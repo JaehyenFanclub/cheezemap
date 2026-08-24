@@ -1,0 +1,24 @@
+package org.example.user.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
+
+@Getter
+@Setter
+@Schema(description = "마이페이지 수정 요청 (multipart/form-data)")
+public class MyPageEditRequest {
+
+    @Schema(description = "변경할 유저 닉네임", example = "새로운닉네임")
+    private String userNickname;
+
+    @Schema(description = "변경할 전화번호", example = "01099998888")
+    private String userPhone;
+
+    @Schema(description = "변경할 이름", example = "홍길동")
+    private String userName;
+
+    @Schema(description = "프로필 사진 파일", type = "string", format = "binary")
+    private MultipartFile photo;
+}

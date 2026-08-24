@@ -1,0 +1,1414 @@
+/* =====================================================
+   CHEESE MAP 추가 기능 스타일
+   로딩 나침반 / 실시간 날씨 / 로그인·회원가입
+   로그인 헤더 / 마이페이지 / 언어 전환
+===================================================== */
+
+:root {
+    --cheese-yellow: #f5c84c;
+    --cheese-deep: #d99624;
+    --cheese-cream: #fff7d6;
+    --cheese-brown: #6f562c;
+    --cheese-border: #ead79c;
+}
+
+
+/* =====================================================
+   로딩 화면
+===================================================== */
+
+.loading-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background:
+        radial-gradient(
+            circle at center,
+            #fffdf4 0%,
+            var(--cheese-cream) 100%
+        );
+
+    opacity: 1;
+    visibility: visible;
+
+    transition:
+        opacity 0.4s ease,
+        visibility 0.4s ease;
+}
+
+.loading-screen.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+
+    color: var(--cheese-brown);
+}
+
+.loading-content > strong {
+    font-size: 22px;
+    letter-spacing: 0.08em;
+}
+
+.loading-content > span {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+
+/* =====================================================
+   로딩 나침반
+   로고 전체가 아니라 바늘만 회전
+===================================================== */
+
+.loading-compass {
+    position: relative;
+
+    width: 126px;
+    height: 126px;
+}
+
+.loading-logo-base {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+    object-fit: contain;
+}
+
+.loading-needle {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 5px;
+    height: 70px;
+
+    border-radius: 999px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #e25c45 0%,
+            #e25c45 48%,
+            #ffffff 48%,
+            #ffffff 52%,
+            #70542d 52%,
+            #70542d 100%
+        );
+
+    box-shadow:
+        0 2px 8px
+        rgba(82, 57, 20, 0.24);
+
+    transform-origin: 50% 50%;
+
+    transform:
+        translate(-50%, -50%)
+        rotate(0deg);
+
+    animation:
+        cheeseCompassSpin
+        1.15s
+        linear
+        infinite;
+}
+
+.loading-needle::after {
+    content: "";
+
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 13px;
+    height: 13px;
+
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+
+    background: var(--cheese-yellow);
+
+    transform: translate(-50%, -50%);
+}
+
+@keyframes cheeseCompassSpin {
+    from {
+        transform:
+            translate(-50%, -50%)
+            rotate(0deg);
+    }
+
+    to {
+        transform:
+            translate(-50%, -50%)
+            rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-needle {
+        animation: none;
+    }
+}
+
+
+/* =====================================================
+   로그인 후 헤더 프로필 버튼
+===================================================== */
+
+.profile-button:hover {
+    transform: translateY(-1px);
+
+    border-color: var(--cheese-deep);
+    background: var(--cheese-cream);
+}
+
+.profile-button[hidden],
+.login-button[hidden] {
+    display: none !important;
+}
+
+.profile-avatar,
+.mypage-avatar {
+    display: grid;
+    place-items: center;
+
+    color: var(--cheese-brown);
+    background: var(--cheese-yellow);
+
+    border-radius: 50%;
+}
+
+.profile-avatar {
+    width: 30px;
+    height: 30px;
+
+    flex-shrink: 0;
+
+    font-size: 17px;
+}
+
+.profile-name {
+    max-width: 100px;
+
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+
+/* =====================================================
+   로그인 모달 전체 최종 디자인
+===================================================== */
+
+.auth-modal {
+    position: relative;
+
+    width: min(410px, calc(100vw - 32px));
+    padding: 30px 26px 24px;
+
+    border-radius: 22px;
+
+    background: var(--white);
+    box-shadow: var(--shadow);
+
+    overflow: hidden;
+}
+
+
+/* 로그인 폼 전체 배치 */
+.auth-modal form {
+    width: 100%;
+
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+
+    margin: 0;
+    padding: 0;
+}
+
+
+/* 이메일·비밀번호 제목 */
+.auth-modal form label {
+    display: block !important;
+
+    width: 100% !important;
+    margin: 0 0 6px !important;
+    padding: 0 !important;
+
+    color: var(--gray-600);
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+
+/* 두 번째 라벨 간격 */
+.auth-modal form label:not(:first-child) {
+    margin-top: 12px !important;
+}
+
+
+/* 입력창 */
+.auth-modal form input {
+    display: block !important;
+
+    width: 100% !important;
+    height: 42px !important;
+
+    margin: 0 !important;
+    padding: 0 13px !important;
+
+    border: 1px solid var(--cheese-border) !important;
+    border-radius: 11px !important;
+
+    outline: none !important;
+
+    color: var(--text) !important;
+    background: var(--white) !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.auth-modal form input:focus {
+    border-color: #e8aa18 !important;
+
+    box-shadow:
+        0 0 0 3px rgba(246, 201, 69, 0.2) !important;
+}
+
+.auth-modal form input::placeholder {
+    color: var(--gray-400);
+}
+
+
+/* 오류 메시지 */
+.auth-modal .form-error {
+    min-height: 0 !important;
+
+    margin: 6px 0 0 !important;
+
+    color: #c74633;
+
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.auth-modal .form-error:empty {
+    display: none !important;
+}
+
+
+/* 로그인 버튼 */
+.auth-modal form .primary-button,
+.auth-modal form button[type="submit"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 100% !important;
+    height: 48px !important;
+
+    margin: 26px 0 0 !important;
+    padding: 0 18px !important;
+
+    border: 1px solid #dfa818 !important;
+    border-radius: 11px !important;
+
+    color: #3d2b1f !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffd85f 0%,
+            #f6c945 100%
+        ) !important;
+
+    box-shadow:
+        0 5px 12px rgba(223, 168, 24, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+
+    cursor: pointer !important;
+
+    appearance: none !important;
+    -webkit-appearance: none !important;
+
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.auth-modal form .primary-button:hover,
+.auth-modal form button[type="submit"]:hover {
+    transform: translateY(-1px);
+
+    border-color: #cf9410 !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffe277 0%,
+            #f8c537 100%
+        ) !important;
+
+    box-shadow:
+        0 7px 16px rgba(223, 168, 24, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
+}
+
+
+/* 회원가입 버튼 */
+.auth-modal .signup-page-link,
+.auth-modal .text-button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 100% !important;
+    min-height: 42px !important;
+
+    margin: 8px 0 0 !important;
+    padding: 0 16px !important;
+
+    border: 1px solid #efbd38 !important;
+    border-radius: 11px !important;
+
+    color: #a86d13 !important;
+    background: #fffdf7 !important;
+
+    text-decoration: none !important;
+
+    font-size: 13px !important;
+    font-weight: 800 !important;
+
+    cursor: pointer !important;
+
+    box-sizing: border-box !important;
+
+    transition:
+        transform 0.18s ease,
+        color 0.18s ease,
+        border-color 0.18s ease,
+        background-color 0.18s ease;
+}
+
+.auth-modal .signup-page-link:hover,
+.auth-modal .text-button:hover {
+    transform: translateY(-1px);
+
+    color: #664229 !important;
+    border-color: #dfa818 !important;
+    background: #fff7d6 !important;
+}
+
+
+/* 닫기 버튼 */
+.auth-modal .modal-close {
+    position: absolute;
+
+    top: 12px;
+    right: 12px;
+
+    width: 36px;
+    height: 36px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+
+    border: 0;
+    border-radius: 11px;
+
+    color: var(--gray-600);
+    background: var(--gray-100);
+
+    font-size: 23px;
+    line-height: 1;
+}
+
+
+/* 다크 모드 */
+body.dark .auth-modal form input {
+    color: #fff4cf !important;
+    border-color: #565148 !important;
+    background: #252119 !important;
+}
+
+body.dark .auth-modal form .primary-button,
+body.dark .auth-modal form button[type="submit"] {
+    color: #31240f !important;
+}
+
+body.dark .auth-modal .signup-page-link,
+body.dark .auth-modal .text-button {
+    color: #f4cf68 !important;
+    border-color: #9f7c2b !important;
+    background: #302a20 !important;
+}
+
+
+/* =====================================================
+   마이페이지
+===================================================== */
+
+.mypage-modal {
+    width: min(520px, calc(100vw - 32px));
+}
+
+.mypage-profile {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    padding: 6px 0 18px;
+
+    border-bottom:
+        1px solid
+        var(--gray-200);
+}
+
+.mypage-avatar {
+    width: 68px;
+    height: 68px;
+
+    flex-shrink: 0;
+
+    font-size: 30px;
+}
+
+.mypage-profile h2 {
+    margin: 0 0 5px;
+}
+
+.mypage-profile strong,
+.mypage-profile span {
+    display: block;
+}
+
+.mypage-profile strong {
+    color: var(--text);
+
+    font-size: 17px;
+}
+
+.mypage-profile span {
+    margin-top: 3px;
+
+    color: var(--gray-400);
+
+    font-size: 14px;
+}
+/* 이메일 / 비밀번호 라벨과 입력칸 간격 */
+.auth-modal form label {
+    margin-bottom: 8px !important;
+}
+
+/* 두 번째 항목 위쪽 간격 */
+.auth-modal form label:not(:first-child) {
+    margin-top: 14px !important;
+}
+
+/* 입력창 아래 간격 */
+.auth-modal form label {
+    display: block !important;
+    margin-bottom: 0 !important;
+    line-height: 1 !important;
+}
+
+.auth-modal form input {
+    margin-top: 8px !important;
+}
+/* =====================================================
+   마이페이지 탭
+===================================================== */
+
+.mypage-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+
+    margin: 17px 0 14px;
+}
+
+.mypage-tabs button {
+    min-height: 42px;
+
+    padding: 10px;
+
+    border: 1px solid var(--cheese-border);
+    border-radius: 12px;
+
+    color: var(--cheese-brown);
+    background: #ffffff;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.mypage-tabs button:hover {
+    transform: translateY(-1px);
+
+    border-color: var(--cheese-deep);
+}
+
+.mypage-tabs button.active {
+    border-color: var(--cheese-deep);
+
+    color: var(--cheese-brown);
+    background: var(--cheese-yellow);
+}
+
+
+/* =====================================================
+   마이페이지 콘텐츠
+===================================================== */
+
+.mypage-content {
+    min-height: 180px;
+    max-height: 340px;
+
+    display: grid;
+    align-content: start;
+    gap: 10px;
+
+    overflow-y: auto;
+
+    padding-right: 3px;
+}
+
+.mypage-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mypage-content::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+
+    background: #dac78c;
+}
+
+.mypage-card {
+    padding: 14px;
+
+    border: 1px solid var(--cheese-border);
+    border-radius: 14px;
+
+    background: #fffdf6;
+
+    transition:
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.mypage-card:hover {
+    transform: translateY(-1px);
+
+    border-color: var(--cheese-deep);
+}
+
+.mypage-card strong,
+.mypage-card span {
+    display: block;
+}
+
+.mypage-card strong {
+    color: var(--text);
+
+    font-size: 14px;
+}
+
+.mypage-card span {
+    margin-top: 4px;
+
+    color: var(--cheese-deep);
+
+    font-size: 13px;
+}
+
+.mypage-card p {
+    margin: 9px 0 0;
+
+    color: var(--gray-600);
+
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.mypage-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+
+    margin-top: 11px;
+}
+
+.mypage-card-actions button {
+    padding: 6px 10px;
+
+    border: 1px solid var(--gray-200);
+    border-radius: 9px;
+
+    color: var(--gray-600);
+    background: var(--white);
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.mypage-card-actions button:hover {
+    border-color: var(--cheese-deep);
+
+    background: var(--cheese-cream);
+}
+
+.empty-state {
+    min-height: 180px;
+
+    display: grid;
+    place-items: center;
+
+    color: #8b7b5d;
+
+    text-align: center;
+}
+
+.empty-state i {
+    display: block;
+
+    margin-bottom: 9px;
+
+    color: var(--cheese-deep);
+
+    font-size: 34px;
+}
+
+.empty-state p {
+    margin: 0;
+
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+
+/* =====================================================
+   로그아웃 버튼
+===================================================== */
+
+.logout-button {
+    width: 100%;
+
+    margin-top: 14px;
+    padding: 11px;
+
+    border: 0;
+    border-radius: 12px;
+
+    color: #6b5b42;
+    background: #f2eee5;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease,
+        color 0.18s ease;
+}
+
+.logout-button:hover {
+    color: #ffffff;
+    background: #c85b45;
+}
+
+
+/* =====================================================
+   언어 변경 버튼
+===================================================== */
+
+.sidebar-footer #languageButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.sidebar-footer #languageButton i {
+    font-size: 15px;
+}
+
+
+/* =====================================================
+   좋아요 버튼 상태
+===================================================== */
+
+.heart-button.saved,
+#favoriteButton.saved {
+    color: #df5d4c;
+}
+
+.heart-button.saved {
+    background: #fff0eb;
+}
+
+#saveButton.saved {
+    border-color: #e49a86;
+
+    color: #c94f3e;
+    background: #fff0eb;
+}
+
+
+/* =====================================================
+   다크 모드 추가 대응
+===================================================== */
+
+body.dark .weather-icon {
+    color: #2d2415;
+}
+
+body.dark .profile-button,
+body.dark .header-message-button {
+    color: #f8e9b8;
+    background: #302a20;
+}
+
+body.dark .profile-button:hover,
+body.dark .header-message-button:hover {
+    background: #3d3527;
+}
+
+body.dark .auth-modal input {
+    color: #fff4cf;
+    background: #252119;
+}
+
+body.dark .mypage-tabs button {
+    color: #fff0bd;
+    background: #252119;
+}
+
+body.dark .mypage-tabs button.active {
+    color: #3c2e16;
+    background: var(--cheese-yellow);
+}
+
+body.dark .mypage-card {
+    color: #f8e9b8;
+    background: #302a20;
+}
+
+body.dark .mypage-card strong {
+    color: #fff3cc;
+}
+
+body.dark .mypage-card-actions button {
+    color: #e6dfd1;
+    background: #28251f;
+}
+
+body.dark .logout-button {
+    color: #e5ddcf;
+    background: #3a3730;
+}
+
+
+/* =====================================================
+   반응형
+===================================================== */
+
+@media (max-width: 850px) {
+    .profile-button {
+        display: none;
+    }
+
+    .loading-compass {
+        width: 112px;
+        height: 112px;
+    }
+
+    .loading-needle {
+        height: 62px;
+    }
+}
+
+@media (max-width: 600px) {
+    .auth-modal,
+    .mypage-modal {
+        padding: 24px 20px;
+    }
+
+    .mypage-avatar {
+        width: 58px;
+        height: 58px;
+
+        font-size: 25px;
+    }
+
+    .mypage-profile strong {
+        font-size: 15px;
+    }
+
+    .mypage-profile span {
+        font-size: 12px;
+    }
+
+    .mypage-content {
+        max-height: 300px;
+    }
+
+    .loading-content > strong {
+        font-size: 19px;
+    }
+
+    .loading-content > span {
+        font-size: 12px;
+    }
+}
+
+
+/* =====================================================
+   날씨 아이콘 보강
+===================================================== */
+
+.weather-icon {
+    width: auto;
+    height: auto;
+    min-width: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.weather-icon i {
+    font-size: 17px;
+    color: #c58b21;
+    transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.weather-button:hover .weather-icon i {
+    transform: scale(1.08);
+}
+
+.weather-condition {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.weather-detail-item > i {
+    flex-shrink: 0;
+    color: #c58b21;
+    font-size: 15px;
+}
+
+.weather-detail-item > span {
+    color: var(--gray-600);
+    font-size: 11px;
+}
+
+.weather-button.is-loading .weather-icon i {
+    animation: weather-icon-loading 1s linear infinite;
+}
+
+@keyframes weather-icon-loading {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+body.dark .weather-icon {
+    background: transparent;
+    box-shadow: none;
+}
+
+body.dark .weather-icon i,
+body.dark .weather-detail-item > i {
+    color: #ffd76b;
+}
+
+
+
+
+/* =====================================================
+   날씨 아이콘 최종본
+===================================================== */
+.weather-button .weather-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    height: 22px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    color: #d49315 !important;
+    overflow: visible !important;
+    line-height: 1 !important;
+}
+
+.weather-button .weather-icon::before,
+.weather-button .weather-icon::after {
+    content: none !important;
+    display: none !important;
+}
+
+.weather-button .weather-icon svg {
+    display: block !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    fill: none !important;
+    stroke: currentColor !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+.weather-button > time {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
+
+.weather-button.is-loading .weather-icon,
+.weather-button.is-loading .weather-icon svg {
+    animation: none !important;
+}
+
+body.dark .weather-button .weather-icon {
+    color: #ffd76b !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* =====================================================
+   다크 모드 최종 대비 보정
+   지도 위에 직접 지정된 라이트 색상을 덮어쓴다.
+===================================================== */
+
+body.dark .map-area {
+    background-color: #1d1c19;
+}
+
+body.dark .search-area input::placeholder,
+body.dark .auth-modal input::placeholder,
+body.dark .route-panel input::placeholder {
+    color: #aaa69b;
+    opacity: 1;
+}
+
+body.dark .filter-chip,
+body.dark .map-status-card,
+body.dark .map-controls button,
+body.dark .legend-card,
+body.dark .place-card,
+body.dark .route-panel,
+body.dark .recommend-panel {
+    border-color: rgba(246, 201, 69, 0.22);
+    background-color: rgba(46, 44, 39, 0.96);
+    color: #f5f2e9;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+}
+
+body.dark .filter-chip {
+    color: #e5dfd2;
+}
+
+body.dark .filter-chip:hover,
+body.dark .map-controls button:hover,
+body.dark #hideRecommendButton:hover {
+    background-color: #454032;
+}
+
+body.dark .filter-chip.active {
+    border-color: #f6c945;
+    background-color: #d8ad35;
+    color: #211c13;
+}
+
+body.dark .map-status-card small,
+body.dark .recommend-header small,
+body.dark .panel-header small,
+body.dark .place-category,
+body.dark .place-address,
+body.dark .mini-place small,
+body.dark .mini-place span,
+body.dark .route-result,
+body.dark .legend-card span {
+    color: #c7c0b2;
+}
+
+body.dark .map-status-card strong,
+body.dark .recommend-header h2,
+body.dark .legend-card strong,
+body.dark .panel-header h2,
+body.dark .place-card h2,
+body.dark .mini-place strong,
+body.dark .route-panel label,
+body.dark .route-panel label > span,
+body.dark .place-meta strong {
+    color: #fff5d6;
+}
+
+body.dark #hideRecommendButton,
+body.dark .close-panel {
+    color: #f2eadc;
+    background-color: #3a3730;
+}
+
+body.dark .mini-place {
+    border-color: #504b41;
+    background-color: #34312b;
+    color: #f5f2e9;
+}
+
+body.dark .mini-place:hover {
+    border-color: #d9b94d;
+    background-color: #3b372f;
+    box-shadow: 0 9px 18px rgba(0, 0, 0, 0.26);
+}
+
+body.dark .place-list::-webkit-scrollbar-thumb {
+    background-color: #655f53;
+}
+
+body.dark .route-panel input,
+body.dark .auth-modal input {
+    border-color: #565148;
+    color: #f8f3e7;
+    background-color: #25231f;
+}
+
+body.dark .route-panel input:focus,
+body.dark .auth-modal input:focus {
+    border-color: #d8ad35;
+    box-shadow: 0 0 0 4px rgba(246, 201, 69, 0.13);
+}
+
+body.dark .transport-tabs,
+body.dark .transport-tabs button,
+body.dark .place-action-button,
+body.dark .place-card button:not(.close-panel),
+body.dark .sidebar-footer button {
+    color: #ddd6c9;
+    background-color: #34312b;
+}
+
+body.dark .transport-tabs button.active,
+body.dark .place-action-button:hover,
+body.dark .place-card button:not(.close-panel):hover {
+    color: #2d2515;
+    background-color: #d8ad35;
+}
+
+body.dark .weather-button:hover,
+body.dark .icon-button:hover,
+body.dark .header-message-button:hover,
+body.dark .login-button:hover,
+body.dark .profile-button:hover,
+body.dark .category-item:hover {
+    color: #fff5d6;
+    background-color: #454032;
+}
+
+body.dark .category-item.active {
+    color: #2d2515;
+    background-color: #d8ad35;
+}
+
+body.dark .category-item.active .category-icon,
+body.dark .side-item.active .side-icon {
+    color: #3f3024;
+}
+
+body.dark .switch-row,
+body.dark .sidebar-footer button,
+body.dark .weather-expanded-content,
+body.dark .weather-button > time {
+    color: #d5cec0;
+}
+
+body.dark .toast {
+    border: 1px solid rgba(246, 201, 69, 0.25);
+    color: #fff5d6;
+    background-color: #2e2c27;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
+}
+
+body.dark .modal-backdrop {
+    background-color: rgba(7, 7, 6, 0.72);
+}
+
+body.dark .auth-modal,
+body.dark .mypage-modal {
+    border: 1px solid #4f4b43;
+    color: #f5f2e9;
+    background-color: #2e2c27;
+}
+
+body.dark .auth-modal h2,
+body.dark .mypage-modal h2,
+body.dark .mypage-profile strong,
+body.dark .auth-modal label {
+    color: #fff5d6;
+}
+
+body.dark .auth-modal p,
+body.dark .mypage-profile span,
+body.dark .empty-state {
+    color: #c9c2b5;
+}
+
+
+/* =====================================================
+   Google 지도 기본 렌더링 유지
+   내부 타일에는 transform, zoom, filter를 강제로 적용하지 않는다.
+===================================================== */
+
+#googleMap {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    background-color: #f5f1e8;
+}
+
+body.dark #googleMap {
+    background-color: #1d1c19;
+}
+
+#googleMap img {
+    max-width: none;
+}
+
+
+/* =====================================================
+   로그인 / 회원가입 모달 보정
+===================================================== */
+
+.modal-backdrop {
+    padding: 20px;
+}
+
+.auth-modal {
+    position: relative;
+    width: min(420px, calc(100vw - 32px));
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+
+.modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    color: var(--gray-600);
+    background: var(--gray-100);
+    font-size: 24px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--text);
+    background: var(--yellow-light);
+}
+
+.auth-modal .text-button {
+    width: 100%;
+    margin-top: 12px;
+}
+
+body.dark .modal-close {
+    color: #f5f2e9;
+    background: #3a3730;
+}
+
+body.dark .modal-close:hover {
+    color: #2d2515;
+    background: #d8ad35;
+}
+
+
+/* 별도 회원가입 페이지 이동 링크 */
+.signup-page-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+
+/* =====================================================
+   마이페이지 최종 보정: 프로필 수정 + 3개 탭
+===================================================== */
+.mypage-profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mypage-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 5px;
+    padding-right: 42px;
+}
+
+.mypage-title-row h2 {
+    margin: 0;
+}
+
+.mypage-edit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--cheese-border);
+    border-radius: 10px;
+    color: var(--cheese-brown);
+    background: var(--white);
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.mypage-edit-button:hover {
+    border-color: var(--cheese-deep);
+    background: var(--cheese-cream);
+}
+
+.mypage-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body.dark .mypage-edit-button {
+    color: #f4cf68;
+    border-color: #766331;
+    background: #302a20;
+}
+
+@media (max-width: 480px) {
+    .mypage-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 7px;
+        padding-right: 38px;
+    }
+
+    .mypage-edit-button {
+        min-height: 30px;
+    }
+
+    .mypage-tabs button {
+        padding-inline: 4px;
+        font-size: 11px;
+    }
+}
+
+
+/* 경로 검색 전 안내 문구 */
+.route-empty-message {
+    margin: 0;
+    padding: 14px 4px 2px;
+    color: var(--gray-600);
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+
+/* Transitous 대중교통 경로 */
+.transit-data-credit{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--gray-200);color:var(--gray-600);font-size:10px;line-height:1.5;text-align:center}.transit-data-credit a{color:var(--brown);font-weight:700;text-underline-offset:2px}.transit-route-option{width:100%;margin:0 0 10px;padding:12px;border:1px solid var(--gray-200);border-radius:13px;background:var(--white);color:var(--text);text-align:left;cursor:pointer}.transit-route-option:hover,.transit-route-option.active{border-color:var(--yellow-dark);background:var(--yellow-light)}.transit-route-option .route-summary{display:flex;align-items:center;justify-content:space-between;gap:10px}.transit-route-option .route-summary span{color:var(--gray-600);font-size:11px;text-align:right}.transit-route-option .route-line p{overflow-wrap:anywhere}
+
+
+
+
+/* 길찾기 패널이 열린 상태에서 지도 아이콘/위치 선택 */
+body:has(#routePanel.show) #googleMap {
+    cursor: crosshair;
+}
+
+
+/* 장소 상세카드에서 출발지 A 지정 */
+#placeRouteButton {
+    border-color: var(--line);
+    background: #ffffff;
+    color: var(--brown-dark);
+    font-weight: 800;
+}
+
+#placeRouteButton:hover {
+    border-color: #ead8a3;
+    background: #fffaf0;
+}
+
+body:has(#routePanel.show) #placeRouteButton {
+    border-color: #efd98a;
+    background: #fff6cf;
+    color: var(--brown-dark);
+}
+
+body:has(#routePanel.show) #placeRouteButton:hover {
+    background: #fff0b2;
+}
+
+
+
+

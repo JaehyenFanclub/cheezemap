@@ -1,0 +1,638 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap");
+
+:root {
+    --yellow: #f6c945;
+    --yellow-bright: #ffd85e;
+    --yellow-dark: #dfa818;
+    --yellow-deep: #c98c0c;
+    --yellow-soft: #fff2b9;
+    --yellow-pale: #fff9df;
+    --cream: #fffaf0;
+    --brown: #664229;
+    --brown-dark: #2e241b;
+    --text: #2d2a26;
+    --muted: #888178;
+    --line: #e6decd;
+    --line-strong: #dac9a5;
+    --white: #ffffff;
+    --danger: #d95c3f;
+    --success: #4b9a5b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    min-height: 100%;
+    font-family: "Noto Sans KR", sans-serif;
+    color: var(--text);
+    background: var(--cream);
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button,
+a {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* =====================================================
+   전체 레이아웃
+===================================================== */
+
+.signup-page {
+    width: 100%;
+    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
+    background: linear-gradient(180deg, #fffdf8 0%, #fff8ea 100%);
+}
+
+/* 기존 왼쪽 소개 영역은 사용하지 않음 */
+.signup-visual {
+    display: none;
+}
+
+.signup-panel {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 24px;
+    background: transparent;
+}
+
+.signup-card {
+    width: min(100%, 760px);
+    padding: 28px 28px 26px;
+    border: 1px solid #eee3c8;
+    border-radius: 24px;
+    background: rgba(255, 253, 246, 0.96);
+    box-shadow: 0 18px 40px rgba(91, 64, 38, 0.08);
+    backdrop-filter: blur(8px);
+}
+
+/* =====================================================
+   상단 로고
+===================================================== */
+
+.mobile-brand {
+    display: block;
+    margin-bottom: 18px;
+}
+
+.mobile-brand a {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--brown-dark);
+    text-decoration: none;
+}
+
+.mobile-brand img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+}
+
+.mobile-brand strong {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+/* =====================================================
+   제목
+===================================================== */
+
+.signup-heading {
+    margin-bottom: 22px;
+}
+
+.signup-heading > span {
+    display: inline-block;
+    color: var(--yellow-dark);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+}
+
+.signup-heading h2 {
+    margin: 6px 0;
+    color: var(--brown-dark);
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+.signup-heading p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+/* =====================================================
+   폼 레이아웃
+===================================================== */
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.field {
+    display: block;
+    min-width: 0;
+}
+
+.field.full {
+    grid-column: 1 / -1;
+}
+
+.field > span,
+.sex-field legend {
+    display: block;
+    margin-bottom: 7px;
+    color: #4a4035;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.field b {
+    color: var(--danger);
+}
+
+.field em {
+    margin-left: 5px;
+    color: #a29a90;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 500;
+}
+
+/* =====================================================
+   입력창
+===================================================== */
+
+.input-wrap {
+    position: relative;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    border: 1px solid #e6dcc7;
+    border-radius: 12px;
+    background: var(--white);
+    box-shadow: 0 3px 10px rgba(76, 53, 23, 0.025);
+    transition:
+        border-color 0.18s ease,
+        background-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.input-wrap:hover {
+    border-color: var(--line-strong);
+}
+
+.input-wrap:focus-within {
+    border-color: var(--yellow-dark);
+    background: #fffdf7;
+    box-shadow: 0 0 0 4px rgba(246, 201, 69, 0.18);
+}
+
+.input-wrap > i {
+    width: 39px;
+    flex-shrink: 0;
+    color: #ad8b52;
+    font-size: 16px;
+    text-align: center;
+}
+
+.input-wrap input {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 0 14px 0 0;
+    border: 0;
+    outline: 0;
+    color: var(--text);
+    background: transparent;
+    font-size: 12px;
+}
+
+.input-wrap input::placeholder {
+    color: #b2aaa0;
+}
+
+.input-wrap.is-error {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgba(217, 92, 63, 0.1);
+}
+
+.password-toggle {
+    width: 39px;
+    height: 100%;
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    color: #9b948a;
+    background: transparent;
+    cursor: pointer;
+    transition:
+        color 0.18s ease,
+        background-color 0.18s ease;
+}
+
+.password-toggle:hover {
+    color: var(--yellow-deep);
+    background: var(--yellow-pale);
+}
+
+.field-error {
+    display: block;
+    min-height: 14px;
+    margin: 4px 3px 0;
+    color: var(--danger);
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+/* =====================================================
+   성별 선택
+===================================================== */
+
+.sex-field {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.sex-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.sex-options label {
+    position: relative;
+}
+
+.sex-options input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sex-options span {
+    width: 100%;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    color: #756e65;
+    background: var(--white);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform 0.18s ease,
+        color 0.18s ease,
+        border-color 0.18s ease,
+        background-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.sex-options span:hover {
+    transform: translateY(-1px);
+    border-color: #e3ba50;
+    color: var(--brown);
+    background: var(--yellow-pale);
+}
+
+.sex-options input:checked + span {
+    border-color: var(--yellow-dark);
+    color: #40300d;
+    background: var(--yellow-soft);
+    box-shadow:
+        inset 0 0 0 1px rgba(223, 168, 24, 0.16),
+        0 5px 12px rgba(223, 168, 24, 0.1);
+}
+
+.sex-options input:focus-visible + span {
+    outline: 3px solid rgba(246, 201, 69, 0.25);
+    outline-offset: 2px;
+}
+
+/* =====================================================
+   약관 동의
+===================================================== */
+
+.agree-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 16px;
+    color: #686159;
+    font-size: 10px;
+    line-height: 1.6;
+    cursor: pointer;
+}
+
+.agree-row input {
+    position: absolute;
+    opacity: 0;
+}
+
+.custom-check {
+    width: 17px;
+    height: 17px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    border: 1px solid #ccc5b9;
+    border-radius: 6px;
+    color: transparent;
+    background: var(--white);
+    transition:
+        color 0.18s ease,
+        border-color 0.18s ease,
+        background-color 0.18s ease;
+}
+
+.agree-row:hover .custom-check {
+    border-color: var(--yellow-dark);
+}
+
+.agree-row input:checked + .custom-check {
+    border-color: var(--yellow-dark);
+    color: #392b0d;
+    background: var(--yellow);
+}
+
+.agree-row input:focus-visible + .custom-check {
+    outline: 3px solid rgba(246, 201, 69, 0.25);
+    outline-offset: 2px;
+}
+
+.agree-row b {
+    color: var(--yellow-deep);
+}
+
+.terms-error {
+    margin-left: 27px;
+}
+
+/* =====================================================
+   상태 메시지
+===================================================== */
+
+.form-message {
+    min-height: 16px;
+    margin: 5px 0;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.form-message.success {
+    color: var(--success);
+}
+
+.form-message.error {
+    color: var(--danger);
+}
+
+/* =====================================================
+   회원가입 버튼
+===================================================== */
+
+.signup-submit {
+    width: 100%;
+    height: 49px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 6px;
+    border: 1px solid var(--yellow-dark);
+    border-radius: 13px;
+    color: #35290f;
+    background: linear-gradient(180deg, var(--yellow-bright) 0%, var(--yellow) 100%);
+    font-size: 13px;
+    font-weight: 800;
+    box-shadow:
+        0 10px 20px rgba(223, 168, 24, 0.21),
+        inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    cursor: pointer;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.signup-submit::before,
+.signup-submit::after {
+    content: none;
+    display: none;
+}
+
+.signup-submit:hover {
+    transform: translateY(-2px);
+    border-color: #cc920e;
+    background: linear-gradient(180deg, #ffe477 0%, #f8c63d 100%);
+    box-shadow:
+        0 14px 25px rgba(223, 168, 24, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.signup-submit:active {
+    transform: translateY(0);
+    box-shadow:
+        0 5px 12px rgba(223, 168, 24, 0.18),
+        inset 0 2px 4px rgba(112, 71, 6, 0.1);
+}
+
+.signup-submit:focus-visible {
+    outline: 3px solid rgba(246, 201, 69, 0.3);
+    outline-offset: 3px;
+}
+
+/* =====================================================
+   하단 링크
+===================================================== */
+
+.login-guide {
+    margin-top: 14px;
+    color: #8c857b;
+    font-size: 11px;
+    text-align: center;
+}
+
+.login-guide a {
+    position: relative;
+    margin-left: 5px;
+    color: #75500c;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.login-guide a::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -2px;
+    left: 0;
+    height: 1px;
+    background: #b89037;
+}
+
+.login-guide a:hover {
+    color: var(--yellow-deep);
+}
+
+.back-home {
+    width: fit-content;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin: 12px auto 0;
+    color: #8d867c;
+    font-size: 10px;
+    text-decoration: none;
+    transition:
+        color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.back-home:hover {
+    color: var(--brown);
+    transform: translateX(-2px);
+}
+
+/* =====================================================
+   높이가 낮은 화면
+===================================================== */
+
+@media (max-height: 760px) and (min-width: 561px) {
+    .signup-panel {
+        padding-top: 14px;
+        padding-bottom: 14px;
+    }
+
+    .signup-card {
+        padding-top: 20px;
+        padding-bottom: 18px;
+    }
+
+    .mobile-brand {
+        margin-bottom: 11px;
+    }
+
+    .signup-heading {
+        margin-bottom: 14px;
+    }
+
+    .signup-heading h2 {
+        font-size: 27px;
+    }
+
+    .form-grid {
+        gap: 9px 12px;
+    }
+
+    .input-wrap {
+        height: 41px;
+    }
+
+    .sex-options span {
+        height: 39px;
+    }
+
+    .agree-row {
+        margin-top: 10px;
+    }
+
+    .signup-submit {
+        height: 45px;
+    }
+
+    .login-guide {
+        margin-top: 9px;
+    }
+
+    .back-home {
+        margin-top: 7px;
+    }
+}
+
+/* =====================================================
+   모바일
+===================================================== */
+
+@media (max-width: 560px) {
+    .signup-page {
+        height: auto;
+        overflow: visible;
+    }
+
+    .signup-panel {
+        min-height: 100vh;
+        height: auto;
+        align-items: flex-start;
+        padding: 20px 14px 30px;
+    }
+
+    .signup-card {
+        padding: 26px 18px 22px;
+        border-radius: 22px;
+    }
+
+    .signup-heading h2 {
+        font-size: 28px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .field.full {
+        grid-column: auto;
+    }
+
+    .input-wrap {
+        height: 48px;
+    }
+
+    .sex-options {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sex-options span {
+        height: 44px;
+    }
+
+    .agree-row {
+        margin-top: 18px;
+    }
+
+    .signup-submit {
+        height: 52px;
+    }
+}

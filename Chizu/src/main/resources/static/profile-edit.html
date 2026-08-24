@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로필 수정 | CHEESE MAP</title>
+    <link rel="stylesheet" href="css/profile-edit.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+</head>
+<body>
+    <main class="profile-edit-page">
+        <section class="profile-edit-card">
+            <a href="index.html" class="back-button" aria-label="돌아가기">
+                <i class="ti ti-arrow-left"></i>
+            </a>
+
+            <div class="page-heading">
+                <div class="profile-edit-avatar"><i class="ti ti-user"></i></div>
+                <div>
+                    <h1>프로필 수정</h1>
+                    <p>마이페이지에 표시되는 회원 정보를 수정합니다.</p>
+                </div>
+            </div>
+
+            <form id="profileEditForm">
+                <label>이름<input type="text" id="editName" name="userName" autocomplete="name"></label>
+                <label>닉네임<input type="text" id="editNickname" name="userNickname" required></label>
+                <label>이메일<input type="email" id="editEmail" name="email" autocomplete="email" required></label>
+                <label>전화번호<input type="tel" id="editPhone" name="phone" autocomplete="tel"></label>
+                <label>생년월일<input type="date" id="editBirth" name="birth"></label>
+                <label>프로필 사진<input type="file" id="editPhoto" accept="image/*"></label>
+
+                <div class="form-divider"><span>비밀번호 변경</span></div>
+
+                <label>현재 비밀번호<input type="password" id="currentPassword" autocomplete="current-password"></label>
+                <label>새 비밀번호<input type="password" id="newPassword" autocomplete="new-password" minlength="6"></label>
+                <label>새 비밀번호 확인<input type="password" id="newPasswordConfirm" autocomplete="new-password" minlength="6"></label>
+
+                <p class="form-message" id="profileEditMessage" aria-live="polite"></p>
+
+                <div class="form-actions">
+                    <a href="index.html" class="cancel-button">취소</a>
+                    <button type="submit" class="save-button">수정 완료</button>
+                </div>
+            </form>
+        </section>
+    </main>
+    <script src="js/api.js"></script>
+    <script src="js/profile-edit.js"></script>
+</body>
+</html>

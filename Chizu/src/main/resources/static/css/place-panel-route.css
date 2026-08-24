@@ -1,0 +1,1645 @@
+/* =====================================================
+   네이버지도형 장소 상세 사이드 패널
+===================================================== */
+
+#googleMap {
+    left: 0;
+    transition: left 0.28s ease;
+}
+
+.place-side-panel {
+    position: absolute !important;
+    z-index: 35 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 390px !important;
+    max-width: calc(100% - 44px);
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-right: 1px solid var(--gray-200) !important;
+    border-radius: 0 !important;
+    background: var(--white) !important;
+    box-shadow: 12px 0 28px rgba(65, 51, 35, 0.12) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateX(calc(-100% - 1px)) !important;
+    transition: transform 0.28s ease !important;
+}
+
+.place-side-panel.show {
+    transform: translateX(0) !important;
+}
+
+body.place-side-panel-open #googleMap {
+    left: 390px;
+}
+
+.place-side-panel .place-image {
+    width: 100%;
+    height: 190px;
+    border-radius: 0;
+}
+
+.place-side-panel .place-content {
+    height: calc(100% - 190px);
+    padding: 24px 24px 38px;
+    overflow-y: auto;
+    background: var(--white);
+}
+
+.place-side-panel .place-title-row h2 {
+    margin-top: 5px;
+    font-size: 24px;
+}
+
+.place-side-panel .place-close {
+    top: 14px;
+    right: 14px;
+    z-index: 3;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: rgba(255, 253, 246, 0.94);
+    box-shadow: 0 5px 14px rgba(65, 51, 35, 0.12);
+}
+
+.place-side-toggle {
+    position: absolute;
+    z-index: 4;
+    top: 50%;
+    right: -34px;
+    width: 34px;
+    height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--gray-200);
+    border-left: 0;
+    border-radius: 0 13px 13px 0;
+    color: var(--brown);
+    background: var(--white);
+    box-shadow: 6px 3px 14px rgba(65, 51, 35, 0.12);
+    transform: translateY(-50%);
+}
+
+.place-side-toggle:hover {
+    color: var(--brown-dark);
+    background: var(--yellow-light);
+}
+
+.place-side-panel:not(.show) .place-side-toggle i {
+    transform: rotate(180deg);
+}
+
+.place-side-panel .place-actions {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 0 2px;
+    background: linear-gradient(to bottom, transparent, var(--white) 22%);
+}
+
+body.dark .place-side-panel,
+body.dark .place-side-panel .place-content,
+body.dark .place-side-toggle {
+    background: var(--white) !important;
+}
+
+@media (max-width: 900px) {
+    .place-side-panel {
+        width: min(360px, calc(100% - 42px)) !important;
+    }
+
+    body.place-side-panel-open #googleMap {
+        left: 0;
+    }
+}
+
+@media (max-width: 620px) {
+    .place-side-panel {
+        top: auto !important;
+        width: 100% !important;
+        max-width: none;
+        height: 68% !important;
+        border-right: 0 !important;
+        border-top: 1px solid var(--gray-200) !important;
+        transform: translateY(100%) !important;
+    }
+
+    .place-side-panel.show {
+        transform: translateY(0) !important;
+    }
+
+    .place-side-toggle {
+        top: -34px;
+        right: 18px;
+        width: 68px;
+        height: 34px;
+        border: 1px solid var(--gray-200);
+        border-bottom: 0;
+        border-radius: 13px 13px 0 0;
+        transform: none;
+    }
+
+    .place-side-panel .place-image {
+        height: 145px;
+    }
+
+    .place-side-panel .place-content {
+        height: calc(100% - 145px);
+    }
+}
+
+
+/* =====================================================
+   장소 상세 패널이 열릴 때 지도 왼쪽 UI도 함께 이동
+===================================================== */
+.top-filter-bar,
+.map-status-card,
+.recommend-panel {
+    transition:
+        left 0.28s ease,
+        transform 0.28s ease;
+}
+
+body.place-side-panel-open .top-filter-bar {
+    left: 408px;
+}
+
+body.place-side-panel-open .map-status-card {
+    left: 408px;
+}
+
+body.place-side-panel-open .recommend-panel {
+    left: 408px;
+}
+
+@media (max-width: 900px) {
+    body.place-side-panel-open .top-filter-bar,
+    body.place-side-panel-open .map-status-card,
+    body.place-side-panel-open .recommend-panel {
+        left: 18px;
+    }
+}
+
+@media (max-width: 620px) {
+    body.place-side-panel-open .top-filter-bar,
+    body.place-side-panel-open .map-status-card,
+    body.place-side-panel-open .recommend-panel {
+        left: 12px;
+    }
+}
+
+
+/* =====================================================
+   POI / 커스텀 마커 카테고리별 색상
+   역=파랑 / 공원=초록 / 박물관·미술관=보라
+===================================================== */
+
+.cheese-map-marker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 5px 14px rgba(45, 42, 38, 0.22);
+    color: #ffffff;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+.cheese-marker-transport {
+    background: #3b82f6;
+}
+
+.cheese-marker-park {
+    background: #22c55e;
+}
+
+.cheese-marker-museum,
+.cheese-marker-gallery {
+    background: #a855f7;
+}
+
+.cheese-marker-cafe {
+    background: #b7793f;
+}
+
+.cheese-marker-food {
+    background: #f97316;
+}
+
+.cheese-marker-convenience {
+    background: #eab308;
+}
+
+.cheese-marker-tour {
+    background: #14b8a6;
+}
+
+body.dark .cheese-map-marker {
+    border-color: #f5f2e9;
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.38);
+}
+
+
+/* =====================================================
+   CHEESE MAP - 길찾기 패널 왼쪽 슬라이드형
+   기존 지도 오른쪽 플로팅 카드 대신 왼쪽 사이드 패널로 표시
+===================================================== */
+
+/* 지도 이동도 부드럽게 */
+.map-area {
+    transition: left 0.28s ease;
+}
+
+/* 길찾기 패널은 사이드바 위를 덮는 왼쪽 전용 패널 */
+.route-panel {
+    position: fixed !important;
+    z-index: 120 !important;
+
+    top: var(--header-height) !important;
+    left: 0 !important;
+    right: auto !important;
+    bottom: 0 !important;
+
+    display: block !important;
+
+    width: 370px !important;
+    max-width: min(370px, 100vw) !important;
+    height: calc(100vh - var(--header-height)) !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+    padding: 22px 18px 24px !important;
+
+    border: 0 !important;
+    border-right: 1px solid var(--gray-200) !important;
+    border-radius: 0 !important;
+
+    background: var(--white) !important;
+    box-shadow: 12px 0 30px rgba(65, 51, 35, 0.12) !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-100%);
+
+    transition:
+        transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.2s ease,
+        visibility 0.28s ease;
+}
+
+.route-panel.show {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+/* 길찾기 열리면 지도 시작점도 오른쪽으로 같이 밀기 */
+body:has(#routePanel.show) .map-area {
+    left: 370px !important;
+}
+
+/* 기존 오른쪽 플로팅 느낌 제거 */
+.route-panel .panel-header {
+    position: sticky;
+    top: -22px;
+    z-index: 5;
+    margin: -22px -18px 18px;
+    padding: 20px 18px 14px;
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.route-panel .close-panel {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+}
+
+/* 상세 경로가 길어져도 패널 안에서 자연스럽게 스크롤 */
+.route-panel .route-result {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* 다크모드 */
+body.dark .route-panel,
+body.dark .route-panel .panel-header {
+    background: var(--white) !important;
+}
+
+body.dark .route-panel {
+    border-right-color: #4a4740 !important;
+    box-shadow: 12px 0 30px rgba(0, 0, 0, 0.32) !important;
+}
+
+/* 태블릿/모바일에서는 화면 전체 너비의 슬라이드 패널 */
+@media (max-width: 850px) {
+    .route-panel {
+        top: var(--header-height) !important;
+        left: 0 !important;
+        right: auto !important;
+        bottom: 0 !important;
+
+        width: min(370px, 92vw) !important;
+        max-width: 92vw !important;
+        height: calc(100vh - var(--header-height)) !important;
+        max-height: none !important;
+
+        border-right: 1px solid var(--gray-200) !important;
+        border-radius: 0 !important;
+    }
+
+    body:has(#routePanel.show) .map-area {
+        left: 0 !important;
+    }
+}
+
+
+/* =====================================================
+   CHEESE MAP - POI 상세 패널 내부 길찾기
+   길찾기는 별도 플로팅/왼쪽 패널이 아니라 장소 정보 아래에 이어서 표시
+===================================================== */
+
+/* 장소 정보 전체가 하나의 세로 스크롤이 되도록 유지 */
+.place-side-panel .place-content {
+    overflow-y: auto !important;
+    scroll-behavior: smooth;
+}
+
+/* 버튼 아래에 붙는 길찾기 영역 */
+.place-side-panel .place-route-panel {
+    position: relative !important;
+    z-index: auto !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+
+    display: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+
+    margin: 18px 0 0 !important;
+    padding: 18px 0 4px !important;
+
+    border: 0 !important;
+    border-top: 1px solid var(--gray-200) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+
+    overflow: visible !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+    transition: none !important;
+}
+
+.place-side-panel .place-route-panel.show {
+    display: block !important;
+}
+
+/* 예전 왼쪽 슬라이드 규칙 무효화 */
+body:has(#routePanel.show) .map-area {
+    left: var(--sidebar-width) !important;
+}
+
+body.place-side-panel-open:has(#routePanel.show) .map-area {
+    left: var(--sidebar-width) !important;
+}
+
+.place-side-panel .place-route-panel .panel-header {
+    position: static !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 15px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+.place-side-panel .place-route-panel .panel-header small {
+    font-size: 9px;
+    letter-spacing: .12em;
+}
+
+.place-side-panel .place-route-panel .panel-header h2 {
+    margin: 2px 0 0;
+    font-size: 18px;
+}
+
+.place-side-panel .place-route-panel .close-panel {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+}
+
+.place-side-panel .place-route-panel label {
+    margin-bottom: 10px;
+}
+
+.place-side-panel .place-route-panel input {
+    width: 100%;
+}
+
+.place-side-panel .place-route-panel .transport-tabs {
+    margin-top: 10px;
+}
+
+.place-side-panel .place-route-panel #findRouteButton {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.place-side-panel .place-route-panel .route-result {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* 길찾기가 펼쳐졌을 때 액션바가 중간에 달라붙지 않게 함 */
+.place-side-panel .place-actions {
+    position: static !important;
+    padding: 12px 0 2px;
+    background: transparent !important;
+}
+
+/* POI 패널이 열린 동안 지도는 기존 장소패널 폭만큼만 이동 */
+body.place-side-panel-open #googleMap {
+    left: 390px;
+}
+
+@media (max-width: 900px) {
+    body:has(#routePanel.show) .map-area,
+    body.place-side-panel-open:has(#routePanel.show) .map-area {
+        left: 0 !important;
+    }
+
+    body.place-side-panel-open #googleMap {
+        left: 0;
+    }
+}
+
+@media (max-width: 620px) {
+    .place-side-panel .place-route-panel {
+        margin-top: 14px !important;
+        padding-top: 15px !important;
+    }
+}
+
+body.dark .place-side-panel .place-route-panel,
+body.dark .place-side-panel .place-route-panel .panel-header {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* =====================================================
+   POI 길찾기 - 가독성 개선 / 뒤로가기 버튼
+===================================================== */
+
+.place-side-panel .place-route-panel .panel-header {
+    align-items: flex-start !important;
+    margin-bottom: 18px !important;
+}
+
+.place-side-panel .place-route-panel .route-back-button {
+    width: auto !important;
+    height: 32px !important;
+    min-width: 0;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 9px !important;
+    border: 1px solid var(--gray-200) !important;
+    border-radius: 9px !important;
+    color: var(--gray-600) !important;
+    background: var(--white) !important;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.place-side-panel .place-route-panel .route-back-button:hover {
+    border-color: var(--yellow-dark) !important;
+    color: var(--brown-dark) !important;
+    background: var(--yellow-light) !important;
+}
+
+.place-side-panel .place-route-panel .route-back-button i {
+    font-size: 15px;
+}
+
+/* 경로 카드 */
+.place-side-panel .transit-route-option {
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 14px;
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+    border-radius: 15px;
+    background: var(--white);
+    color: var(--text);
+    text-align: left;
+    box-shadow: 0 3px 10px rgba(65, 51, 35, 0.04);
+}
+
+.place-side-panel .transit-route-option:hover,
+.place-side-panel .transit-route-option.active {
+    border-color: var(--yellow-dark);
+}
+
+.place-side-panel .transit-route-option.active {
+    background: #fff9e8;
+    box-shadow: 0 7px 18px rgba(111, 82, 31, 0.08);
+}
+
+.place-side-panel .transit-route-option .route-summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 11px;
+}
+
+.place-side-panel .route-summary-main {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+
+.place-side-panel .route-summary-main > strong {
+    flex-shrink: 0;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.place-side-panel .route-recommend-badge {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin: 0 !important;
+    padding: 3px 7px;
+    border-radius: 999px;
+    color: #6a4b13 !important;
+    background: var(--yellow-light);
+    font-size: 9px !important;
+    font-weight: 800;
+    line-height: 1.2 !important;
+    white-space: nowrap;
+}
+
+.place-side-panel .route-summary-time {
+    display: block !important;
+    margin: 1px 0 0 !important;
+    color: var(--gray-600) !important;
+    font-size: 10px !important;
+    font-weight: 600;
+    line-height: 1.45 !important;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.place-side-panel .route-summary-time b {
+    color: var(--gray-400);
+    font-weight: 600;
+}
+
+.place-side-panel .transit-route-option .route-line {
+    display: grid;
+    grid-template-columns: 25px minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 8px 9px;
+    border-radius: 10px;
+    background: rgba(246, 201, 69, 0.10);
+}
+
+.place-side-panel .route-mode-icon {
+    width: 25px;
+    height: 25px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--brown);
+    background: var(--yellow-light);
+    font-size: 14px;
+}
+
+.place-side-panel .transit-route-option .route-line p {
+    min-width: 0;
+    margin: 0;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .transit-route-chevron {
+    color: var(--gray-400);
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+
+.place-side-panel .transit-route-option.expanded .transit-route-chevron {
+    transform: rotate(180deg);
+}
+
+/* 상세 경로 */
+.place-side-panel .transit-route-details {
+    display: none;
+    margin-top: 13px;
+    padding-top: 13px;
+    border-top: 1px solid var(--gray-200);
+    cursor: default;
+}
+
+.place-side-panel .transit-route-option.expanded .transit-route-details {
+    display: block;
+}
+
+.place-side-panel .transit-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 13px;
+}
+
+.place-side-panel .transit-detail-header strong {
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.place-side-panel .transit-detail-header span {
+    color: var(--gray-400);
+    font-size: 8px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: right;
+}
+
+.place-side-panel .transit-detail-timeline {
+    display: block;
+}
+
+.place-side-panel .transit-detail-leg {
+    position: relative;
+    padding: 0;
+}
+
+.place-side-panel .transit-detail-leg + .transit-detail-leg {
+    margin-top: 8px;
+}
+
+.place-side-panel .transit-detail-station,
+.place-side-panel .transit-detail-ride,
+.place-side-panel .transit-detail-walk {
+    position: relative;
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 9px;
+}
+
+.place-side-panel .transit-detail-station {
+    align-items: start;
+    min-height: 44px;
+    padding: 1px 0 7px;
+}
+
+.place-side-panel .transit-detail-station::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: 18px;
+    bottom: -7px;
+    width: 1.5px;
+    border-radius: 999px;
+    background: #dec77d;
+}
+
+.place-side-panel .transit-detail-station:last-child::after {
+    display: none;
+}
+
+.place-side-panel .transit-station-dot {
+    position: relative;
+    z-index: 2;
+    width: 10px;
+    height: 10px;
+    margin: 4px 0 0 7px;
+    border: 2px solid var(--yellow-dark);
+    border-radius: 50%;
+    background: var(--white);
+}
+
+.place-side-panel .transit-station-dot.destination {
+    background: var(--yellow);
+}
+
+.place-side-panel .transit-detail-station > div,
+.place-side-panel .transit-detail-ride > div,
+.place-side-panel .transit-detail-walk > div {
+    min-width: 0;
+}
+
+.place-side-panel .transit-detail-station strong {
+    display: block;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.place-side-panel .transit-detail-station span:not(.transit-station-dot) {
+    display: block;
+    margin-top: 2px;
+    color: var(--gray-600);
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.place-side-panel .transit-detail-ride {
+    margin: -1px 0 7px;
+    padding: 10px 10px 10px 0;
+}
+
+.place-side-panel .transit-detail-ride::before {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: -8px;
+    bottom: -8px;
+    width: 2px;
+    border-radius: 999px;
+    background: var(--yellow-dark);
+}
+
+.place-side-panel .transit-detail-icon {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    place-items: start center;
+    padding-top: 1px;
+    color: var(--brown);
+    font-size: 15px;
+}
+
+.place-side-panel .transit-detail-ride .transit-detail-icon {
+    color: var(--yellow-dark);
+}
+
+.place-side-panel .transit-detail-ride > div {
+    padding: 9px 11px;
+    border: 1px solid #eee3c4;
+    border-radius: 11px;
+    background: #fffdf7;
+}
+
+.place-side-panel .transit-detail-ride strong {
+    display: block;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.place-side-panel .transit-detail-ride span {
+    display: block;
+    margin-top: 3px;
+    color: var(--gray-600);
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.55;
+}
+
+.place-side-panel .transit-detail-walk {
+    margin: 8px 0;
+    padding: 9px 10px 9px 0;
+    border-radius: 11px;
+    background: var(--gray-50);
+}
+
+.place-side-panel .transit-detail-walk .transit-detail-icon {
+    color: var(--gray-600);
+}
+
+.place-side-panel .transit-detail-walk strong {
+    display: block;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.place-side-panel .transit-detail-walk span {
+    display: block;
+    margin-top: 2px;
+    color: var(--gray-600);
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+body.dark .place-side-panel .transit-route-option.active {
+    background: #393329;
+}
+
+body.dark .place-side-panel .transit-route-option .route-line {
+    background: rgba(246, 201, 69, 0.08);
+}
+
+body.dark .place-side-panel .transit-detail-ride > div {
+    border-color: #50493b;
+    background: #302d27;
+}
+
+body.dark .place-side-panel .transit-detail-walk {
+    background: #292722;
+}
+
+body.dark .place-side-panel .place-route-panel .route-back-button {
+    border-color: #514b40 !important;
+    color: #ddd6c9 !important;
+    background: #34312b !important;
+}
+
+
+
+/* =====================================================
+   POI 길찾기 집중 모드
+===================================================== */
+.place-side-panel.route-focus .place-content > :not(.place-route-panel) {
+    display: none !important;
+}
+
+.place-side-panel.route-focus .place-content {
+    padding-top: 16px !important;
+}
+
+.place-side-panel.route-focus .place-route-panel {
+    display: block !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top: 0 !important;
+}
+
+.place-side-panel.route-focus .place-image {
+    border-bottom: 1px solid var(--gray-200);
+}
+
+body.dark .place-side-panel.route-focus .place-image {
+    border-bottom-color: #4a4740;
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   장소 상세 - 메뉴 / 리뷰
+===================================================== */
+.place-detail-sections { margin-top: 8px; border-top: 1px solid var(--gray-200); }
+.place-detail-section { padding: 22px 0 24px; border-bottom: 1px solid var(--gray-200); }
+.place-detail-section:last-child { border-bottom: 0; }
+.place-section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.place-section-eyebrow { display: block; margin-bottom: 3px; color: #a08d72; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.place-section-header h3 { margin: 0; color: var(--gray-900); font-size: 18px; }
+.place-section-count, .place-section-link { color: var(--gray-500); font-size: 12px; font-weight: 700; }
+.place-section-link { padding: 6px 9px; border: 0; border-radius: 8px; background: var(--yellow-light); color: var(--brown-dark); cursor: pointer; }
+.place-section-link:hover { background: #ffe9a5; }
+.place-menu-list, .place-review-list { display: flex; flex-direction: column; gap: 10px; }
+.place-menu-item { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; }
+.place-menu-thumb { width: 64px; height: 64px; overflow: hidden; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: #f4f0e8; color: #a79a86; font-size: 18px; }
+.place-menu-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.place-menu-info { min-width: 0; }
+.place-menu-info strong { display: block; overflow: hidden; color: var(--gray-900); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.place-menu-info p { margin: 5px 0 0; overflow: hidden; color: var(--gray-500); font-size: 11px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+.place-menu-price { color: var(--gray-900); font-size: 13px; font-weight: 800; white-space: nowrap; }
+.place-review-summary { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; padding: 13px 14px; border-radius: 12px; background: #fffaf0; }
+.place-review-summary > strong { color: var(--gray-900); font-size: 28px; }
+.place-review-stars { color: #e5a900; font-size: 14px; letter-spacing: 1px; }
+.place-review-summary span { display: block; margin-top: 2px; color: var(--gray-500); font-size: 11px; }
+.place-review-item { padding: 13px 0; border-top: 1px solid var(--gray-100); }
+.place-review-item:first-child { border-top: 0; }
+.place-review-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.place-review-user { color: var(--gray-800); font-size: 12px; font-weight: 800; }
+.place-review-rating { color: #e5a900; font-size: 11px; letter-spacing: 1px; }
+.place-review-content { margin: 7px 0 5px; color: var(--gray-700); font-size: 12px; line-height: 1.55; }
+.place-review-date { color: var(--gray-400); font-size: 10px; }
+.place-empty-text { margin: 6px 0; color: var(--gray-500); font-size: 12px; }
+body.dark .place-detail-sections, body.dark .place-detail-section, body.dark .place-review-item { border-color: var(--gray-200); }
+body.dark .place-review-summary { background: #fffaf0; }
+
+/* MR.EUM 수정부분: Google Maps 스타일 리뷰 작성 UI */
+.review-compose-modal { width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow-y: auto; }
+.review-compose-place { margin: -4px 0 22px; color: var(--gray-500); font-size: 13px; font-weight: 700; }
+.review-compose-block { display: block; margin-top: 20px; }
+.review-compose-block > strong { display: block; margin-bottom: 10px; color: var(--gray-800); font-size: 13px; }
+.review-star-picker { display: flex; gap: 4px; }
+.review-star-picker button { width: 40px; height: 40px; padding: 0; border: 0; background: transparent; color: #d9d2c5; font-size: 32px; cursor: pointer; }
+.review-star-picker button.selected { color: #e5a900; }
+.review-rating-message { margin: 6px 0 0 !important; color: var(--gray-500); font-size: 11px !important; }
+#reviewContent { width: 100%; min-height: 130px; box-sizing: border-box; resize: vertical; padding: 13px; border: 1px solid var(--gray-200); border-radius: 12px; background: var(--white); color: var(--gray-900); outline: none; font: inherit; font-size: 13px; line-height: 1.6; }
+.review-character-count { display: block; margin-top: 5px; text-align: right; color: var(--gray-400); font-size: 10px; }
+.review-photo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.review-photo-add, .review-photo-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 12px; }
+.review-photo-add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px dashed var(--gray-300); background: var(--gray-50); color: var(--gray-500); cursor: pointer; font-size: 10px; }
+.review-photo-add i { font-size: 20px; }
+.review-photo-item img { width: 100%; height: 100%; object-fit: cover; }
+.review-photo-item button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; cursor: pointer; }
+.review-compose-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+@media (max-width: 620px) {
+    .place-menu-item { grid-template-columns: 54px minmax(0, 1fr) auto; }
+    .place-menu-thumb { width: 54px; height: 54px; }
+    .review-photo-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   그룹 저장 버튼은 기존 .place-actions button 스타일을 사용합니다.
+   기존 CSS 레이아웃은 변경하지 않습니다.
+===================================================== */
+
+
+/* =====================================================
+   MR.EUM 수정부분: 리뷰 수정 토글 UI
+===================================================== */
+.place-review-user-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.place-review-edit-toggle { padding: 4px 7px; border: 1px solid var(--gray-200); border-radius: 7px; background: var(--white); color: var(--gray-500); font-size: 10px; cursor: pointer; }
+.place-review-edit-toggle:hover { background: var(--gray-50); color: var(--gray-800); }
+.place-review-edit-stars { display: flex; gap: 2px; margin-bottom: 8px; }
+.place-review-edit-stars button { padding: 0; border: 0; background: transparent; color: #d9d2c5; font-size: 22px; cursor: pointer; }
+.place-review-edit-stars button.selected { color: #e5a900; }
+.place-review-edit textarea { width: 100%; min-height: 90px; box-sizing: border-box; resize: vertical; padding: 10px; border: 1px solid var(--gray-200); border-radius: 10px; background: var(--white); color: var(--gray-900); outline: none; font: inherit; font-size: 12px; line-height: 1.5; }
+.place-review-edit-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+.place-review-edit-actions button { padding: 6px 9px; border-radius: 7px; font-size: 10px; cursor: pointer; }
+.place-review-edit-cancel { border: 1px solid var(--gray-200); background: var(--white); color: var(--gray-600); }
+.place-review-edit-save { border: 0; background: var(--yellow-light); color: var(--brown-dark); font-weight: 700; }
+body.dark .place-review-edit-toggle, body.dark .place-review-edit textarea, body.dark .place-review-edit-cancel { background: var(--white); }
+
+
+/* MR.EUM 수정부분: 내가 작성한 리뷰에만 표시되는 수정 버튼 */
+.place-review-edit-button {
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: underline;
+}
+/* MR.EUM 수정부분: 공유 눌렀을 때 메시지 우선순위 존나 앞으로*/
+.toast {
+    position: fixed !important; /* absolute를 fixed로 변경하여 부모 모달창의 레이어 벽을 파괴 */
+    z-index: 1000000 !important; /* 브라우저 화면 전체에서 가장 높은 우선순위 부여 */
+    left: 50% !important;
+    bottom: 35px !important; /* 화면 아래쪽에서 35px 띄움 */
+    transform: translate(-50%, 20px) !important; /* 중앙 정렬 및 아래에서 위로 튀어나오는 준비 */
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease !important;
+    visibility: hidden;
+    opacity: 0;
+}
+
+.toast.show {
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: translate(-50%, 0) !important; /* 원래 위치로 부드럽게 안착 */
+}
+
+/* =====================================================
+   CHEESE MAP - 장소 상세 액션 버튼 / 확실한 영업 정보만 표시
+===================================================== */
+.place-side-panel .place-title-row .heart-button {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid #eadfca;
+    border-radius: 12px;
+    color: #6f4a28;
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(91, 64, 38, 0.06);
+    cursor: pointer;
+    transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
+}
+
+.place-side-panel .place-title-row .heart-button i {
+    font-size: 20px;
+}
+
+.place-side-panel .place-title-row .heart-button:hover {
+    border-color: #efd27a;
+    background: #fff8dc;
+    transform: translateY(-1px);
+}
+
+.place-side-panel .place-title-row .heart-button.saved,
+.place-side-panel .place-title-row .heart-button:active {
+    border-color: #e8c14b;
+    color: #6a471f;
+    background: #fff1b8;
+}
+
+.place-business-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin: 14px 0 2px;
+    font-size: 13px;
+}
+
+.place-business-info[hidden],
+.place-business-info [hidden] {
+    display: none !important;
+}
+
+.place-business-info .business-status,
+.place-business-info .business-closing {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.place-business-info .business-status {
+    font-weight: 800;
+}
+
+.place-business-info .business-status.is-open {
+    color: #2f8d57;
+}
+
+.place-business-info .business-status.is-closed {
+    color: #8b8177;
+}
+
+.place-business-info .business-status::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.place-business-info .business-closing {
+    padding-left: 10px;
+    border-left: 1px solid #eadfca;
+    color: #766758;
+}
+
+.place-business-info .business-closing strong {
+    color: #3e3025;
+    font-size: 13px;
+}
+
+.place-side-panel .place-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+    padding: 12px 0 2px;
+}
+
+.place-side-panel .place-actions > button {
+    min-width: 0;
+    min-height: 58px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 5px;
+    border: 1px solid #eadfca;
+    border-radius: 13px;
+    color: #5d442e;
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(91, 64, 38, 0.045);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.15;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color .16s ease, background-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+.place-side-panel .place-actions > button i {
+    color: #a66d18;
+    font-size: 19px;
+}
+
+.place-side-panel .place-actions > button:hover {
+    border-color: #efcf6e;
+    background: #fff9e5;
+    box-shadow: 0 5px 12px rgba(91, 64, 38, 0.07);
+    transform: translateY(-1px);
+}
+
+.place-side-panel .place-actions > button:active {
+    transform: translateY(0);
+}
+
+/* 길찾기는 평소 흰색, 실제 길찾기 상태일 때만 연한 치즈색 */
+.place-side-panel #placeRouteButton {
+    border-color: #eadfca;
+    color: #5d442e;
+    background: #ffffff;
+}
+
+body:has(#routePanel.show) .place-side-panel #placeRouteButton {
+    border-color: #e8c95f;
+    color: #513b24;
+    background: #fff3c4;
+}
+
+body:has(#routePanel.show) .place-side-panel #placeRouteButton:hover {
+    background: #ffefb0;
+}
+
+/* 저장 상태도 기존 붉은색 대신 치즈 톤으로 통일 */
+.place-side-panel #saveButton.saved {
+    border-color: #e8c14b;
+    color: #5d442e;
+    background: #fff1b8;
+}
+
+.place-side-panel #saveButton.saved i {
+    color: #9f6814;
+}
+
+@media (max-width: 420px) {
+    .place-side-panel .place-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* =====================================================
+   최소 수정본
+   - 기존 레이아웃/길찾기 동작은 그대로 유지
+   - 리뷰 영역 폭 정상화
+   - 길찾기 입력/버튼 디자인만 치즈 UI로 변경
+===================================================== */
+
+/* place-detail-sections가 기존 place-actions grid 안에 있어도 전체 폭 사용 */
+.place-actions > .place-detail-sections {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+}
+
+.place-actions > .place-detail-sections .place-section-header {
+    width: 100%;
+}
+
+.place-actions > .place-detail-sections #placeReviewWriteButton {
+    writing-mode: horizontal-tb;
+    white-space: nowrap;
+}
+
+/* 길찾기: 위치/크기/표시 방식은 건드리지 않고 내부 UI만 변경 */
+.place-side-panel .place-route-panel label {
+    display: block;
+    color: var(--brown, #5b4026);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.place-side-panel .place-route-panel label > span {
+    display: block;
+    margin-bottom: 7px;
+}
+
+.place-side-panel .place-route-panel input {
+    width: 100%;
+    height: 44px;
+    box-sizing: border-box;
+    padding: 0 13px;
+    border: 1px solid #eadfca;
+    border-radius: 12px;
+    outline: none;
+    background: #fff;
+    color: var(--text, #2d2a26);
+    font: inherit;
+    font-size: 13px;
+}
+
+.place-side-panel .place-route-panel input:focus {
+    border-color: #e4bd3e;
+    box-shadow: 0 0 0 3px rgba(246, 201, 69, .16);
+}
+
+.place-side-panel .place-route-panel .transport-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.place-side-panel .place-route-panel .transport-tabs button {
+    min-width: 0;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 8px;
+    border: 1px solid #eadfca;
+    border-radius: 12px;
+    background: #fff;
+    color: #5b4026;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.place-side-panel .place-route-panel .transport-tabs button i {
+    color: #a66d18;
+    font-size: 17px;
+}
+
+.place-side-panel .place-route-panel .transport-tabs button:hover {
+    background: #fffaf0;
+    border-color: #edcf73;
+}
+
+.place-side-panel .place-route-panel .transport-tabs button.active {
+    background: #fff1b8;
+    border-color: #efc84e;
+    color: #4f3a22;
+}
+
+.place-side-panel .place-route-panel #findRouteButton {
+    width: 100%;
+    height: 46px;
+    margin-top: 12px;
+    border: 1px solid #efc84e;
+    border-radius: 12px;
+    background: #fff1b8;
+    color: #4f3a22;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.place-side-panel .place-route-panel #findRouteButton:hover {
+    background: #ffeaa0;
+}
+
+/* 경로 검색 버튼과 검색 결과가 한 덩어리처럼 붙어 보이지 않도록 간격 분리 */
+.place-side-panel .place-route-panel #routeResult,
+.place-side-panel .place-route-panel .route-result.show {
+    margin-top: 14px !important;
+}
+
+/* ===== Transit readability upgrade (KO / JA / EN) ===== */
+.place-side-panel .route-line-chips {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    color: var(--text);
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 1.45;
+}
+
+.place-side-panel .route-line-chips > em {
+    color: var(--gray-400);
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 800;
+}
+
+.place-side-panel .route-line-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    padding: 4px 7px 4px 5px;
+    border: 1px solid rgba(80, 67, 49, 0.10);
+    border-radius: 999px;
+    background: #fff;
+}
+
+.place-side-panel .route-line-chip > i {
+    width: 7px;
+    height: 20px;
+    flex: 0 0 7px;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.07);
+}
+
+.place-side-panel .route-line-chip > b {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 4px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.place-side-panel .route-line-chip > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .transit-detail-leg {
+    --transit-line-color: var(--yellow-dark);
+}
+
+.place-side-panel .transit-detail-leg + .transit-detail-leg {
+    margin-top: 12px;
+    padding-top: 4px;
+}
+
+.place-side-panel .transit-detail-station::after,
+.place-side-panel .transit-detail-ride::before {
+    background: var(--transit-line-color);
+}
+
+.place-side-panel .transit-detail-ride {
+    margin: 0 0 8px;
+    padding: 8px 8px 8px 0;
+}
+
+.place-side-panel .transit-detail-ride > div {
+    padding: 11px 12px;
+    border: 1px solid color-mix(in srgb, var(--transit-line-color) 28%, #dedede);
+    border-left: 4px solid var(--transit-line-color);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(48, 40, 31, .035);
+}
+
+.place-side-panel .transit-detail-ride .transit-detail-icon {
+    color: var(--transit-line-color);
+}
+
+.place-side-panel .transit-line-title-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+
+.place-side-panel .transit-line-title-row strong {
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .transit-line-code {
+    display: inline-grid !important;
+    place-items: center;
+    flex: 0 0 auto;
+    min-width: 25px;
+    height: 25px;
+    margin: 0 !important;
+    padding: 0 5px;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    color: #fff !important;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.10);
+    font-size: 9px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+}
+
+.place-side-panel .transit-line-swatch {
+    display: inline-block !important;
+    width: 8px;
+    height: 25px;
+    flex: 0 0 8px;
+    margin: 0 !important;
+    border-radius: 999px;
+}
+
+.place-side-panel .transit-ride-meta {
+    margin-top: 6px !important;
+    color: var(--gray-600) !important;
+    font-size: 9.5px !important;
+    font-weight: 650 !important;
+    line-height: 1.55 !important;
+}
+
+.place-side-panel .transit-detail-station {
+    min-height: 46px;
+    padding-bottom: 8px;
+}
+
+.place-side-panel .transit-station-dot {
+    border-color: var(--transit-line-color);
+}
+
+.place-side-panel .transit-station-dot.destination {
+    background: var(--transit-line-color);
+}
+
+.place-side-panel .transit-detail-station strong {
+    font-size: 12.5px;
+}
+
+.place-side-panel .transit-detail-station span:not(.transit-station-dot) {
+    margin-top: 3px;
+    font-size: 9.5px;
+}
+
+.place-side-panel .transit-detail-walk {
+    margin: 10px 0;
+    padding: 10px 11px 10px 0;
+    border: 1px dashed var(--gray-300);
+    background: var(--gray-50);
+}
+
+.place-side-panel .transit-detail-walk::before {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: -10px;
+    bottom: -10px;
+    width: 2px;
+    background: repeating-linear-gradient(to bottom, #aaa 0 4px, transparent 4px 8px);
+}
+
+.place-side-panel .transit-detail-walk .transit-detail-icon {
+    z-index: 2;
+    width: 22px;
+    height: 22px;
+    margin-left: 2px;
+    padding-top: 3px;
+    border-radius: 50%;
+    background: var(--gray-50);
+}
+
+.place-side-panel .transit-detail-header {
+    align-items: flex-start;
+}
+
+.place-side-panel .transit-detail-header strong {
+    font-size: 13px;
+}
+
+.place-side-panel .transit-detail-header span {
+    max-width: 145px;
+    font-size: 8.5px;
+    line-height: 1.45;
+}
+
+body.dark .place-side-panel .route-line-chip,
+body.dark .place-side-panel .transit-detail-ride > div {
+    background: rgba(255,255,255,.045);
+}
+
+
+/* =====================================================
+   Google Places 사진 캐러셀
+===================================================== */
+.place-side-panel .place-image {
+    position: relative;
+    overflow: hidden;
+    background: var(--gray-100);
+}
+
+.google-place-photo-carousel {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #ece8df;
+    user-select: none;
+    touch-action: pan-y;
+}
+
+.google-place-photo-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.32s cubic-bezier(.22,.61,.36,1);
+    will-change: transform;
+}
+
+.google-place-photo-slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.google-place-photo-slide .google-place-main-photo {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+}
+
+.google-place-photo-nav {
+    position: absolute;
+    z-index: 3;
+    top: 50%;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.78);
+    border-radius: 50%;
+    color: #fff;
+    background: rgba(22, 25, 30, .56);
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    transform: translateY(-50%);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: opacity .18s ease, background .18s ease, transform .18s ease;
+}
+
+.google-place-photo-nav:hover:not(:disabled) {
+    background: rgba(22, 25, 30, .72);
+    transform: translateY(-50%) scale(1.04);
+}
+
+.google-place-photo-nav:disabled {
+    opacity: .28;
+    cursor: default;
+}
+
+.google-place-photo-prev { left: 12px; }
+.google-place-photo-next { right: 12px; }
+
+.google-place-photo-dots {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(22, 25, 30, .38);
+    transform: translateX(-50%);
+    backdrop-filter: blur(5px);
+}
+
+.google-place-photo-dot {
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,.55);
+    cursor: pointer;
+    transition: width .18s ease, border-radius .18s ease, background .18s ease;
+}
+
+.google-place-photo-dot.active {
+    width: 18px;
+    border-radius: 999px;
+    background: #fff;
+}
+
+body.dark .google-place-photo-carousel {
+    background: #242424;
+}
+
+@media (max-width: 620px) {
+    .google-place-photo-nav {
+        width: 30px;
+        height: 30px;
+    }
+    .google-place-photo-prev { left: 9px; }
+    .google-place-photo-next { right: 9px; }
+}

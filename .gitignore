@@ -19,6 +19,35 @@
 *.tar.gz
 *.rar
 
+# Keep Gradle Wrapper jar
+!**/gradle-wrapper.jar
+
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Gradle
+.gradle/
+**/build/
+!src/**/build/
+
+# IDE / local compile output
+bin/
+out/
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Spring Boot
+*.pid
+*.seed
+*.pid.lock
+
+# Local env / secrets (prefer env vars over committing real keys)
+.env
+.env.*
+!.env.example
