@@ -1375,7 +1375,49 @@ body.dark .mypage-edit-button {
 
 
 /* Transitous 대중교통 경로 */
-.transit-data-credit{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--gray-200);color:var(--gray-600);font-size:10px;line-height:1.5;text-align:center}.transit-data-credit a{color:var(--brown);font-weight:700;text-underline-offset:2px}.transit-route-option{width:100%;margin:0 0 10px;padding:12px;border:1px solid var(--gray-200);border-radius:13px;background:var(--white);color:var(--text);text-align:left;cursor:pointer}.transit-route-option:hover,.transit-route-option.active{border-color:var(--yellow-dark);background:var(--yellow-light)}.transit-route-option .route-summary{display:flex;align-items:center;justify-content:space-between;gap:10px}.transit-route-option .route-summary span{color:var(--gray-600);font-size:11px;text-align:right}.transit-route-option .route-line p{overflow-wrap:anywhere}
+.transit-data-credit {
+    margin:10px 0 0;
+    padding-top:10px;
+    border-top:1px solid var(--gray-200);
+    color:var(--gray-600);
+    font-size:10px;
+    line-height:1.5;
+    text-align:center
+}
+.transit-data-credit a {
+    color:var(--brown);
+    font-weight:700;
+    text-underline-offset:2px
+}
+.transit-route-option {
+    width:100%;
+    margin:0 0 10px;
+    padding:12px;
+    border:1px solid var(--gray-200);
+    border-radius:13px;
+    background:var(--white);
+    color:var(--text);
+    text-align:left;
+    cursor:pointer
+}
+.transit-route-option:hover,.transit-route-option.active {
+    border-color:var(--yellow-dark);
+    background:var(--yellow-light)
+}
+.transit-route-option .route-summary {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px
+}
+.transit-route-option .route-summary span {
+    color:var(--gray-600);
+    font-size:11px;
+    text-align:right
+}
+.transit-route-option .route-line p {
+    overflow-wrap:anywhere
+}
 
 
 

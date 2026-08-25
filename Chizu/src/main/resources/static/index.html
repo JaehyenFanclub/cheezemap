@@ -645,8 +645,8 @@
                             현재 지역
                         </small>
 
-                        <strong data-i18n="map.shinjuku">
-                            도쿄도 신주쿠구
+                        <strong id="currentAreaName">
+                            위치 확인 중
                         </strong>
                     </div>
 
@@ -2037,7 +2037,13 @@
 
             <label class="review-compose-block" for="reviewContent">
                 <strong data-i18n="review.contentLabel">리뷰 내용</strong>
-                <textarea id="reviewContent" maxlength="500" rows="6" data-i18n-placeholder="review.contentPlaceholder" placeholder="리뷰를 작성해주세요."></textarea>
+                <textarea
+                    id="reviewContent"
+                    maxlength="500"
+                    rows="6"
+                    data-i18n-placeholder="review.contentPlaceholder"
+                    placeholder="리뷰를 작성해주세요."
+                ></textarea>
                 <span class="review-character-count" id="reviewCharacterCount">0/500</span>
             </label>
 
@@ -2083,7 +2089,7 @@
     -->
 
     <script
-        src="https://maps.googleapis.com/maps/api/js?key={GoogleApiKey}&callback=initGoogleMap&loading=async&libraries=places,routes&language=ja&region=JP&v=weekly"
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDVHhGDijK1dZClySXTSNAQDGyVwP_FLmg&callback=initGoogleMap&loading=async&libraries=places,routes,marker&language=ja&region=JP&v=weekly"
         async
         defer
        
