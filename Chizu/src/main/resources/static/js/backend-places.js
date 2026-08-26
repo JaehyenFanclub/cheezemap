@@ -164,7 +164,8 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
             const normalized = {
                 ...autoPlace,
                 autoPlaceId: String(autoPlace.autoPlaceId),
-                googlePlaceId: String(autoPlace.autoPlaceId || descriptor.googlePlaceId),
+                // Google Place ID는 AutoPlace ID와 별개이므로 원래 Google ID를 유지합니다.
+                googlePlaceId: String(descriptor.googlePlaceId),
                 placeName: autoPlace.name || descriptor.name,
                 placeCategory: autoPlace.category || descriptor.category,
                 placeAddress: autoPlace.address || descriptor.address,
@@ -177,8 +178,49 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
                 isAutoPlace: true
             };
 
-            // AutoPlace는 String ID 구조입니다. 숫자 Place ID가 필요한 리뷰/메뉴 API에는
-            // undefined를 보내지 않도록 호출부에서 명시적으로 구분합니다.
+            /*
+                리뷰 API는 /place/{placeId}/review 형태의 숫자 placeId를 사용합니다.
+                Google POI도 리뷰를 작성할 수 있도록 로그인 상태에서는 Google Place ID를
+                기존 Place 테이블과 한 번 연결합니다. PlaceService가 googlePlaceId 중복을
+                확인하므로 같은 Google 장소를 여러 번 눌러도 Place 행이 계속 생기지 않습니다.
+            */
+            if (getAuthToken()) {
+                const reviewPlace = await apiRequest("/place", {
+                    method: "POST",
+                    auth: true,
+                    body: {
+                        googlePlaceId: descriptor.googlePlaceId,
+                        placeName: normalized.placeName,
+                        placeCategory: normalized.placeCategory,
+                        placeAddress: normalized.placeAddress,
+                        placePhone: descriptor.phone || "",
+                        placeInformation: `Google Maps POI / ${descriptor.googlePlaceId}`,
+                        placeDate: new Date().toISOString(),
+                        placeLatitude: Number.isFinite(Number(normalized.placeLatitude))
+                            ? Number(normalized.placeLatitude)
+                            : null,
+                        placeLongitude: Number.isFinite(Number(normalized.placeLongitude))
+                            ? Number(normalized.placeLongitude)
+                            : null
+                    }
+                });
+
+                const linked = {
+                    ...normalized,
+                    ...reviewPlace,
+                    autoPlaceId: normalized.autoPlaceId,
+                    googlePlaceId: descriptor.googlePlaceId,
+                    photoUrls: normalized.photoUrls,
+                    rating: normalized.rating,
+                    userRatingCount: normalized.userRatingCount,
+                    externalKey: descriptor.externalKey,
+                    isAutoPlace: true
+                };
+
+                rememberBackendPlace(descriptor.externalKey, linked);
+                return linked;
+            }
+
             backendPlaceCache.set(descriptor.externalKey, normalized);
             return normalized;
         })();

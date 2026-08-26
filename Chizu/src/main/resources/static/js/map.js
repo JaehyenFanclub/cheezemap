@@ -3139,10 +3139,12 @@ function updatePlaceCard(placeKey) {
     }
 
     if (placeReviewCount) {
+        // 상단 리뷰 수는 Google/샘플 값이 아니라 치즈맵 DB 리뷰 개수로 표시한다.
+        // 실제 개수는 reviews.js의 renderPlaceReviews()가 조회 후 갱신한다.
         placeReviewCount.textContent =
             currentLanguage === "ko"
-                ? `리뷰 ${place.reviewCount.toLocaleString()}개`
-                : `レビュー ${place.reviewCount.toLocaleString()}件`;
+                ? "리뷰 0개"
+                : "レビュー 0件";
     }
 
     if (placeAddress) {
@@ -4048,11 +4050,8 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
         ? directRating
         : backendRating;
 
-    const directReviewCount = Number(poi?.userRatingCount);
-    const backendReviewCount = Number(autoPlace?.userRatingCount);
-    const reviewCount = Number.isFinite(directReviewCount) && directReviewCount > 0
-        ? directReviewCount
-        : backendReviewCount;
+    // Google userRatingCount는 카드에 표시하지 않는다.
+    // 상단 리뷰 수는 reviews.js에서 치즈맵 DB의 실제 리뷰 개수로 갱신한다.
 
     const placeName = document.getElementById("placeName");
     const placeCategory = document.getElementById("placeCategory");
@@ -4079,13 +4078,9 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
             : "-";
     }
 
-    const reviewText = Number.isFinite(reviewCount)
-        ? currentLanguage === "ko"
-            ? `리뷰 ${reviewCount.toLocaleString()}개`
-            : `レビュー ${reviewCount.toLocaleString()}件`
-        : currentLanguage === "ko"
-            ? "리뷰 정보 없음"
-            : "レビュー情報なし";
+    const reviewText = currentLanguage === "ko"
+        ? "리뷰 0개"
+        : "レビュー 0件";
 
     if (placeReview) {
         placeReview.textContent = reviewText;

@@ -331,9 +331,11 @@ document.getElementById("reviewComposeSubmitButton")?.addEventListener("click", 
                 selectedPlaceKey
             );
 
-        if (!backendPlace?.placeId) {
+        const reviewPlaceId = Number(backendPlace?.placeId);
+
+        if (!Number.isFinite(reviewPlaceId) || reviewPlaceId <= 0) {
             throw new Error(
-                "리뷰를 저장할 장소 ID를 확인하지 못했습니다."
+                "이 장소를 리뷰 저장용 장소와 연결하지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해주세요."
             );
         }
 
@@ -361,7 +363,7 @@ document.getElementById("reviewComposeSubmitButton")?.addEventListener("click", 
         );
 
         await apiRequest(
-            `/place/${backendPlace.placeId}/review`,
+            `/place/${reviewPlaceId}/review`,
             {
                 method:
                     "POST",
@@ -375,9 +377,7 @@ document.getElementById("reviewComposeSubmitButton")?.addEventListener("click", 
         );
 
         reviewCacheByPlace.delete(
-            String(
-                backendPlace.placeId
-            )
+            String(reviewPlaceId)
         );
 
         closeModal(
@@ -485,6 +485,45 @@ document.getElementById("placeReviewList")?.addEventListener("click", async even
     }
 });
 
+async function openMyReviewPlace(placeId) {
+    const backendPlace = await getBackendPlaceById(placeId);
+    const position = {
+        lat: Number(backendPlace?.placeLatitude),
+        lng: Number(backendPlace?.placeLongitude)
+    };
+
+    closeModal(mypageModal);
+
+    if (
+        backendPlace?.googlePlaceId &&
+        typeof openGooglePoi === "function"
+    ) {
+        await openGooglePoi(
+            backendPlace.googlePlaceId,
+            Number.isFinite(position.lat) && Number.isFinite(position.lng)
+                ? position
+                : null,
+            backendPlace.placeName || ""
+        );
+        return;
+    }
+
+    const key = await backendPlaceIdToFrontendKey(placeId);
+    if (key && places[key]) {
+        openPlace(key);
+        googleMap?.panTo(places[key].position);
+        googleMap?.setZoom(15);
+        return;
+    }
+
+    if (Number.isFinite(position.lat) && Number.isFinite(position.lng)) {
+        googleMap?.panTo(position);
+        googleMap?.setZoom(15);
+    }
+
+    showToast("장소 상세정보를 열 수 없습니다.");
+}
+
 /* 마이페이지의 내 리뷰를 서버 데이터로 교체 */
 async function renderMyReviews(container) {
     if (!getAuthToken()) {
@@ -589,11 +628,6 @@ async function renderMyReviews(container) {
                         );
                     });
 
-            const key =
-                await backendPlaceIdToFrontendKey(
-                    placeId
-                );
-
             mine.forEach(review => {
                 cards.push(`
                     <article
@@ -607,26 +641,25 @@ async function renderMyReviews(container) {
                                 ${getReviewStars(review.rating)}
                             </span>
 
-                            <small class="mypage-review-place">
-                                ${escapeGroupHtml(place?.placeName || "장소")}
-                            </small>
+                            <div class="mypage-review-place-row">
+                                <i class="ti ti-map-pin"></i>
+                                <strong class="mypage-review-place">
+                                    ${escapeGroupHtml(place?.placeName || "장소")}
+                                </strong>
+                            </div>
 
                             <p>
                                 ${escapeGroupHtml(review.content)}
                             </p>
 
                             <div class="mypage-card-actions">
-                                ${
-                                    key &&
-                                    places[key]
-                                        ? `<button
-                                                type="button"
-                                                data-open-place="${key}"
-                                           >
-                                                장소 보기
-                                           </button>`
-                                        : ""
-                                }
+                                <button
+                                    type="button"
+                                    class="mypage-place-view-button"
+                                    data-open-review-place="${placeId}"
+                                >
+                                    장소 보기
+                                </button>
 
                                 <button
                                     type="button"
@@ -704,35 +737,7 @@ async function renderMyReviews(container) {
         container.innerHTML =
             cards.join("");
 
-        container
-            .querySelectorAll(
-                "[data-open-place]"
-            )
-            .forEach(button => {
-                button.addEventListener(
-                    "click",
-                    () => {
-                        const key =
-                            button.dataset.openPlace;
 
-                        closeModal(
-                            mypageModal
-                        );
-
-                        openPlace(
-                            key
-                        );
-
-                        googleMap?.panTo(
-                            places[key].position
-                        );
-
-                        googleMap?.setZoom(
-                            15
-                        );
-                    }
-                );
-            });
 
     } catch (error) {
         console.error(
@@ -782,6 +787,16 @@ document
                 !reviewId ||
                 !placeId
             ) {
+                return;
+            }
+
+            if (event.target.closest("[data-open-review-place]")) {
+                try {
+                    await openMyReviewPlace(placeId);
+                } catch (error) {
+                    console.error("장소 보기 실패:", error);
+                    showToast(error.message || "장소를 열지 못했습니다.");
+                }
                 return;
             }
 

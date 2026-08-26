@@ -466,10 +466,13 @@ async function renderMyReviews(container) {
             return `
                 <article class="mypage-card" data-my-review-id="${review.reviewId}" data-my-review-place-id="${review.placeId}" data-my-review-place-key="${frontendKey || ""}" data-edit-rating="${review.rating}">
                     <span>${getReviewStars(review.rating)}</span>
-                    <small class="mypage-review-place">${escapeGroupHtml(placeName)}</small>
+                    <div class="mypage-review-place-row">
+                        <i class="ti ti-map-pin"></i>
+                        <strong class="mypage-review-place">${escapeGroupHtml(placeName)}</strong>
+                    </div>
                     <p>${escapeGroupHtml(review.content || "")}</p>
                     <div class="mypage-card-actions">
-                        ${frontendKey && places[frontendKey] ? `<button type="button" data-open-place="${frontendKey}">${currentLanguage === "ko" ? "장소 보기" : "場所を見る"}</button>` : ""}
+                        <button type="button" class="mypage-place-view-button" data-open-review-place="${review.placeId}">${currentLanguage === "ko" ? "장소 보기" : "場所を見る"}</button>
                         <button type="button" data-my-review-edit-toggle aria-expanded="false">${currentLanguage === "ko" ? "수정" : "編集"}</button>
                     </div>
                     <div class="place-review-edit mypage-review-edit" data-my-review-edit hidden>

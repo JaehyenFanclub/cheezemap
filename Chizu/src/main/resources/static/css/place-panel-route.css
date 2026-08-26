@@ -1754,3 +1754,31 @@ body.dark .google-place-photo-carousel {
     .google-place-photo-prev { left: 9px; }
     .google-place-photo-next { right: 9px; }
 }
+
+
+/* 리뷰 등록 버튼: 상단 활성 카테고리와 같은 치즈 노랑 톤 */
+#reviewComposeSubmitButton {
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid #e6a900;
+    border-radius: 10px;
+    background: #ffd65a;
+    color: #3e3014;
+    font-weight: 800;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+#reviewComposeSubmitButton:hover:not(:disabled) {
+    border-color: #d99f00;
+    background: #f8c83f;
+}
+
+#reviewComposeSubmitButton:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+#reviewComposeSubmitButton:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
