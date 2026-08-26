@@ -318,13 +318,10 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
             const normalized = {
                 ...autoPlace,
                 autoPlaceId: String(autoPlace.autoPlaceId),
-<<<<<<< HEAD
-                // Google Place ID는 AutoPlace ID와 별개이므로 원래 Google ID를 유지합니다.
-                googlePlaceId: String(descriptor.googlePlaceId),
-=======
+                // AutoPlace API가 Place getOrCreate 후 placeId를 내려줍니다.
                 placeId: Number.isFinite(placeId) && placeId > 0 ? placeId : null,
-                googlePlaceId: String(autoPlace.googlePlaceId || autoPlace.autoPlaceId || googlePlaceId),
->>>>>>> 19cdb77061ef00fef0daf57613101d15eb48b0dd
+                // Google Place ID는 정규화된 값을 유지합니다.
+                googlePlaceId: String(googlePlaceId),
                 placeName: autoPlace.name || descriptor.name,
                 placeCategory: autoPlace.category || descriptor.category,
                 placeAddress: autoPlace.address || descriptor.address,
@@ -339,52 +336,8 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
                 isAutoPlace: true
             };
 
-<<<<<<< HEAD
-            /*
-                리뷰 API는 /place/{placeId}/review 형태의 숫자 placeId를 사용합니다.
-                Google POI도 리뷰를 작성할 수 있도록 로그인 상태에서는 Google Place ID를
-                기존 Place 테이블과 한 번 연결합니다. PlaceService가 googlePlaceId 중복을
-                확인하므로 같은 Google 장소를 여러 번 눌러도 Place 행이 계속 생기지 않습니다.
-            */
-            if (getAuthToken()) {
-                const reviewPlace = await apiRequest("/place", {
-                    method: "POST",
-                    auth: true,
-                    body: {
-                        googlePlaceId: descriptor.googlePlaceId,
-                        placeName: normalized.placeName,
-                        placeCategory: normalized.placeCategory,
-                        placeAddress: normalized.placeAddress,
-                        placePhone: descriptor.phone || "",
-                        placeInformation: `Google Maps POI / ${descriptor.googlePlaceId}`,
-                        placeDate: new Date().toISOString(),
-                        placeLatitude: Number.isFinite(Number(normalized.placeLatitude))
-                            ? Number(normalized.placeLatitude)
-                            : null,
-                        placeLongitude: Number.isFinite(Number(normalized.placeLongitude))
-                            ? Number(normalized.placeLongitude)
-                            : null
-                    }
-                });
-
-                const linked = {
-                    ...normalized,
-                    ...reviewPlace,
-                    autoPlaceId: normalized.autoPlaceId,
-                    googlePlaceId: descriptor.googlePlaceId,
-                    photoUrls: normalized.photoUrls,
-                    rating: normalized.rating,
-                    userRatingCount: normalized.userRatingCount,
-                    externalKey: descriptor.externalKey,
-                    isAutoPlace: true
-                };
-
-                rememberBackendPlace(descriptor.externalKey, linked);
-                return linked;
-            }
-
-            backendPlaceCache.set(descriptor.externalKey, normalized);
-=======
+            // Place는 백엔드 AutoPlace → getOrCreateFromAutoPlace 로 이미 연결됩니다.
+            // 여기서 POST /place 를 다시 호출하면 중복 Place가 생길 수 있습니다.
             if (normalized.placeId) {
                 rememberBackendPlace(descriptor.externalKey, normalized);
                 if (
@@ -398,7 +351,6 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
             } else {
                 backendPlaceCache.set(descriptor.externalKey, normalized);
             }
->>>>>>> 19cdb77061ef00fef0daf57613101d15eb48b0dd
             return normalized;
         })();
 

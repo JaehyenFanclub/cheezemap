@@ -1,42 +1,4 @@
 
-async function debugGooglePlaceDetails(placeId) {
-    if (!placeId || !google?.maps?.places?.Place) {
-        console.warn("DEBUG PLACE: invalid placeId or Places library unavailable", placeId);
-        return null;
-    }
-
-    try {
-        const place = new google.maps.places.Place({ id: placeId });
-        await place.fetchFields({
-            fields: [
-                "id",
-                "displayName",
-                "photos",
-                "rating",
-                "userRatingCount",
-                "types",
-                "formattedAddress"
-            ]
-        });
-
-        console.log("PLACE DETAILS:", {
-            id: place.id,
-            name: place.displayName,
-            photos: place.photos,
-            photoCount: Array.isArray(place.photos) ? place.photos.length : 0,
-            rating: place.rating,
-            userRatingCount: place.userRatingCount,
-            types: place.types,
-            address: place.formattedAddress
-        });
-
-        return place;
-    } catch (error) {
-        console.error("PLACE DETAILS DEBUG ERROR:", error);
-        return null;
-    }
-}
-
 /* =====================================================
    커스텀 지도 마커
 ===================================================== */
@@ -253,14 +215,6 @@ function bindGoogleMapRuntime() {
     createStationClickAreas();
 
     googleMap.addListener("click", handleGoogleMapClick);
-    googleMap.addListener("click", (event) => {
-        console.log("MAP CLICK EVENT:", event);
-        console.log("PLACE ID:", event?.placeId ?? null);
-
-        if (event?.placeId) {
-            debugGooglePlaceDetails(event.placeId);
-        }
-    });
     // Google 지도에서 역 이름 텍스트는 placeId가 잘 들어오지만,
     // JR/전철/지하철 아이콘은 placeId 없이 클릭되는 경우가 있다.
     // 그런 아이콘 클릭만 별도로 잡아서 주변의 실제 역 Place로 연결한다.
@@ -3109,6 +3063,14 @@ function getPlaceDisplayName(name = "") {
     return String(name || "").trim();
 }
 
+/** 리뷰가 없으면 카드 상단 별점/리뷰 수 행을 숨깁니다. */
+function setPlaceCardRatingRowVisible(reviewCount) {
+    const ratingRow = document.querySelector("#placeCard .rating-row");
+    if (!ratingRow) return;
+    const count = Number(reviewCount);
+    ratingRow.hidden = !(Number.isFinite(count) && count > 0);
+}
+
 
 function isStationPoiType(type = "") {
     return [
@@ -3188,14 +3150,6 @@ function updatePlaceCard(placeKey) {
     }
 
     if (placeReviewCount) {
-<<<<<<< HEAD
-        // 상단 리뷰 수는 Google/샘플 값이 아니라 치즈맵 DB 리뷰 개수로 표시한다.
-        // 실제 개수는 reviews.js의 renderPlaceReviews()가 조회 후 갱신한다.
-        placeReviewCount.textContent =
-            currentLanguage === "ko"
-                ? "리뷰 0개"
-                : "レビュー 0件";
-=======
         const count = Number(place.reviewCount || 0);
         placeReviewCount.textContent =
             currentLanguage === "ko"
@@ -3203,7 +3157,9 @@ function updatePlaceCard(placeKey) {
                 : currentLanguage === "en"
                     ? `${count.toLocaleString()} reviews`
                     : `レビュー ${count.toLocaleString()}件`;
->>>>>>> 19cdb77061ef00fef0daf57613101d15eb48b0dd
+        setPlaceCardRatingRowVisible(count);
+    } else {
+        setPlaceCardRatingRowVisible(place.reviewCount);
     }
 
     if (placeAddress) {
@@ -4098,14 +4054,8 @@ async function renderGooglePoiMainPhoto(placeImage, placeIcon, poi, autoPlace, v
     updateCarousel(0);
 }
 
-function debugGooglePoiPhotos(poi, autoPlace) {
-    const directPhotos = Array.isArray(poi?.photos) ? poi.photos : [];
-    const backendUrls = Array.isArray(autoPlace?.photoUrls) ? autoPlace.photoUrls : [];
-}
-
 function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
     const { loadPhoto = true, forceTransportCategory = false } = options;
-    debugGooglePoiPhotos(poi, autoPlace);
     const name =
         poi.displayName ||
         (currentLanguage === "ko"
@@ -4130,27 +4080,17 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
     );
     const directRating = Number(poi?.rating);
     const backendRating = Number(autoPlace?.rating);
-<<<<<<< HEAD
-    const rating = Number.isFinite(directRating) && directRating > 0
-        ? directRating
-        : backendRating;
-
-    // Google userRatingCount는 카드에 표시하지 않는다.
-    // 상단 리뷰 수는 reviews.js에서 치즈맵 DB의 실제 리뷰 개수로 갱신한다.
-=======
     const rating = hasPlaceStats && Number.isFinite(placeAvg)
         ? placeAvg
         : (Number.isFinite(directRating) && directRating > 0
             ? directRating
             : backendRating);
-    const directReviewCount = Number(poi?.userRatingCount);
-    const backendReviewCount = Number(autoPlace?.userRatingCount);
+
+    // Google userRatingCount는 카드에 표시하지 않는다.
+    // Place가 있으면 Cheese Map 리뷰 수, 없으면 0으로 두고 reviews.js가 DB 개수로 갱신한다.
     const reviewCount = hasPlaceStats && Number.isFinite(placeReviews)
         ? placeReviews
-        : (Number.isFinite(directReviewCount) && directReviewCount > 0
-            ? directReviewCount
-            : backendReviewCount);
->>>>>>> 19cdb77061ef00fef0daf57613101d15eb48b0dd
+        : 0;
 
     const placeName = document.getElementById("placeName");
     const placeCategory = document.getElementById("placeCategory");
@@ -4179,21 +4119,12 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
             : "-";
     }
 
-<<<<<<< HEAD
+    const safeReviewCount = Number.isFinite(reviewCount) ? reviewCount : 0;
     const reviewText = currentLanguage === "ko"
-        ? "리뷰 0개"
-        : "レビュー 0件";
-=======
-    const reviewText = Number.isFinite(reviewCount)
-        ? currentLanguage === "ko"
-            ? `리뷰 ${reviewCount.toLocaleString()}개`
-            : currentLanguage === "en"
-                ? `${reviewCount.toLocaleString()} reviews`
-                : `レビュー ${reviewCount.toLocaleString()}件`
-        : currentLanguage === "ko"
-            ? "리뷰 정보 없음"
-            : "レビュー情報なし";
->>>>>>> 19cdb77061ef00fef0daf57613101d15eb48b0dd
+        ? `리뷰 ${safeReviewCount.toLocaleString()}개`
+        : currentLanguage === "en"
+            ? `${safeReviewCount.toLocaleString()} reviews`
+            : `レビュー ${safeReviewCount.toLocaleString()}件`;
 
     if (placeReview) {
         placeReview.textContent = reviewText;
@@ -4202,6 +4133,8 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
     if (placeReviewCount) {
         placeReviewCount.textContent = reviewText;
     }
+
+    setPlaceCardRatingRowVisible(safeReviewCount);
 
     if (placeAddress) {
         placeAddress.textContent =
