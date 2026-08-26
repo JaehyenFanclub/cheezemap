@@ -969,6 +969,10 @@ async function savePlaceToSelectedGroup() {
             await ensureBackendPlace(
                 placeKey
             );
+        const placeId = Number(backendPlace?.placeId);
+        if (!Number.isFinite(placeId) || placeId <= 0) {
+            throw new Error("장소를 서버에 연결하지 못했습니다. 다시 시도해 주세요.");
+        }
 
         const group =
             groupCache.find(
@@ -982,11 +986,7 @@ async function savePlaceToSelectedGroup() {
         const alreadySaved =
             group?.placeBackendIds
                 ?.map(Number)
-                .includes(
-                    Number(
-                        backendPlace.placeId
-                    )
-                );
+                .includes(placeId);
 
         if (!alreadySaved) {
             await apiRequest(
@@ -997,10 +997,7 @@ async function savePlaceToSelectedGroup() {
                     auth:
                         true,
                     body: {
-                        placeId:
-                            Number(
-                                backendPlace.placeId
-                            ),
+                        placeId,
                         groupId
                     }
                 }
@@ -1091,11 +1088,22 @@ function toInputDate(value) {
 }
 
 async function hydrateGroup(raw) {
-    const placeBackendIds = raw.placeIds || raw.placeId || [];
+    const placeBackendIds = []
+        .concat(raw.placeIds ?? raw.placeId ?? [])
+        .map(Number)
+        .filter(id => Number.isFinite(id) && id > 0);
+
     const placeIds = [];
     for (const backendId of placeBackendIds) {
-        const key = await backendPlaceIdToFrontendKey(backendId);
-        if (key && places[key]) placeIds.push(key);
+        try {
+            const data = await getBackendPlaceById(backendId);
+            const key = typeof registerFrontendPlaceFromBackend === "function"
+                ? registerFrontendPlaceFromBackend(data)
+                : await backendPlaceIdToFrontendKey(backendId);
+            if (key) placeIds.push(key);
+        } catch (error) {
+            console.warn("그룹 장소 로드 실패:", backendId, error);
+        }
     }
     return {
         groupId: raw.groupId,
@@ -1103,7 +1111,7 @@ async function hydrateGroup(raw) {
         groupMemo: raw.groupMemo || "",
         groupName: raw.groupName,
         placeIds,
-        placeBackendIds: placeBackendIds.map(Number)
+        placeBackendIds
     };
 }
 

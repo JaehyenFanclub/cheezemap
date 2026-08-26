@@ -9,7 +9,7 @@ import org.example.autoPlace.Entity.AutoPlace;
 import org.example.autoPlace.Entity.AutoPlacePhoto;
 import org.example.autoPlace.Repository.AutoPlaceRepository;
 import org.example.place.domain.Place;
-import org.example.place.repository.PlaceRepository;
+import org.example.place.service.PlaceService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -27,7 +27,7 @@ import java.util.*;
 public class AutoPlaceService {
 
     private final AutoPlaceRepository autoPlaceRepository;
-    private final PlaceRepository placeRepository;
+    private final PlaceService placeService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -57,6 +57,9 @@ public class AutoPlaceService {
         }
 
         String normalizedPlaceId = placeId.trim();
+        if (normalizedPlaceId.startsWith("places/")) {
+            normalizedPlaceId = normalizedPlaceId.substring("places/".length());
+        }
 
         /*
          * 지도 카드/리뷰/그룹 렌더링이 거의 동시에 같은 장소를 요청할 수 있습니다.
@@ -69,16 +72,16 @@ public class AutoPlaceService {
                 AutoPlace place = existing.get();
                 // 사진은 이미 있으면 유지하고, 비어 있을 때만 Google에서 다시 채웁니다.
                 if (hasPhotos(place)) {
-                    return AutoPlaceResponseDto.fromEntity(place);
+                    return toResponse(place);
                 }
 
                 GooglePlaceResponseDTO googleData = fetchFromGoogleApi(normalizedPlaceId);
                 if (googleData != null) {
                     applyPhotosFromGoogle(place, googleData);
                     AutoPlace saved = autoPlaceRepository.saveAndFlush(place);
-                    return AutoPlaceResponseDto.fromEntity(saved);
+                    return toResponse(saved);
                 }
-                return AutoPlaceResponseDto.fromEntity(place);
+                return toResponse(place);
             }
 
             GooglePlaceResponseDTO googleData = fetchFromGoogleApi(normalizedPlaceId);
@@ -117,8 +120,13 @@ public class AutoPlaceService {
             applyPhotosFromGoogle(place, googleData);
 
             AutoPlace savedAutoPlace = autoPlaceRepository.saveAndFlush(place);
-            return AutoPlaceResponseDto.fromEntity(savedAutoPlace);
+            return toResponse(savedAutoPlace);
         }
+    }
+
+    private AutoPlaceResponseDto toResponse(AutoPlace autoPlace) {
+        Place place = placeService.getOrCreateFromAutoPlace(autoPlace);
+        return AutoPlaceResponseDto.fromEntity(autoPlace, place);
     }
 
     private boolean hasPhotos(AutoPlace place) {
