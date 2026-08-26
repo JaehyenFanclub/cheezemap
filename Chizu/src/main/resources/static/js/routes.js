@@ -328,10 +328,9 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
     clearRenderedRoute();
 
     /*
-        치즈맵 길찾기 공통 컬러.
-        출발/도착 마커와 자연스럽게 이어지는 치즈 골드 계열을 사용하고,
-        도보만 점선으로 구분해 모드 차이를 한눈에 알아볼 수 있게 한다.
-        밝은 크림색 halo를 얇게 깔아 라이트/다크 지도 모두에서 가독성을 유지한다.
+        길찾기 경로는 Google Maps에 가까운 단순한 블루 계열로 통일한다.
+        기존 치즈색 halo/메인선 조합은 떠 보일 수 있어, 흰색 halo + 블루 본선으로 정리한다.
+        도보는 같은 톤의 점선으로만 차이를 주고, 출발/도착은 별도 핀으로 구분한다.
     */
     const path = Array.isArray(route.path)
         ? route.path.filter(Boolean)
@@ -344,14 +343,16 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
 
     const isWalking = travelMode === "WALKING";
 
-    const haloLine = new google.maps.Polyline({
-        map: googleMap,
-        path,
-        strokeColor: "#FFF6D8",
-        strokeOpacity: 0.78,
-        strokeWeight: isWalking ? 6 : 7,
-        zIndex: 9
-    });
+    const haloLine = !isWalking
+        ? new google.maps.Polyline({
+            map: googleMap,
+            path,
+            strokeColor: "#FFFFFF",
+            strokeOpacity: 0.92,
+            strokeWeight: 8,
+            zIndex: 9
+        })
+        : null;
 
     let routeLine;
 
@@ -364,28 +365,30 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
             zIndex: 10,
             icons: [{
                 icon: {
-                    path: "M 0,-1 0,1",
-                    strokeColor: "#D9A514",
-                    strokeOpacity: 0.98,
-                    strokeWeight: 3.2,
-                    scale: 2.1
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: "#4285F4",
+                    fillOpacity: 1,
+                    strokeColor: "#FFFFFF",
+                    strokeOpacity: 0.95,
+                    strokeWeight: 1,
+                    scale: 4.6
                 },
                 offset: "0",
-                repeat: "10px"
+                repeat: "14px"
             }]
         });
     } else {
         routeLine = new google.maps.Polyline({
             map: googleMap,
             path,
-            strokeColor: "#D9A514",
-            strokeOpacity: 0.98,
+            strokeColor: "#4285F4",
+            strokeOpacity: 1,
             strokeWeight: 5,
             zIndex: 10
         });
     }
 
-    routePolylines = [haloLine, routeLine];
+    routePolylines = haloLine ? [haloLine, routeLine] : [routeLine];
 
     const startInputValue =
         document.getElementById("startPoint")?.value || "";
@@ -398,12 +401,12 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
                 : (currentLanguage === "ko" ? "출발" : "出発")
             : (currentLanguage === "ko" ? "도착" : "到着");
 
-        const marker = new google.maps.Marker({
-            map: googleMap,
+        const marker = createGoogleStyleRouteMarker({
             position,
-            clickable: false,
+            type,
+            text: markerText,
             zIndex: 30,
-            icon: createCheeseRouteMarkerIcon(type, markerText)
+            clickable: false
         });
 
         routeMarkers.push(marker);
@@ -463,8 +466,36 @@ async function selectRoute(index) {
 ===================================================== */
 
 function decodeTransitousPolyline(encoded, precision = 6) {
-    const coords=[]; const factor=10**precision; let i=0,lat=0,lng=0;
-    while(i<encoded.length){let result=0,shift=0,b;do{b=encoded.charCodeAt(i++)-63;result|=(b&31)<<shift;shift+=5;}while(b>=32&&i<encoded.length);lat+=(result&1)?~(result>>1):(result>>1);result=0;shift=0;do{b=encoded.charCodeAt(i++)-63;result|=(b&31)<<shift;shift+=5;}while(b>=32&&i<encoded.length);lng+=(result&1)?~(result>>1):(result>>1);coords.push({lat:lat/factor,lng:lng/factor});} return coords;
+    const coordinates = [];
+    let index = 0;
+    let latitude = 0;
+    let longitude = 0;
+    const factor = 10 ** precision;
+
+    const decodeValue = () => {
+        let result = 0;
+        let shift = 0;
+        let byte;
+
+        do {
+            byte = encoded.charCodeAt(index++) - 63;
+            result |= (byte & 31) << shift;
+            shift += 5;
+        } while (byte >= 32 && index < encoded.length);
+
+        return (result & 1) ? ~(result >> 1) : (result >> 1);
+    };
+
+    while (index < encoded.length) {
+        latitude += decodeValue();
+        longitude += decodeValue();
+        coordinates.push({
+            lat: latitude / factor,
+            lng: longitude / factor
+        });
+    }
+
+    return coordinates;
 }
 function routeLocale() {
     return currentLanguage === "ko" ? "ko-KR" : currentLanguage === "en" ? "en-US" : "ja-JP";
@@ -475,8 +506,20 @@ function routeLanguagePreference() {
 function rt(ko, ja, en) {
     return currentLanguage === "ko" ? ko : currentLanguage === "en" ? en : ja;
 }
-function formatTransitousTime(v){return v?new Intl.DateTimeFormat(routeLocale(),{timeZone:"Asia/Tokyo",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(v)):"--:--";}
-function getTransitousTransitLegs(it){const street=new Set(["WALK","FOOT","BIKE","CAR"]);return(it?.legs||[]).filter(l=>!street.has(l.mode));}
+function formatTransitousTime(value) {
+    if (!value) return "--:--";
+
+    return new Intl.DateTimeFormat(routeLocale(), {
+        timeZone: "Asia/Tokyo",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    }).format(new Date(value));
+}
+function getTransitousTransitLegs(itinerary) {
+    const streetModes = new Set(["WALK", "FOOT", "BIKE", "CAR"]);
+    return (itinerary?.legs || []).filter(leg => !streetModes.has(leg.mode));
+}
 const TOKYO_LINE_NAMES = {
     JA: "JR 埼京線",
     JB: "JR 中央・総武線",
@@ -504,7 +547,7 @@ const TOKYO_TRANSIT_META = {
     JT: { ko: "JR 도카이도선", ja: "JR 東海道線", en: "JR Tokaido Line", color: "#f68b1f" },
     JO: { ko: "JR 요코스카선", ja: "JR 横須賀線", en: "JR Yokosuka Line", color: "#0067c0" },
     JE: { ko: "JR 게이요선", ja: "JR 京葉線", en: "JR Keiyo Line", color: "#c9242f" },
-    G:  { ko: "도쿄메트로 긴자선", ja: "東京メトロ銀座線", en: "Tokyo Metro Ginza Line", color: "#f39700" },
+    G:  { ko: "도쿄메트로 긴자선", ja: "東京メトロ銀座線", en: "Tokyo Metro Ginza Line", color: "#ffb300" },
     M:  { ko: "도쿄메트로 마루노우치선", ja: "東京メトロ丸ノ内線", en: "Tokyo Metro Marunouchi Line", color: "#e60012" },
     H:  { ko: "도쿄메트로 히비야선", ja: "東京メトロ日比谷線", en: "Tokyo Metro Hibiya Line", color: "#9caeb7" },
     T:  { ko: "도쿄메트로 도자이선", ja: "東京メトロ東西線", en: "Tokyo Metro Tozai Line", color: "#00a7db" },
@@ -542,7 +585,7 @@ function getTransitousLineColor(leg) {
         .map(normalizeTransitColor).find(Boolean);
     if (apiColor) return apiColor;
     const code = getTransitousLineCode(leg);
-    return TOKYO_TRANSIT_META[code]?.color || "#b88418";
+    return TOKYO_TRANSIT_META[code]?.color || "#4285F4";
 }
 
 // 지도 위 경로는 실제 노선색 대신 치즈맵용 차분한 팔레트를 사용한다.
@@ -575,7 +618,12 @@ function getLocalizedTransitLineName(leg) {
     const code = getTransitousLineCode(leg);
     const meta = TOKYO_TRANSIT_META[code];
     if (meta) return meta[currentLanguage] || meta.ja;
-    return getTransitousActualLineName(leg) || cleanTransitousLineCandidate(leg?.category?.name) || cleanTransitousLineCandidate(leg?.mode) || rt("대중교통", "公共交通", "Transit");
+    return (
+        getTransitousActualLineName(leg) ||
+        cleanTransitousLineCandidate(leg?.category?.name) ||
+        cleanTransitousLineCandidate(leg?.mode) ||
+        rt("대중교통", "公共交通", "Transit")
+    );
 }
 
 
@@ -985,8 +1033,18 @@ function renderTransitousLegDetail(leg, legIndex) {
     const stopCountText = stopCount !== null ? rt(`${stopCount}개 역`, `${stopCount}駅`, `${stopCount} stops`) : "";
     const durationText = minutes !== null ? rt(`약 ${minutes}분`, `約${minutes}分`, `About ${minutes} min`) : "";
     const rideMeta = [directionText, stopCountText, durationText].filter(Boolean).join(" · ");
-    const departureMeta = [fromPlatform, startTime !== "--:--" ? rt(`${startTime} 출발`, `${startTime} 発`, `Departs ${startTime}`) : ""].filter(Boolean).join(" · ");
-    const arrivalMeta = [toPlatform, endTime !== "--:--" ? rt(`${endTime} 도착`, `${endTime} 着`, `Arrives ${endTime}`) : ""].filter(Boolean).join(" · ");
+    const departureMeta = [
+        fromPlatform,
+        startTime !== "--:--"
+            ? rt(`${startTime} 출발`, `${startTime} 発`, `Departs ${startTime}`)
+            : ""
+    ].filter(Boolean).join(" · ");
+    const arrivalMeta = [
+        toPlatform,
+        endTime !== "--:--"
+            ? rt(`${endTime} 도착`, `${endTime} 着`, `Arrives ${endTime}`)
+            : ""
+    ].filter(Boolean).join(" · ");
 
     return `
         <div class="transit-detail-leg" style="--transit-line-color:${lineColor}">
@@ -1135,82 +1193,171 @@ function drawTransitousRoute(it, fit = true) {
     const bounds = new google.maps.LatLngBounds();
 
     /*
-        지도 경로 디자인
-        - 첫 탑승 구간은 치즈 골드
-        - 환승할 때마다 다음 탑승 구간의 색을 바꿔 구간 구분을 명확하게 함
-        - 환승/도보 구간은 중립 회색 점선으로 표시
-        - 출발/도착 마커는 기존 치즈 노랑을 유지
+        탑승 구간은 각 실제 철도/지하철 노선의 공식 색을 사용한다.
+        API가 색을 주면 그 값을 우선하고, 없으면 도쿄 메트로/JR/도에이 노선 코드별 색을 사용한다.
+        색을 알 수 없는 노선만 기본 Google 블루로 표시한다.
     */
-    const transferPalette = [
-        "#D9A514", // 치즈 골드
-        "#2F7D78", // 차분한 틸
-        "#4C6FAE", // 블루
-        "#8B5E83"  // 뮤트 퍼플
-    ];
-    let transitLegIndex = 0;
+
+    let previousLegEnd = null;
+
+    const toLatLng = place => {
+        const lat = Number(place?.lat ?? place?.latitude);
+        const lng = Number(place?.lon ?? place?.lng ?? place?.longitude);
+        return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+    };
+
+    const pointDistanceMeters = (a, b) => {
+        if (!a || !b) return Infinity;
+        const rad = value => value * Math.PI / 180;
+        const earth = 6371000;
+        const dLat = rad(b.lat - a.lat);
+        const dLng = rad(b.lng - a.lng);
+        const lat1 = rad(a.lat);
+        const lat2 = rad(b.lat);
+        const h = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+        return 2 * earth * Math.asin(Math.min(1, Math.sqrt(h)));
+    };
+
+    /* API polyline이 비정상적으로 멀리 튀는 경우 지도 전체에 이상한 선이 생긴다.
+       정상 경로는 그대로 두고, 명백한 좌표 튐만 버린다. */
+    const isObviouslyBrokenPath = (path, legFrom, legTo, walk) => {
+        if (!Array.isArray(path) || path.length < 2) return true;
+
+        const directDistance = legFrom && legTo
+            ? pointDistanceMeters(legFrom, legTo)
+            : 0;
+
+        // geometry 시작/끝이 실제 정류장·역 좌표와 지나치게 멀면 잘못된 polyline으로 본다.
+        const endpointTolerance = walk
+            ? Math.max(350, directDistance * 0.45)
+            : Math.max(1200, directDistance * 0.45);
+
+        if (
+            legFrom &&
+            pointDistanceMeters(legFrom, path[0]) > endpointTolerance
+        ) {
+            return true;
+        }
+
+        if (
+            legTo &&
+            pointDistanceMeters(path[path.length - 1], legTo) > endpointTolerance
+        ) {
+            return true;
+        }
+
+        // 인접한 점 하나가 갑자기 수 km 이상 점프하는 경우도 제거한다.
+        const jumpLimit = walk
+            ? Math.max(900, directDistance * 0.9)
+            : Math.max(4500, directDistance * 1.15);
+
+        for (let i = 1; i < path.length; i += 1) {
+            if (pointDistanceMeters(path[i - 1], path[i]) > jumpLimit) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    const drawWalkDots = path => {
+        if (!Array.isArray(path) || path.length < 2) return null;
+        return new google.maps.Polyline({
+            map: googleMap,
+            path,
+            strokeOpacity: 0,
+            strokeWeight: 0,
+            icons: [{
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: "#4285F4",
+                    fillOpacity: 1,
+                    strokeColor: "#FFFFFF",
+                    strokeOpacity: 0.95,
+                    strokeWeight: 1,
+                    scale: 4.6
+                },
+                offset: "0",
+                repeat: "14px"
+            }],
+            zIndex: 7
+        });
+    };
 
     (it.legs || []).forEach(leg => {
         const encoded =
             leg?.legGeometry?.points ||
             leg?.legGeometry;
 
-        if (typeof encoded !== "string" || !encoded) {
-            return;
+        let path = [];
+        if (typeof encoded === "string" && encoded) {
+            path = decodeTransitousPolyline(encoded, 6);
         }
 
-        const path = decodeTransitousPolyline(encoded, 6);
-
-        if (!path.length) {
-            return;
-        }
-
+        const legFrom = toLatLng(leg?.from);
+        const legTo = toLatLng(leg?.to);
         const walk = isTransitousWalkLeg(leg);
 
-        if (walk) {
-            /* 환승/도보 구간: 중립 회색 점선 */
-            const walkLine = new google.maps.Polyline({
-                map: googleMap,
-                path,
-                strokeOpacity: 0,
-                strokeWeight: 0,
-                icons: [
-                    {
-                        icon: {
-                            path: "M 0,-1 0,1",
-                            strokeColor: "#9CA3AF",
-                            strokeOpacity: 0.96,
-                            strokeWeight: 3,
-                            scale: 2
-                        },
-                        offset: "0",
-                        repeat: "10px"
-                    }
-                ],
-                zIndex: 6
+        if (path.length && isObviouslyBrokenPath(path, legFrom, legTo, walk)) {
+            console.warn("비정상적으로 튀는 대중교통 geometry를 제외했습니다.", {
+                from: leg?.from,
+                to: leg?.to,
+                route: leg?.route || leg?.line
             });
+            path = [];
+        }
 
-            renderedPolylines.push(walkLine);
+        /* geometry가 없는 경우 직선으로 무조건 이어 버리면 복잡한 경로에서
+           지도 전체를 가로지르는 이상한 선이 생길 수 있다.
+           실제로 걸어가는 짧은 구간만 안전하게 점선 fallback을 허용한다. */
+        if (!path.length && walk && legFrom && legTo) {
+            const fallbackDistance = pointDistanceMeters(legFrom, legTo);
+
+            if (fallbackDistance <= 1200) {
+                path = [legFrom, legTo];
+            }
+        }
+
+        if (!path.length) {
+            previousLegEnd = null;
+            return;
+        }
+
+        /* 연속 leg 사이의 아주 작은 좌표 오차만 점선으로 메운다.
+           먼 구간까지 강제로 연결하면 복잡한 환승 경로에서 거대한 대각선이 생긴다. */
+        if (previousLegEnd) {
+            const gapDistance = pointDistanceMeters(previousLegEnd, path[0]);
+
+            if (gapDistance > 8 && gapDistance <= 120) {
+                const connector = drawWalkDots([previousLegEnd, path[0]]);
+                if (connector) renderedPolylines.push(connector);
+                bounds.extend(previousLegEnd);
+                bounds.extend(path[0]);
+            }
+        }
+
+        if (walk) {
+            /* 환승 후 도보 구간: 파란 원형 점으로 또렷하게 표시 */
+            const walkLine = drawWalkDots(path);
+            if (walkLine) renderedPolylines.push(walkLine);
         } else {
             /* 크림색 halo를 깔아 지도 위에서 경로가 묻히지 않게 함 */
             const routeHalo = new google.maps.Polyline({
                 map: googleMap,
                 path,
-                strokeColor: "#FFF6D8",
-                strokeOpacity: 0.72,
-                strokeWeight: 7,
+                strokeColor: "#FFFFFF",
+                strokeOpacity: 0.9,
+                strokeWeight: 8,
                 zIndex: 5
             });
 
-            /* 환승할 때마다 탑승 구간 색을 바꿔 어디서 노선이 바뀌는지 즉시 보이게 한다.
-               실제 JR/지하철 노선색은 상세 경로 카드의 배지에 유지한다. */
-            const segmentColor = transferPalette[transitLegIndex % transferPalette.length];
-            transitLegIndex += 1;
-
+            const routeLineColor = getTransitousLineColor(leg);
             const routeLine = new google.maps.Polyline({
                 map: googleMap,
                 path,
-                strokeColor: segmentColor,
-                strokeOpacity: 0.98,
+                strokeColor: routeLineColor,
+                strokeOpacity: 1,
                 strokeWeight: 5,
                 zIndex: 6
             });
@@ -1219,6 +1366,7 @@ function drawTransitousRoute(it, fit = true) {
         }
 
         path.forEach(point => bounds.extend(point));
+        previousLegEnd = path[path.length - 1] || legTo || previousLegEnd;
     });
 
     const first = it.legs?.[0]?.from;
@@ -1235,15 +1383,12 @@ function drawTransitousRoute(it, fit = true) {
                 : (currentLanguage === "ko" ? "출발" : "出発")
             : (currentLanguage === "ko" ? "도착" : "到着");
 
-        const marker = new google.maps.Marker({
-            map: googleMap,
+        const marker = createGoogleStyleRouteMarker({
             position,
-            clickable: false,
+            type: isStart ? "start" : "end",
+            text: markerText,
             zIndex: 30,
-            icon: createCheeseRouteMarkerIcon(
-                isStart ? "start" : "end",
-                markerText
-            )
+            clickable: false
         });
 
         renderedMarkers.push(marker);
@@ -1444,88 +1589,93 @@ function getClickedMapPlaceName(event, fallback) {
 }
 
 
-function createCheeseRouteMarkerIcon(type = "start", text = "") {
+function createGoogleStyleRouteMarker({
+    position,
+    type = "start",
+    text = "",
+    title = "",
+    zIndex = 30,
+    clickable = false
+}) {
     const isStart = type === "start";
+    const markerText = isStart
+        ? (currentLanguage === "ko" ? "출발" : "出発")
+        : (currentLanguage === "ko" ? "도착" : "到着");
 
-    const labelText = String(
-        text ||
-        (isStart
-            ? (currentLanguage === "ko" ? "출발" : "出発")
-            : (currentLanguage === "ko" ? "도착" : "到着"))
-    );
+    const markerTitle = String(text || markerText);
 
     /*
-        치즈 구멍 없이, 치즈맵의 크림/노랑/브라운만 사용한
-        얇고 작은 지도용 출발·도착 라벨입니다.
+        Google Maps PinElement 모양은 그대로 쓰고 색만 노란색으로 변경한다.
+        핀 자체는 작게 유지하고, '출발/도착'은 옆의 작은 라벨로 분리해
+        지도 위에서 과하게 커 보이지 않도록 한다.
     */
-    const dotFill = isStart ? "#fffdf6" : "#f6c945";
-    const dotStroke = isStart ? "#c99218" : "#664229";
-    const pillFill = "#fffdf6";
-    const pillStroke = isStart ? "#e3c36e" : "#d8c7a5";
-    const textColor = "#5b4026";
+    if (
+        google.maps.marker?.PinElement &&
+        google.maps.marker?.AdvancedMarkerElement
+    ) {
+        const pin = new google.maps.marker.PinElement({
+            background: isStart ? "#FFD54A" : "#FBC02D",
+            borderColor: "#8A6508",
+            glyphColor: "#8A6508",
+            scale: 0.82
+        });
 
-    /* 한글/일본어/영문 길이에 따라 라벨 폭을 조금씩 늘림 */
-    const labelWidth = Math.max(46, Math.min(88, 22 + labelText.length * 13));
-    const width = labelWidth + 18;
-    const height = 30;
-    const dotX = 10;
-    const dotY = 15;
-    const pillX = 17;
+        const wrapper = document.createElement("div");
+        wrapper.style.display = "flex";
+        wrapper.style.alignItems = "center";
+        wrapper.style.gap = "3px";
+        wrapper.style.transform = "translateY(-2px)";
 
-    const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            <defs>
-                <filter id="shadow" x="-30%" y="-50%" width="180%" height="200%">
-                    <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#3d2b1f" flood-opacity="0.16"/>
-                </filter>
-            </defs>
+        const label = document.createElement("span");
+        label.textContent = markerText;
+        label.style.padding = "1px 4px";
+        label.style.borderRadius = "4px";
+        label.style.background = "rgba(255,255,255,0.94)";
+        label.style.border = "1px solid rgba(138,101,8,0.35)";
+        label.style.color = "#5B4300";
+        label.style.fontSize = "10px";
+        label.style.fontWeight = "700";
+        label.style.lineHeight = "14px";
+        label.style.whiteSpace = "nowrap";
+        label.style.boxShadow = "0 1px 2px rgba(0,0,0,0.12)";
 
-            <g filter="url(#shadow)">
-                <rect
-                    x="${pillX}"
-                    y="4"
-                    width="${labelWidth}"
-                    height="22"
-                    rx="11"
-                    fill="${pillFill}"
-                    stroke="${pillStroke}"
-                    stroke-width="1"
-                />
+        wrapper.append(pin.element, label);
 
-                <circle
-                    cx="${dotX}"
-                    cy="${dotY}"
-                    r="6.6"
-                    fill="${dotFill}"
-                    stroke="${dotStroke}"
-                    stroke-width="1.35"
-                />
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+            map: googleMap,
+            position,
+            title: title || markerTitle,
+            content: wrapper,
+            zIndex,
+            gmpClickable: Boolean(clickable)
+        });
 
-                <circle
-                    cx="${dotX}"
-                    cy="${dotY}"
-                    r="2"
-                    fill="${isStart ? "#c99218" : "#664229"}"
-                />
-            </g>
+        return marker;
+    }
 
-            <text
-                x="${pillX + 10}"
-                y="18.5"
-                fill="${textColor}"
-                font-size="11"
-                font-weight="700"
-                font-family="Noto Sans KR, Noto Sans JP, Arial, sans-serif"
-            >${labelText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</text>
-        </svg>
-    `;
-
-    return {
-        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-        scaledSize: new google.maps.Size(width, height),
-        /* 작은 원의 중심이 실제 좌표에 오도록 고정 */
-        anchor: new google.maps.Point(dotX, dotY)
-    };
+    /* Advanced Marker를 쓸 수 없는 환경을 위한 안전한 fallback. */
+    return new google.maps.Marker({
+        map: googleMap,
+        position,
+        title: title || markerTitle,
+        clickable,
+        zIndex,
+        label: {
+            text: markerText,
+            color: "#5B4300",
+            fontSize: "10px",
+            fontWeight: "700"
+        },
+        icon: {
+            path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+            fillColor: isStart ? "#FFD54A" : "#FBC02D",
+            fillOpacity: 1,
+            strokeColor: "#8A6508",
+            strokeWeight: 1.5,
+            scale: 8,
+            anchor: new google.maps.Point(0, 2)
+        }
+    });
 }
 
 function addTemporaryRouteMarker(
@@ -1544,12 +1694,13 @@ function addTemporaryRouteMarker(
                 : (currentLanguage === "ko" ? "출발" : "出発")
             : (currentLanguage === "ko" ? "도착" : "到着");
 
-    const marker = new google.maps.Marker({
-        map: googleMap,
+    const marker = createGoogleStyleRouteMarker({
         position,
+        type: markerType,
+        text: markerText,
         title,
         zIndex: 40,
-        icon: createCheeseRouteMarkerIcon(markerType, markerText)
+        clickable: true
     });
 
     routeMarkers.push(marker);

@@ -1272,7 +1272,13 @@ function renderSelectedGroup() {
 
     panel.querySelector('[data-group-action="edit"]')?.addEventListener("click", () => openGroupForm(group));
     panel.querySelector('[data-group-action="share"]')?.addEventListener("click", () => shareGroup(group));
-    panel.querySelector('[data-group-action="message"]')?.addEventListener("click", () => openMessageCompose({ subject: `[${group.groupName}] 일정 관련 쪽지`, body: `${group.groupName} 일정에 대해 이야기하고 싶어요.` }));
+    panel.querySelector('[data-group-action="message"]')?.addEventListener(
+        "click",
+        () => openMessageCompose({
+            subject: `[${group.groupName}] 일정 관련 쪽지`,
+            body: `${group.groupName} 일정에 대해 이야기하고 싶어요.`
+        })
+    );
     panel.querySelector('[data-group-action="delete"]')?.addEventListener("click", () => deleteGroup(group.groupId));
     panel.querySelectorAll("[data-group-place]").forEach(button => button.addEventListener("click", () => {
         const key = button.dataset.groupPlace;
@@ -1397,7 +1403,17 @@ async function syncGroupPlaces(groupId, oldIds, newIds) {
     }
     for (const placeId of oldSet) {
         if (!newSet.has(placeId)) {
-            await apiRequest(`/group/${groupId}/deletePlace`, { method: "DELETE", auth: true, body: { placeId, groupId: Number(groupId) } });
+            await apiRequest(
+                `/group/${groupId}/deletePlace`,
+                {
+                    method: "DELETE",
+                    auth: true,
+                    body: {
+                        placeId,
+                        groupId: Number(groupId)
+                    }
+                }
+            );
         }
     }
 }

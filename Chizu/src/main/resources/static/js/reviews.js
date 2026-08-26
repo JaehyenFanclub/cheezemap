@@ -27,7 +27,17 @@ function getReviewStars(rating) {
 function formatReviewDate(value) {
     if (!value) return "";
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? String(value).slice(0, 10) : date.toLocaleDateString(currentLanguage === "ja" ? "ja-JP" : currentLanguage === "en" ? "en-US" : "ko-KR");
+    if (Number.isNaN(date.getTime())) {
+        return String(value).slice(0, 10);
+    }
+
+    const locale = currentLanguage === "ja"
+        ? "ja-JP"
+        : currentLanguage === "en"
+            ? "en-US"
+            : "ko-KR";
+
+    return date.toLocaleDateString(locale);
 }
 
 async function resolveActiveBackendPlace(placeKey = selectedPlaceKey) {
@@ -74,14 +84,24 @@ async function renderPlaceReviews(placeKey) {
         if (score) score.textContent = "-";
         if (stars) stars.textContent = "☆☆☆☆☆";
         if (summary) summary.textContent = `${translate("place.reviewCount")} 0`;
-        list.innerHTML = `<p class="place-empty-text">${getAuthToken() ? escapeGroupHtml(error.message) : translate("place.reviewEmpty")}</p>`;
+        const errorMessage = getAuthToken()
+            ? escapeGroupHtml(error.message)
+            : translate("place.reviewEmpty");
+        list.innerHTML = `<p class="place-empty-text">${errorMessage}</p>`;
         return;
     }
 
     const average = reviews.length ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length : NaN;
     if (score) score.textContent = Number.isFinite(average) ? average.toFixed(1) : "-";
     if (stars) stars.textContent = Number.isFinite(average) ? getReviewStars(average) : "☆☆☆☆☆";
-    if (summary) summary.textContent = `${translate("place.reviewCount")} ${reviews.length}${currentLanguage === "ja" ? "件" : currentLanguage === "ko" ? "개" : ""}`;
+    if (summary) {
+        const reviewUnit = currentLanguage === "ja"
+            ? "件"
+            : currentLanguage === "ko"
+                ? "개"
+                : "";
+        summary.textContent = `${translate("place.reviewCount")} ${reviews.length}${reviewUnit}`;
+    }
 
     if (!reviews.length) {
         list.innerHTML = `<p class="place-empty-text">${translate("place.reviewEmpty")}</p>`;
@@ -126,7 +146,15 @@ async function renderPlaceMenu(placeKey) {
     const menuSection = document.getElementById("placeMenuSection");
     const staticPlace = placeKey ? places[placeKey] : null;
     const googleType = String(selectedGooglePoi?.primaryType || "").toLowerCase();
-    const shouldShow = staticPlace ? staticPlace.type === "food" : Boolean(selectedGooglePoi && (googleType.includes("restaurant") || googleType.includes("food")));
+    const shouldShow = staticPlace
+        ? staticPlace.type === "food"
+        : Boolean(
+            selectedGooglePoi &&
+            (
+                googleType.includes("restaurant") ||
+                googleType.includes("food")
+            )
+        );
     if (!list) return;
     if (!shouldShow) {
         if (menuSection) menuSection.style.display = "none";
@@ -163,7 +191,9 @@ async function renderPlaceMenu(placeKey) {
     }
     list.innerHTML = menus.map(menu => {
         const price = String(menu.menuValue || "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        const image = menu.photoUrl ? `<img src="${escapeGroupHtml(menu.photoUrl)}" alt="${escapeGroupHtml(menu.menuName)}">` : `<i class="ti ti-tools-kitchen-2"></i>`;
+        const image = menu.photoUrl
+            ? `<img src="${escapeGroupHtml(menu.photoUrl)}" alt="${escapeGroupHtml(menu.menuName)}">`
+            : `<i class="ti ti-tools-kitchen-2"></i>`;
         return `<article class="place-menu-item"><div class="place-menu-thumb">${image}</div><div class="place-menu-info"><strong>${escapeGroupHtml(menu.menuName)}</strong><p>${escapeGroupHtml(menu.menuInfo || translate("place.menuDescriptionEmpty"))}</p></div><strong class="place-menu-price">¥${price}</strong></article>`;
     }).join("");
 }
@@ -215,17 +245,54 @@ function setReviewRating(rating) {
 
 function renderReviewPhotoPreview() {
     if (!reviewPhotoGrid) return;
-    reviewPhotoGrid.innerHTML = `<label class="review-photo-add" for="reviewPhotoInput"><i class="ti ti-camera-plus"></i><span>${translate("review.photoAdd")}</span></label>`;
+    reviewPhotoGrid.innerHTML = `
+        <label class="review-photo-add" for="reviewPhotoInput">
+            <i class="ti ti-camera-plus"></i>
+            <span>${translate("review.photoAdd")}</span>
+        </label>
+    `;
     reviewSelectedPhotos.forEach((file, index) => {
         const url = URL.createObjectURL(file);
-        reviewPhotoGrid.insertAdjacentHTML("beforeend", `<div class="review-photo-item"><img src="${url}" alt=""><button type="button" data-photo-index="${index}">×</button></div>`);
+        reviewPhotoGrid.insertAdjacentHTML(
+            "beforeend",
+            `
+                <div class="review-photo-item">
+                    <img src="${url}" alt="">
+                    <button type="button" data-photo-index="${index}">×</button>
+                </div>
+            `
+        );
     });
 }
 
-reviewStarPicker?.addEventListener("click", event => { const button = event.target.closest("button[data-rating]"); if (button) setReviewRating(button.dataset.rating); });
-reviewContent?.addEventListener("input", () => { if (reviewCharacterCount) reviewCharacterCount.textContent = `${reviewContent.value.length}/500`; });
-reviewPhotoInput?.addEventListener("change", event => { reviewSelectedPhotos = [...reviewSelectedPhotos, ...Array.from(event.target.files || [])].slice(0, 5); reviewPhotoInput.value = ""; renderReviewPhotoPreview(); });
-reviewPhotoGrid?.addEventListener("click", event => { const button = event.target.closest("button[data-photo-index]"); if (!button) return; reviewSelectedPhotos.splice(Number(button.dataset.photoIndex), 1); renderReviewPhotoPreview(); });
+reviewStarPicker?.addEventListener("click", event => {
+    const button = event.target.closest("button[data-rating]");
+    if (button) {
+        setReviewRating(button.dataset.rating);
+    }
+});
+reviewContent?.addEventListener("input", () => {
+    if (reviewCharacterCount) {
+        reviewCharacterCount.textContent = `${reviewContent.value.length}/500`;
+    }
+});
+reviewPhotoInput?.addEventListener("change", event => {
+    const selectedFiles = Array.from(event.target.files || []);
+    reviewSelectedPhotos = [
+        ...reviewSelectedPhotos,
+        ...selectedFiles
+    ].slice(0, 5);
+
+    reviewPhotoInput.value = "";
+    renderReviewPhotoPreview();
+});
+reviewPhotoGrid?.addEventListener("click", event => {
+    const button = event.target.closest("button[data-photo-index]");
+    if (!button) return;
+
+    reviewSelectedPhotos.splice(Number(button.dataset.photoIndex), 1);
+    renderReviewPhotoPreview();
+});
 document.getElementById("placeReviewWriteButton")?.addEventListener("click", openReviewComposeModal);
 document.getElementById("reviewComposeCloseButton")?.addEventListener("click", () => closeModal(reviewComposeModal));
 document.getElementById("reviewComposeCancelButton")?.addEventListener("click", () => closeModal(reviewComposeModal));
@@ -377,7 +444,14 @@ document.getElementById("placeReviewList")?.addEventListener("click", async even
         form.append("rating", item.dataset.editRating || item.dataset.reviewRating || "5");
         form.append("content", content);
         try {
-            await apiRequest(`/place/${activeReviewBackendPlace.placeId}/review/${reviewId}/edit`, { method: "PUT", auth: true, body: form });
+            await apiRequest(
+                `/place/${activeReviewBackendPlace.placeId}/review/${reviewId}/edit`,
+                {
+                    method: "PUT",
+                    auth: true,
+                    body: form
+                }
+            );
             reviewCacheByPlace.delete(String(activeReviewBackendPlace.placeId));
             await renderPlaceReviews(selectedPlaceKey);
             showToast("리뷰가 수정되었습니다.");
@@ -397,7 +471,13 @@ document.getElementById("placeReviewList")?.addEventListener("click", async even
     if (event.target.closest("[data-review-like]")) {
         if (!getAuthToken()) { openModal(loginModal); return; }
         try {
-            const result = await apiRequest(`/place/${activeReviewBackendPlace.placeId}/review/${reviewId}/like`, { method: "POST", auth: true });
+            const result = await apiRequest(
+                `/place/${activeReviewBackendPlace.placeId}/review/${reviewId}/like`,
+                {
+                    method: "POST",
+                    auth: true
+                }
+            );
             reviewCacheByPlace.delete(String(activeReviewBackendPlace.placeId));
             await renderPlaceReviews(selectedPlaceKey);
             showToast(result?.msg || "처리되었습니다.");
@@ -994,8 +1074,22 @@ function syncPlaceSidePanelState() {
 }
 
 const placeSidePanelElement = document.getElementById("placeCard");
-if (placeSidePanelElement) new MutationObserver(syncPlaceSidePanelState).observe(placeSidePanelElement, { attributes: true, attributeFilter: ["class"] });
-document.getElementById("placeSideToggle")?.addEventListener("click", () => { const panel = document.getElementById("placeCard"); if (!panel) return; panel.classList.toggle("show"); syncPlaceSidePanelState(); });
+if (placeSidePanelElement) {
+    new MutationObserver(syncPlaceSidePanelState).observe(
+        placeSidePanelElement,
+        {
+            attributes: true,
+            attributeFilter: ["class"]
+        }
+    );
+}
+document.getElementById("placeSideToggle")?.addEventListener("click", () => {
+    const panel = document.getElementById("placeCard");
+    if (!panel) return;
+
+    panel.classList.toggle("show");
+    syncPlaceSidePanelState();
+});
 syncPlaceSidePanelState();
 
 (function () {

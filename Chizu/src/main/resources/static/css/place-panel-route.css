@@ -930,17 +930,58 @@ body.dark .place-side-panel.route-focus .place-image {
 .place-section-eyebrow { display: block; margin-bottom: 3px; color: #a08d72; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
 .place-section-header h3 { margin: 0; color: var(--gray-900); font-size: 18px; }
 .place-section-count, .place-section-link { color: var(--gray-500); font-size: 12px; font-weight: 700; }
-.place-section-link { padding: 6px 9px; border: 0; border-radius: 8px; background: var(--yellow-light); color: var(--brown-dark); cursor: pointer; }
+.place-section-link {
+    padding: 6px 9px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--yellow-light);
+    color: var(--brown-dark);
+    cursor: pointer;
+}
 .place-section-link:hover { background: #ffe9a5; }
 .place-menu-list, .place-review-list { display: flex; flex-direction: column; gap: 10px; }
 .place-menu-item { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; }
-.place-menu-thumb { width: 64px; height: 64px; overflow: hidden; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: #f4f0e8; color: #a79a86; font-size: 18px; }
+.place-menu-thumb {
+    width: 64px;
+    height: 64px;
+    overflow: hidden;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f4f0e8;
+    color: #a79a86;
+    font-size: 18px;
+}
 .place-menu-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .place-menu-info { min-width: 0; }
-.place-menu-info strong { display: block; overflow: hidden; color: var(--gray-900); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.place-menu-info p { margin: 5px 0 0; overflow: hidden; color: var(--gray-500); font-size: 11px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+.place-menu-info strong {
+    display: block;
+    overflow: hidden;
+    color: var(--gray-900);
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.place-menu-info p {
+    margin: 5px 0 0;
+    overflow: hidden;
+    color: var(--gray-500);
+    font-size: 11px;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .place-menu-price { color: var(--gray-900); font-size: 13px; font-weight: 800; white-space: nowrap; }
-.place-review-summary { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; padding: 13px 14px; border-radius: 12px; background: #fffaf0; }
+.place-review-summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+    padding: 13px 14px;
+    border-radius: 12px;
+    background: #fffaf0;
+}
 .place-review-summary > strong { color: var(--gray-900); font-size: 28px; }
 .place-review-stars { color: #e5a900; font-size: 14px; letter-spacing: 1px; }
 .place-review-summary span { display: block; margin-top: 2px; color: var(--gray-500); font-size: 11px; }
@@ -961,17 +1002,63 @@ body.dark .place-review-summary { background: #fffaf0; }
 .review-compose-block { display: block; margin-top: 20px; }
 .review-compose-block > strong { display: block; margin-bottom: 10px; color: var(--gray-800); font-size: 13px; }
 .review-star-picker { display: flex; gap: 4px; }
-.review-star-picker button { width: 40px; height: 40px; padding: 0; border: 0; background: transparent; color: #d9d2c5; font-size: 32px; cursor: pointer; }
+.review-star-picker button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #d9d2c5;
+    font-size: 32px;
+    cursor: pointer;
+}
 .review-star-picker button.selected { color: #e5a900; }
 .review-rating-message { margin: 6px 0 0 !important; color: var(--gray-500); font-size: 11px !important; }
-#reviewContent { width: 100%; min-height: 130px; box-sizing: border-box; resize: vertical; padding: 13px; border: 1px solid var(--gray-200); border-radius: 12px; background: var(--white); color: var(--gray-900); outline: none; font: inherit; font-size: 13px; line-height: 1.6; }
+#reviewContent {
+    width: 100%;
+    min-height: 130px;
+    box-sizing: border-box;
+    resize: vertical;
+    padding: 13px;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    background: var(--white);
+    color: var(--gray-900);
+    outline: none;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.6;
+}
 .review-character-count { display: block; margin-top: 5px; text-align: right; color: var(--gray-400); font-size: 10px; }
 .review-photo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .review-photo-add, .review-photo-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 12px; }
-.review-photo-add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px dashed var(--gray-300); background: var(--gray-50); color: var(--gray-500); cursor: pointer; font-size: 10px; }
+.review-photo-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px dashed var(--gray-300);
+    background: var(--gray-50);
+    color: var(--gray-500);
+    cursor: pointer;
+    font-size: 10px;
+}
 .review-photo-add i { font-size: 20px; }
 .review-photo-item img { width: 100%; height: 100%; object-fit: cover; }
-.review-photo-item button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; cursor: pointer; }
+.review-photo-item button {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0,0,0,.65);
+    color: #fff;
+    cursor: pointer;
+}
 .review-compose-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
 @media (max-width: 620px) {
     .place-menu-item { grid-template-columns: 54px minmax(0, 1fr) auto; }
@@ -991,17 +1078,41 @@ body.dark .place-review-summary { background: #fffaf0; }
    MR.EUM 수정부분: 리뷰 수정 토글 UI
 ===================================================== */
 .place-review-user-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.place-review-edit-toggle { padding: 4px 7px; border: 1px solid var(--gray-200); border-radius: 7px; background: var(--white); color: var(--gray-500); font-size: 10px; cursor: pointer; }
+.place-review-edit-toggle {
+    padding: 4px 7px;
+    border: 1px solid var(--gray-200);
+    border-radius: 7px;
+    background: var(--white);
+    color: var(--gray-500);
+    font-size: 10px;
+    cursor: pointer;
+}
 .place-review-edit-toggle:hover { background: var(--gray-50); color: var(--gray-800); }
 .place-review-edit-stars { display: flex; gap: 2px; margin-bottom: 8px; }
 .place-review-edit-stars button { padding: 0; border: 0; background: transparent; color: #d9d2c5; font-size: 22px; cursor: pointer; }
 .place-review-edit-stars button.selected { color: #e5a900; }
-.place-review-edit textarea { width: 100%; min-height: 90px; box-sizing: border-box; resize: vertical; padding: 10px; border: 1px solid var(--gray-200); border-radius: 10px; background: var(--white); color: var(--gray-900); outline: none; font: inherit; font-size: 12px; line-height: 1.5; }
+.place-review-edit textarea {
+    width: 100%;
+    min-height: 90px;
+    box-sizing: border-box;
+    resize: vertical;
+    padding: 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    background: var(--white);
+    color: var(--gray-900);
+    outline: none;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.5;
+}
 .place-review-edit-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
 .place-review-edit-actions button { padding: 6px 9px; border-radius: 7px; font-size: 10px; cursor: pointer; }
 .place-review-edit-cancel { border: 1px solid var(--gray-200); background: var(--white); color: var(--gray-600); }
 .place-review-edit-save { border: 0; background: var(--yellow-light); color: var(--brown-dark); font-weight: 700; }
-body.dark .place-review-edit-toggle, body.dark .place-review-edit textarea, body.dark .place-review-edit-cancel { background: var(--white); }
+body.dark .place-review-edit-toggle, body.dark .place-review-edit textarea, body.dark .place-review-edit-cancel {
+    background: var(--white);
+}
 
 
 /* MR.EUM 수정부분: 내가 작성한 리뷰에만 표시되는 수정 버튼 */

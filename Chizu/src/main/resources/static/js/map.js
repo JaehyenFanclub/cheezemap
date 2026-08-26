@@ -1,3 +1,42 @@
+
+async function debugGooglePlaceDetails(placeId) {
+    if (!placeId || !google?.maps?.places?.Place) {
+        console.warn("DEBUG PLACE: invalid placeId or Places library unavailable", placeId);
+        return null;
+    }
+
+    try {
+        const place = new google.maps.places.Place({ id: placeId });
+        await place.fetchFields({
+            fields: [
+                "id",
+                "displayName",
+                "photos",
+                "rating",
+                "userRatingCount",
+                "types",
+                "formattedAddress"
+            ]
+        });
+
+        console.log("PLACE DETAILS:", {
+            id: place.id,
+            name: place.displayName,
+            photos: place.photos,
+            photoCount: Array.isArray(place.photos) ? place.photos.length : 0,
+            rating: place.rating,
+            userRatingCount: place.userRatingCount,
+            types: place.types,
+            address: place.formattedAddress
+        });
+
+        return place;
+    } catch (error) {
+        console.error("PLACE DETAILS DEBUG ERROR:", error);
+        return null;
+    }
+}
+
 /* =====================================================
    커스텀 지도 마커
 ===================================================== */
@@ -214,12 +253,253 @@ function bindGoogleMapRuntime() {
     createStationClickAreas();
 
     googleMap.addListener("click", handleGoogleMapClick);
+    googleMap.addListener("click", (event) => {
+        console.log("MAP CLICK EVENT:", event);
+        console.log("PLACE ID:", event?.placeId ?? null);
+
+        if (event?.placeId) {
+            debugGooglePlaceDetails(event.placeId);
+        }
+    });
+    // Google 지도에서 역 이름 텍스트는 placeId가 잘 들어오지만,
+    // JR/전철/지하철 아이콘은 placeId 없이 클릭되는 경우가 있다.
+    // 그런 아이콘 클릭만 별도로 잡아서 주변의 실제 역 Place로 연결한다.
+    googleMap.addListener("click", handleTransitPoiIconFallbackClick);
     googleMap.addListener("zoom_changed", refreshStationClickVisibility);
     googleMap.addListener("idle", () => {
         const toggle = document.getElementById("wheelchairToggle");
         if (toggle?.checked) scheduleWheelchairAccessibilitySearch();
     });
 }
+
+
+
+/* =====================================================
+   Google 기본 전철/JR POI 아이콘 클릭 보정
+===================================================== */
+
+const nearbyTransitPoiCache = new Map();
+
+function getGoogleMapClickDomLabel(event) {
+    const target = event?.domEvent?.target;
+    if (!target) return "";
+
+    const labelled = target.closest?.("[aria-label], [title], [role='button']") || target;
+
+    return [
+        labelled?.getAttribute?.("aria-label"),
+        labelled?.getAttribute?.("title"),
+        labelled?.textContent,
+        target?.getAttribute?.("aria-label"),
+        target?.getAttribute?.("title")
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function isTransitPoiIconClick(event) {
+    if (event?.placeId || !event?.latLng) return false;
+
+    const label = getGoogleMapClickDomLabel(event).toLowerCase();
+    if (!label) return false;
+
+    return /(^|\s)jr($|\s)|station|train|railway|subway|metro|transit|駅|電車|鉄道|地下鉄|전철|철도|지하철|(?:^|\s)역(?:$|\s)/i.test(label);
+}
+
+function normalizeTransitDisplayName(name = "") {
+    return getPlaceDisplayName(String(name || "").trim());
+}
+
+function ensureTransitStationDisplaySuffix(name = "") {
+    const raw = String(name || "").trim();
+    if (!raw) {
+        return currentLanguage === "ja"
+            ? "駅"
+            : currentLanguage === "en"
+                ? "Station"
+                : "역";
+    }
+
+    if (currentLanguage === "ja") {
+        return /駅$/u.test(raw) ? raw : `${raw.replace(/\s*(駅|역|station)\s*$/iu, "").trim()}駅`;
+    }
+
+    if (currentLanguage === "en") {
+        return /station$/iu.test(raw)
+            ? raw
+            : `${raw.replace(/\s*(駅|역|station)\s*$/iu, "").trim()} Station`;
+    }
+
+    return /역$/u.test(raw)
+        ? raw
+        : `${raw.replace(/\s*(駅|역|station)\s*$/iu, "").trim()}역`;
+}
+
+async function resolveNearbyTransitPoi(position) {
+    if (!position || !window.google?.maps) return null;
+
+    const lat = Number(position.lat);
+    const lng = Number(position.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+    // 같은 아이콘을 여러 번 눌러도 Places 요청을 반복하지 않도록 좌표 단위 캐시
+    const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    if (nearbyTransitPoiCache.has(cacheKey)) {
+        return nearbyTransitPoiCache.get(cacheKey);
+    }
+
+    try {
+        const { Place } = await google.maps.importLibrary("places");
+        let candidates = [];
+
+        // Places API (New) Nearby Search가 사용 가능한 경우 가장 정확하게 주변 역만 찾는다.
+        if (typeof Place.searchNearby === "function") {
+            const response = await Place.searchNearby({
+                fields: [
+                    "id",
+                    "displayName",
+                    "location",
+                    "primaryType",
+                    "photos",
+                    "rating",
+                    "userRatingCount"
+                ],
+                locationRestriction: {
+                    center: { lat, lng },
+                    radius: 180
+                },
+                includedPrimaryTypes: [
+                    "train_station",
+                    "subway_station",
+                    "transit_station"
+                ],
+                maxResultCount: 20,
+                rankPreference: "DISTANCE",
+                language: currentLanguage === "ko" ? "ko" : "ja",
+                region: "JP"
+            });
+
+            candidates = response?.places || [];
+        }
+
+        // Nearby Search를 쓸 수 없는 환경이면 일본어 '駅' Text Search로 보조한다.
+        if (!candidates.length && typeof Place.searchByText === "function") {
+            const response = await Place.searchByText({
+                textQuery: "駅",
+                fields: [
+                    "id",
+                    "displayName",
+                    "location",
+                    "primaryType",
+                    "photos",
+                    "rating",
+                    "userRatingCount"
+                ],
+                locationBias: {
+                    center: { lat, lng },
+                    radius: 250
+                },
+                language: "ja",
+                region: "JP",
+                maxResultCount: 20
+            });
+
+            candidates = response?.places || [];
+        }
+
+        const stationTypes = new Set([
+            "train_station",
+            "subway_station",
+            "transit_station"
+        ]);
+
+        const ranked = candidates
+            .map(candidate => {
+                if (!candidate?.id || !candidate?.location) return null;
+
+                const distance = distanceMetersBetween(position, candidate.location);
+                if (!Number.isFinite(distance) || distance > 220) return null;
+
+                const isStation = stationTypes.has(candidate.primaryType);
+                const hasPhoto = Array.isArray(candidate.photos) && candidate.photos.length > 0;
+                const reviewCount = Number(candidate.userRatingCount) || 0;
+
+                // 아이콘 클릭에서는 '가장 가까운 실제 역'이 가장 중요하고,
+                // 같은 거리대에서는 사진/평점 데이터가 있는 대표 Place를 조금 우대한다.
+                let score = 1000 - Math.min(900, distance * 4);
+                if (isStation) score += 350;
+                if (hasPhoto) score += 80;
+                if (reviewCount > 0) score += 60;
+
+                return { candidate, distance, score };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.score - a.score || a.distance - b.distance);
+
+        const best = ranked[0]?.candidate || null;
+        const result = best
+            ? {
+                placeId: best.id,
+                name: String(best.displayName || "").trim(),
+                position: best.location
+                    ? {
+                        lat: typeof best.location.lat === "function" ? best.location.lat() : Number(best.location.lat),
+                        lng: typeof best.location.lng === "function" ? best.location.lng() : Number(best.location.lng)
+                    }
+                    : { lat, lng }
+            }
+            : null;
+
+        nearbyTransitPoiCache.set(cacheKey, result);
+        return result;
+    } catch (error) {
+        console.debug("전철/JR 아이콘 주변 역 검색 실패:", error);
+        nearbyTransitPoiCache.set(cacheKey, null);
+        return null;
+    }
+}
+
+async function handleTransitPoiIconFallbackClick(event) {
+    // 일반 POI/역 이름 텍스트 클릭은 기존 handleGoogleMapClick이 처리한다.
+    if (!isTransitPoiIconClick(event)) return;
+
+    // 길찾기에서 지도 목적지를 선택 중일 때는 기존 길찾기 클릭 처리를 방해하지 않는다.
+    if (typeof isRoutePanelOpen === "function" && isRoutePanelOpen()) return;
+
+    const clickPosition = event.latLng.toJSON();
+    const station = await resolveNearbyTransitPoi(clickPosition);
+
+    if (!station?.placeId) return;
+
+    event.stop?.();
+
+    const stationPosition = station.position || clickPosition;
+    const stationName = String(station.name || "").trim();
+
+    /*
+        전철/JR 아이콘을 눌렀을 때는 주변의 다른 대표 장소로 Place ID 자체를
+        갈아타지 않는다. 검색으로 찾은 실제 역 Place ID를 그대로 사용한다.
+
+        단, 해당 역 Place의 photos가 비어 있는 경우에만 openGooglePoi 내부에서
+        같은 역 이름/좌표의 다른 station 후보를 찾아 사진만 보충한다.
+        이름/주소/평점/리뷰 수는 원래 역 Place의 값을 그대로 유지한다.
+    */
+    const stationDisplayName = ensureTransitStationDisplaySuffix(stationName);
+
+    await openGooglePoi(
+        station.placeId,
+        stationPosition,
+        stationName || (currentLanguage === "ko" ? "역" : "駅"),
+        {
+            forceTransportCategory: true,
+            displayNameOverride: stationDisplayName,
+            photoSearchNames: [stationName]
+        }
+    );
+}
+
 
 /* Map ID 전환 후 기존 오버레이를 새 지도에 다시 연결 */
 function reattachMapObjectsAfterStyleSwitch() {
@@ -450,6 +730,169 @@ const DARK_MAP_STYLES = [
     }
 ];
 
+
+/* =====================================================
+   현재 지역 - 브라우저 위치정보 + Google 역지오코딩
+===================================================== */
+
+let currentAreaAddressParts = null;
+let currentAreaLocationState = "loading";
+
+const TOKYO_WARD_KO = {
+    "千代田区": "지요다구",
+    "中央区": "주오구",
+    "港区": "미나토구",
+    "新宿区": "신주쿠구",
+    "文京区": "분쿄구",
+    "台東区": "다이토구",
+    "墨田区": "스미다구",
+    "江東区": "고토구",
+    "品川区": "시나가와구",
+    "目黒区": "메구로구",
+    "大田区": "오타구",
+    "世田谷区": "세타가야구",
+    "渋谷区": "시부야구",
+    "中野区": "나카노구",
+    "杉並区": "스기나미구",
+    "豊島区": "도시마구",
+    "北区": "기타구",
+    "荒川区": "아라카와구",
+    "板橋区": "이타바시구",
+    "練馬区": "네리마구",
+    "足立区": "아다치구",
+    "葛飾区": "가쓰시카구",
+    "江戸川区": "에도가와구"
+};
+
+const PREFECTURE_KO = {
+    "東京都": "도쿄도",
+    "北海道": "홋카이도",
+    "大阪府": "오사카부",
+    "京都府": "교토부"
+};
+
+function getAddressComponent(components, types) {
+    return components.find(component =>
+        types.some(type => component.types?.includes(type))
+    )?.long_name || "";
+}
+
+function normalizeCurrentAreaParts(result) {
+    const components = result?.address_components || [];
+
+    return {
+        country: getAddressComponent(components, ["country"]),
+        prefecture: getAddressComponent(components, ["administrative_area_level_1"]),
+        city: getAddressComponent(components, [
+            "locality",
+            "administrative_area_level_2"
+        ]),
+        ward: getAddressComponent(components, [
+            "sublocality_level_1",
+            "sublocality"
+        ]),
+        formattedAddress: result?.formatted_address || ""
+    };
+}
+
+function formatCurrentAreaName(parts) {
+    if (!parts) {
+        if (currentAreaLocationState === "loading") {
+            return currentLanguage === "ja"
+                ? "位置を確認中"
+                : currentLanguage === "en"
+                    ? "Checking location"
+                    : "위치 확인 중";
+        }
+
+        return currentLanguage === "ja"
+            ? "位置情報なし"
+            : currentLanguage === "en"
+                ? "Location unavailable"
+                : "위치 정보 없음";
+    }
+
+    const district = parts.ward || parts.city;
+
+    if (currentLanguage === "ko") {
+        const prefecture = PREFECTURE_KO[parts.prefecture] || parts.prefecture;
+        const koreanDistrict = TOKYO_WARD_KO[district] || district;
+        const value = [prefecture, koreanDistrict].filter(Boolean).join(" ");
+        return value || parts.formattedAddress || "현재 위치";
+    }
+
+    if (currentLanguage === "en") {
+        const value = [district, parts.prefecture].filter(Boolean).join(", ");
+        return value || parts.formattedAddress || "Current location";
+    }
+
+    const value = [parts.prefecture, district].filter(Boolean).join("");
+    return value || parts.formattedAddress || "現在地";
+}
+
+function renderCurrentAreaName() {
+    const element = document.getElementById("currentAreaName");
+    if (!element) return;
+
+    element.textContent = formatCurrentAreaName(currentAreaAddressParts);
+    element.title = currentAreaAddressParts?.formattedAddress || "";
+}
+
+async function reverseGeocodeCurrentArea(position) {
+    if (!window.google?.maps?.Geocoder) return null;
+
+    const geocoder = new google.maps.Geocoder();
+    const response = await geocoder.geocode({ location: position });
+    const result = response.results?.[0];
+
+    return result ? normalizeCurrentAreaParts(result) : null;
+}
+
+function refreshCurrentAreaFromGeolocation() {
+    currentAreaLocationState = "loading";
+    currentAreaAddressParts = null;
+    renderCurrentAreaName();
+
+    if (!navigator.geolocation) {
+        currentAreaLocationState = "unavailable";
+        renderCurrentAreaName();
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        async position => {
+            try {
+                const coords = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+
+                currentAreaAddressParts = await reverseGeocodeCurrentArea(coords);
+                currentAreaLocationState = currentAreaAddressParts
+                    ? "ready"
+                    : "unavailable";
+            } catch (error) {
+                console.warn("현재 지역 역지오코딩 실패:", error);
+                currentAreaLocationState = "unavailable";
+            }
+
+            renderCurrentAreaName();
+        },
+        error => {
+            console.warn("현재 위치를 가져오지 못했습니다:", error);
+            currentAreaLocationState = "unavailable";
+            renderCurrentAreaName();
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 8000,
+            maximumAge: 300000
+        }
+    );
+}
+
+window.refreshCurrentAreaFromGeolocation = refreshCurrentAreaFromGeolocation;
+
 function initGoogleMap() {
     const mapElement =
         document.getElementById(
@@ -480,6 +923,8 @@ function initGoogleMap() {
         mapElement,
         createCategoryMapOptions(shinjuku, 13, "all")
     );
+
+    refreshCurrentAreaFromGeolocation();
 
 
     trafficLayer =
@@ -636,89 +1081,238 @@ function clearStationClickAreas() {
 }
 
 
-function createStationClickAreas() {
-    if (!googleMap || !window.google?.maps) {
-        return;
+const stationGooglePlaceCache = new Map();
+
+function distanceMetersBetween(a, b) {
+    if (!a || !b) return Infinity;
+
+    const lat1 = Number(a.lat);
+    const lng1 = Number(a.lng);
+    const lat2 = typeof b.lat === "function" ? b.lat() : Number(b.lat);
+    const lng2 = typeof b.lng === "function" ? b.lng() : Number(b.lng);
+
+    if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) {
+        return Infinity;
     }
 
-    clearStationClickAreas();
+    const toRad = value => value * Math.PI / 180;
+    const earthRadius = 6371000;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const x = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) ** 2;
 
-    Object.entries(places)
-        .filter(([, place]) => {
-            return (
-                place.type === "transport" &&
-                Number.isFinite(place.position?.lat) &&
-                Number.isFinite(place.position?.lng)
-            );
-        })
-        .forEach(([placeKey, place]) => {
-            const marker = new google.maps.Marker({
-                map: googleMap,
-                position: place.position,
-                title: place.name[currentLanguage],
-                clickable: true,
-                optimized: false,
-                zIndex: 20,
+    return 2 * earthRadius * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
 
-                // Google 기본 역 모양은 그대로 두고 클릭 영역만 덮습니다.
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 18,
-                    fillColor: "#000000",
-                    fillOpacity: 0.001,
-                    strokeColor: "#000000",
-                    strokeOpacity: 0,
-                    strokeWeight: 0
+async function resolveGoogleStationPlace(placeKey, place) {
+    if (!place?.position) {
+        return null;
+    }
+
+    const cached = stationGooglePlaceCache.get(placeKey);
+    if (cached) {
+        return cached;
+    }
+
+    const rawJa = String(place.name?.ja || "").trim();
+    const rawKo = String(place.name?.ko || "").trim();
+    const rawEn = String(place.name?.en || "").trim();
+    const sourceName = rawJa || rawKo || rawEn;
+
+    if (!sourceName) {
+        return null;
+    }
+
+    /*
+        Google 지도에서는 같은 역 주변에 이름 텍스트용 Place와
+        JR/지하철 아이콘용 Place가 따로 존재할 수 있다.
+
+        예)
+        田町   <-> 田町駅
+        東京   <-> 東京駅
+        品川   <-> 品川駅
+
+        역 아이콘을 눌렀을 때 빈 하위 Place를 그대로 쓰지 않고,
+        '역/駅/Station'을 뺀 기본 이름이 같은 후보들 중에서
+        사진/평점/리뷰 수가 가장 충실하고 좌표가 가까운 대표 Place를 선택한다.
+        이렇게 하면 이름 텍스트와 역 아이콘을 눌러도 같은 상세정보로 연결된다.
+    */
+    const stripStationSuffix = value => String(value || "")
+        .normalize("NFKC")
+        .replace(/JR東日本|JR東海|JR西日本|JR|東京メトロ|都営地下鉄|都営/gi, "")
+        .replace(/\s*(駅|역|station)\s*$/iu, "")
+        .trim();
+
+    const normalizeBaseName = value => stripStationSuffix(value)
+        .replace(/[\s\-‐‑‒–—―・･·.,，。'"’“”()（）\[\]【】]/g, "")
+        .toLowerCase();
+
+    const rawNames = [...new Set([rawJa, rawKo, rawEn].filter(Boolean))];
+    const baseNames = [...new Set(rawNames.map(stripStationSuffix).filter(Boolean))];
+    const queries = [...new Set([...rawNames, ...baseNames])];
+    const expectedBases = [...new Set(baseNames.map(normalizeBaseName).filter(Boolean))];
+
+    const stationTypes = new Set([
+        "train_station",
+        "subway_station",
+        "transit_station"
+    ]);
+
+    try {
+        const { Place } = await google.maps.importLibrary("places");
+        const candidatesById = new Map();
+
+        for (const textQuery of queries) {
+            try {
+                const { places = [] } = await Place.searchByText({
+                    textQuery,
+                    fields: [
+                        "id",
+                        "displayName",
+                        "location",
+                        "primaryType",
+                        "primaryTypeDisplayName",
+                        "formattedAddress",
+                        "rating",
+                        "userRatingCount",
+                        "photos"
+                    ],
+                    locationBias: {
+                        center: place.position,
+                        radius: 900
+                    },
+                    language: /[ぁ-んァ-ヶ一-龯駅]/u.test(textQuery) ? "ja" : undefined,
+                    region: "JP",
+                    maxResultCount: 20
+                });
+
+                places.forEach(candidate => {
+                    if (candidate?.id && !candidatesById.has(candidate.id)) {
+                        candidatesById.set(candidate.id, candidate);
+                    }
+                });
+            } catch (queryError) {
+                console.debug("역 대표 Place 검색 실패:", textQuery, queryError);
+            }
+        }
+
+        const ranked = [...candidatesById.values()]
+            .map(candidate => {
+                if (!candidate?.id || !candidate?.location) return null;
+
+                const distance = distanceMetersBetween(place.position, candidate.location);
+                if (!Number.isFinite(distance) || distance > 900) return null;
+
+                const candidateBase = normalizeBaseName(candidate.displayName);
+                let nameScore = 0;
+
+                for (const expected of expectedBases) {
+                    if (!expected || !candidateBase) continue;
+                    if (candidateBase === expected) {
+                        nameScore = Math.max(nameScore, 1800);
+                    } else if (
+                        candidateBase.includes(expected) ||
+                        expected.includes(candidateBase)
+                    ) {
+                        nameScore = Math.max(nameScore, 1200);
+                    }
                 }
-            });
 
-            marker.addListener("click", async () => {
-                const position = {
-                    lat: place.position.lat,
-                    lng: place.position.lng
+                // 이름 뿌리가 다른 주변 장소는 절대 선택하지 않는다.
+                if (nameScore < 1200) return null;
+
+                const photos = Array.isArray(candidate.photos) ? candidate.photos : [];
+                const reviewCount = Number(candidate.userRatingCount) || 0;
+                const rating = Number(candidate.rating);
+                const primaryType = String(candidate.primaryType || "").toLowerCase();
+                const isStation = stationTypes.has(primaryType);
+
+                let score = nameScore;
+                if (photos.length > 0) score += 800;
+                if (reviewCount > 0) score += 520;
+                if (Number.isFinite(rating) && rating > 0) score += 120;
+                if (isStation) score += 80;
+                score += Math.min(260, Math.log10(reviewCount + 1) * 75);
+                score -= Math.min(450, distance * 0.9);
+
+                return {
+                    candidate,
+                    distance,
+                    score,
+                    hasPhotos: photos.length > 0,
+                    reviewCount,
+                    isStation
                 };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.score - a.score || a.distance - b.distance);
 
-                /*
-                    장소 카드에서 길찾기를 누른 상태라면
-                    이 역을 다음 출발지 또는 도착지로 사용합니다.
-                */
-                if (isRoutePanelOpen()) {
-                    await handleMapRouteSelectionClick({
-                        latLng: new google.maps.LatLng(
-                            position.lat,
-                            position.lng
-                        ),
-                        domEvent: {
-                            target: {
-                                getAttribute(attributeName) {
-                                    return attributeName === "aria-label"
-                                        ? place.name[currentLanguage]
-                                        : null;
-                                }
-                            }
-                        }
-                    });
+        const best = ranked.find(item => item.hasPhotos && item.reviewCount > 0) ||
+            ranked.find(item => item.hasPhotos) ||
+            ranked.find(item => item.reviewCount > 0) ||
+            ranked[0];
 
-                    return;
-                }
+        if (!best?.candidate?.id) {
+            console.warn("동일 역 대표 Place 후보를 찾지 못했습니다:", sourceName);
+            return null;
+        }
 
-                openPlace(placeKey);
-                googleMap.panTo(position);
+        const candidate = best.candidate;
+        const candidateDisplayName = String(candidate.displayName || sourceName).trim();
+        const displayName = stripStationSuffix(candidateDisplayName) || candidateDisplayName;
 
-                if ((googleMap.getZoom() || 0) < 15) {
-                    googleMap.setZoom(15);
-                }
-            });
+        const result = {
+            placeId: candidate.id,
+            position: {
+                lat: typeof candidate.location.lat === "function"
+                    ? candidate.location.lat()
+                    : Number(candidate.location.lat),
+                lng: typeof candidate.location.lng === "function"
+                    ? candidate.location.lng()
+                    : Number(candidate.location.lng)
+            },
+            displayName,
+            originalDisplayName: candidateDisplayName,
+            sourceStationName: sourceName,
+            distance: best.distance
+        };
 
-            stationClickMarkers.push({
-                marker,
-                placeKey,
-                type: place.type,
-                majorStation: Boolean(place.majorStation)
-            });
+        console.debug("역/역명 동일 상세정보 연결:", {
+            requested: sourceName,
+            selected: candidateDisplayName,
+            shownAs: displayName,
+            primaryType: candidate.primaryType,
+            placeId: candidate.id,
+            photos: best.hasPhotos,
+            reviews: best.reviewCount,
+            distance: Math.round(best.distance)
         });
 
-    refreshStationClickVisibility();
+        stationGooglePlaceCache.set(placeKey, result);
+        return result;
+    } catch (error) {
+        console.warn("역 대표 Google Place 검색 실패:", sourceName, error);
+        return null;
+    }
+}
+
+function createStationClickAreas() {
+    /*
+        역 위에 투명한 google.maps.Marker 클릭 영역을 덮어두면
+        Google 기본 POI(JR/지하철/역 아이콘)의 실제 placeId 클릭을 가로채게 된다.
+
+        그 결과:
+        - 지도 글자(예: 新橋)는 Google Place 상세정보가 정상 표시되지만
+        - JR/전철 아이콘은 로컬 places 데이터/별도 resolver를 타면서
+          사진·리뷰가 비는 서로 다른 카드가 열릴 수 있었다.
+
+        이제 투명 역 클릭 마커를 만들지 않고 Google 지도 기본 POI 클릭을
+        그대로 사용한다. 그러면 아이콘이 실제 placeId를 제공하는 경우
+        그 Place 자체의 상세정보를 openGooglePoi 흐름에서 사용할 수 있다.
+    */
+    clearStationClickAreas();
 }
 
 
@@ -2202,16 +2796,56 @@ async function renderRecommendedPlaces(
 // MR.EUM 수정부분: 음식점(type: food)용 메뉴 시연 데이터
 const placeMenuDemoData = {
     ramen: [
-        { menuName: { ko: "치즈 라멘", ja: "チーズラーメン" }, menuValue: "980", menuInfo: { ko: "치즈와 라멘을 함께 즐기는 대표 메뉴", ja: "チーズとラーメンを一緒に楽しめる人気メニュー" }, photoUrl: "" },
-        { menuName: { ko: "매운 치즈 라멘", ja: "辛チーズラーメン" }, menuValue: "1,080", menuInfo: { ko: "매콤한 육수에 치즈를 더한 메뉴", ja: "ピリ辛スープにチーズを加えたメニュー" }, photoUrl: "" },
+        {
+            menuName: { ko: "치즈 라멘", ja: "チーズラーメン" },
+            menuValue: "980",
+            menuInfo: {
+                ko: "치즈와 라멘을 함께 즐기는 대표 메뉴",
+                ja: "チーズとラーメンを一緒に楽しめる人気メニュー"
+            },
+            photoUrl: ""
+        },
+        {
+            menuName: { ko: "매운 치즈 라멘", ja: "辛チーズラーメン" },
+            menuValue: "1,080",
+            menuInfo: {
+                ko: "매콤한 육수에 치즈를 더한 메뉴",
+                ja: "ピリ辛スープにチーズを加えたメニュー"
+            },
+            photoUrl: ""
+        },
         { menuName: { ko: "교자", ja: "餃子" }, menuValue: "450", menuInfo: { ko: "바삭하게 구운 일본식 만두", ja: "香ばしく焼き上げた餃子" }, photoUrl: "" }
     ],
     ichiranShibuya: [
-        { menuName: { ko: "천연 돈골 라멘", ja: "天然とんこつラーメン" }, menuValue: "980", menuInfo: { ko: "이치란 대표 돈코츠 라멘", ja: "一蘭の代表的な天然とんこつラーメン" }, photoUrl: "" },
-        { menuName: { ko: "추가 차슈", ja: "追加チャーシュー" }, menuValue: "250", menuInfo: { ko: "라멘에 추가할 수 있는 차슈", ja: "ラーメンに追加できるチャーシュー" }, photoUrl: "" }
+        {
+            menuName: { ko: "천연 돈골 라멘", ja: "天然とんこつラーメン" },
+            menuValue: "980",
+            menuInfo: {
+                ko: "이치란 대표 돈코츠 라멘",
+                ja: "一蘭の代表的な天然とんこつラーメン"
+            },
+            photoUrl: ""
+        },
+        {
+            menuName: { ko: "추가 차슈", ja: "追加チャーシュー" },
+            menuValue: "250",
+            menuInfo: {
+                ko: "라멘에 추가할 수 있는 차슈",
+                ja: "ラーメンに追加できるチャーシュー"
+            },
+            photoUrl: ""
+        }
     ],
     tsukijiOuterMarket: [
-        { menuName: { ko: "참치 초밥", ja: "まぐろ寿司" }, menuValue: "1,200", menuInfo: { ko: "쓰키지에서 즐기는 대표 해산물 메뉴", ja: "築地で楽しめる人気の海鮮メニュー" }, photoUrl: "" },
+        {
+            menuName: { ko: "참치 초밥", ja: "まぐろ寿司" },
+            menuValue: "1,200",
+            menuInfo: {
+                ko: "쓰키지에서 즐기는 대표 해산물 메뉴",
+                ja: "築地で楽しめる人気の海鮮メニュー"
+            },
+            photoUrl: ""
+        },
         { menuName: { ko: "해산물 덮밥", ja: "海鮮丼" }, menuValue: "1,500", menuInfo: { ko: "신선한 해산물을 올린 덮밥", ja: "新鮮な海鮮をのせた丼" }, photoUrl: "" }
     ]
 };
@@ -2360,7 +2994,11 @@ function renderPlaceReviews(placeKey) {
                 <div class="place-review-edit" data-review-edit hidden>
                     <div class="place-review-edit-stars" data-review-edit-stars>
                         ${[1,2,3,4,5].map(rating => `
-                            <button type="button" data-edit-rating="${rating}" class="${rating <= Number(review.rating) ? "selected" : ""}">${rating <= Number(review.rating) ? "★" : "☆"}</button>
+                            <button
+                                type="button"
+                                data-edit-rating="${rating}"
+                                class="${rating <= Number(review.rating) ? "selected" : ""}"
+                            >${rating <= Number(review.rating) ? "★" : "☆"}</button>
                         `).join("")}
                     </div>
                     <textarea data-review-edit-content maxlength="500">${content}</textarea>
@@ -2465,6 +3103,21 @@ async function openPlace(placeKey) {
 }
 
 
+function getPlaceDisplayName(name = "") {
+    // Google의 실제 Place 이름을 그대로 표시한다.
+    // 東京駅(Tokyo Station)과 東京(Tokyo)은 서로 다른 Place이므로 합치지 않는다.
+    return String(name || "").trim();
+}
+
+
+function isStationPoiType(type = "") {
+    return [
+        "train_station",
+        "subway_station",
+        "transit_station"
+    ].includes(String(type || "").toLowerCase());
+}
+
 function updatePlaceCard(placeKey) {
     const place =
         places[placeKey];
@@ -2516,13 +3169,17 @@ function updatePlaceCard(placeKey) {
 
 
     if (placeName) {
-        placeName.textContent =
-            place.name[currentLanguage] || place.name.ko || "";
+        placeName.textContent = getPlaceDisplayName(
+            place.name[currentLanguage] || place.name.ko || ""
+        );
     }
 
     if (placeCategory) {
-        placeCategory.textContent =
-            place.category[currentLanguage] || place.category.ko || "";
+        // 역 POI는 화면에서 "역"이라는 일반 분류명을 반복하지 않고
+        // 실제 장소 이름만 제목에 보여주므로 카테고리는 "교통"으로 단순화한다.
+        placeCategory.textContent = place.type === "transport"
+            ? (currentLanguage === "ko" ? "교통" : "交通")
+            : (place.category[currentLanguage] || place.category.ko || "");
     }
 
     if (placeRating) {
@@ -2699,7 +3356,148 @@ function getGooglePoiTypeLabel(types = []) {
 }
 
 
-async function openGooglePoi(placeId, fallbackPosition, fallbackName = "") {
+function normalizeNearbyPhotoPlaceName(value) {
+    return String(value || "")
+        .normalize("NFKC")
+        .toLowerCase()
+        .replace(/jr東日本|jr東海|jr西日本|jr|東京メトロ|都営地下鉄|都営/g, "")
+        .replace(/station|駅|역/g, "")
+        .replace(/[\s\-‐‑‒–—―・･·.,，。'"’“”()（）\[\]【】]/g, "")
+        .trim();
+}
+
+async function resolveNearbyPlacePhotoFallback(searchNames = [], position = null) {
+    if (!position || !window.google?.maps) {
+        return [];
+    }
+
+    const rawNames = [...new Set(
+        (Array.isArray(searchNames) ? searchNames : [searchNames])
+            .map(name => String(name || "").trim())
+            .filter(Boolean)
+    )];
+
+    if (!rawNames.length) {
+        return [];
+    }
+
+    const stationTypes = new Set([
+        "train_station",
+        "subway_station",
+        "transit_station"
+    ]);
+
+    const normalizeStationBase = value => String(value || "")
+        .normalize("NFKC")
+        .toLowerCase()
+        .replace(/jr東日本|jr東海|jr西日本|jr|東京メトロ|都営地下鉄|都営/g, "")
+        .replace(/\s*(station|駅|역)\s*$/iu, "")
+        .replace(/[\s\-‐‑‒–—―・･·.,，。'"’“”()（）\[\]【】]/g, "")
+        .trim();
+
+    const expectedBases = [...new Set(
+        rawNames.map(normalizeStationBase).filter(Boolean)
+    )];
+
+    try {
+        const { Place } = await google.maps.importLibrary("places");
+        const candidatesById = new Map();
+
+        // 역의 정체성은 유지한다. 검색어는 원래 역명과 역 접미사를 보강한 형태만 사용한다.
+        const queries = [...new Set(rawNames.flatMap(name => {
+            const base = name.replace(/\s*(station|駅|역)\s*$/iu, "").trim();
+            const list = [name];
+            if (base) {
+                list.push(`${base}駅`);
+                list.push(`${base} station`);
+            }
+            return list;
+        }))];
+
+        for (const textQuery of queries) {
+            try {
+                const { places = [] } = await Place.searchByText({
+                    textQuery,
+                    fields: [
+                        "id",
+                        "displayName",
+                        "location",
+                        "primaryType",
+                        "photos"
+                    ],
+                    locationBias: {
+                        center: position,
+                        radius: 500
+                    },
+                    language: /[ぁ-んァ-ヶ一-龯駅]/u.test(textQuery) ? "ja" : undefined,
+                    region: "JP",
+                    maxResultCount: 20
+                });
+
+                places.forEach(candidate => {
+                    if (candidate?.id && !candidatesById.has(candidate.id)) {
+                        candidatesById.set(candidate.id, candidate);
+                    }
+                });
+            } catch (queryError) {
+                console.debug("역 사진 fallback 검색 실패:", textQuery, queryError);
+            }
+        }
+
+        const ranked = [...candidatesById.values()]
+            .map(candidate => {
+                const photos = Array.isArray(candidate?.photos) ? candidate.photos : [];
+                if (!photos.length || !candidate?.location) return null;
+
+                const primaryType = String(candidate.primaryType || "").toLowerCase();
+                if (!stationTypes.has(primaryType)) return null;
+
+                const distance = distanceMetersBetween(position, candidate.location);
+                if (!Number.isFinite(distance) || distance > 600) return null;
+
+                const candidateBase = normalizeStationBase(candidate.displayName);
+                let nameScore = 0;
+                for (const expected of expectedBases) {
+                    if (!expected || !candidateBase) continue;
+                    if (candidateBase === expected) {
+                        nameScore = Math.max(nameScore, 1400);
+                    } else if (
+                        candidateBase.includes(expected) ||
+                        expected.includes(candidateBase)
+                    ) {
+                        nameScore = Math.max(nameScore, 900);
+                    }
+                }
+
+                // 같은 역 이름이 아닌 주변 역/시설 사진은 절대 섞지 않는다.
+                if (nameScore < 900) return null;
+
+                const score = nameScore - Math.min(500, distance * 1.2);
+                return { candidate, photos, distance, score };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.score - a.score || a.distance - b.distance);
+
+        const best = ranked[0];
+        if (!best) return [];
+
+        console.debug("동일 역 사진만 fallback:", {
+            requested: rawNames,
+            selected: best.candidate.displayName,
+            type: best.candidate.primaryType,
+            distance: Math.round(best.distance),
+            photos: best.photos.length
+        });
+
+        return best.photos;
+    } catch (error) {
+        console.warn("동일 역 사진 fallback 실패:", error);
+        return [];
+    }
+}
+
+
+async function openGooglePoi(placeId, fallbackPosition, fallbackName = "", options = {}) {
     const normalizedPlaceId = typeof normalizeGooglePlaceId === "function"
         ? normalizeGooglePlaceId(placeId)
         : String(placeId || "").replace(/^places\//, "");
@@ -2728,9 +3526,12 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "") {
         ? rawFallbackName
         : (currentLanguage === "ko" ? "선택한 장소" : "選択した場所");
 
+    const displayNameOverride = String(options?.displayNameOverride || "").trim();
+    const forceTransportCategory = Boolean(options?.forceTransportCategory);
+
     const fallbackPoi = {
         id: normalizedPlaceId,
-        displayName: safeName,
+        displayName: displayNameOverride || safeName,
         formattedAddress: "",
         location: safePosition,
         primaryType: "",
@@ -2745,12 +3546,14 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "") {
     selectedPlaceKey = null;
     selectedGooglePoi = {
         placeId: normalizedPlaceId,
-        name: safeName,
+        name: displayNameOverride || safeName,
         position: safePosition,
         address: "",
         primaryType: "",
         primaryTypeDisplayName: "",
-        category: getGooglePoiTypeLabel([]),
+        category: forceTransportCategory
+            ? (currentLanguage === "ko" ? "교통" : "交通")
+            : getGooglePoiTypeLabel([]),
         rating: 0,
         reviewCount: 0,
         userRatingCount: 0,
@@ -2773,6 +3576,32 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "") {
     try {
         const poi = await fetchGooglePoiDetails(normalizedPlaceId);
 
+        // 원래 Place 정보는 그대로 유지하고, 사진만 비어 있을 때 주변의
+        // 동일 장소 후보(예: 東京駅 ↔ 東京, 品川駅 ↔ 品川)에서 보충한다.
+        if (!Array.isArray(poi.photos) || poi.photos.length === 0) {
+            const fallbackPhotos = await resolveNearbyPlacePhotoFallback(
+                [
+                    ...(Array.isArray(options?.photoSearchNames)
+                        ? options.photoSearchNames
+                        : []),
+                    poi.displayName,
+                    rawFallbackName
+                ],
+                safePosition || (poi.location ? {
+                    lat: typeof poi.location.lat === "function"
+                        ? poi.location.lat()
+                        : Number(poi.location.lat),
+                    lng: typeof poi.location.lng === "function"
+                        ? poi.location.lng()
+                        : Number(poi.location.lng)
+                } : null)
+            );
+
+            if (fallbackPhotos.length) {
+                poi.photos = fallbackPhotos;
+            }
+        }
+
         const position = poi.location
             ? {
                 lat: typeof poi.location.lat === "function"
@@ -2784,7 +3613,7 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "") {
             }
             : safePosition;
 
-        const resolvedName = String(poi.displayName || rawFallbackName || "").trim();
+        const resolvedName = String(displayNameOverride || poi.displayName || rawFallbackName || "").trim();
         const hasResolvedName = Boolean(resolvedName) &&
             resolvedName !== "선택한 장소" &&
             resolvedName !== "選択した場所" &&
@@ -2807,7 +3636,9 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "") {
             address: poi.formattedAddress || "",
             primaryType: poi.primaryType || "",
             primaryTypeDisplayName: poi.primaryTypeDisplayName || "",
-            category: poi.primaryTypeDisplayName || getGooglePoiTypeLabel(poi.primaryType ? [poi.primaryType] : []),
+            category: forceTransportCategory || isStationPoiType(poi.primaryType)
+                ? (currentLanguage === "ko" ? "교통" : "交通")
+                : (poi.primaryTypeDisplayName || getGooglePoiTypeLabel(poi.primaryType ? [poi.primaryType] : [])),
             rating: Number(poi.rating) || 0,
             reviewCount: Number(poi.userRatingCount) || 0,
             userRatingCount: Number(poi.userRatingCount) || 0,
@@ -2823,9 +3654,27 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "") {
             console.warn("AutoPlace 백엔드 연결 실패:", backendError);
         }
 
-        // Google 상세 조회가 끝난 뒤 Places API (New) 사진으로 갱신합니다.
-        updateGooglePoiCard({ ...poi, id: resolvedPlaceId }, autoPlace, {
-            loadPhoto: true
+        // Place 클래스의 필드들은 getter 기반이라 {...poi}로 펼치면
+        // photos/rating/userRatingCount 같은 상세 필드가 빠질 수 있다.
+        // 표시 이름만 바꾸더라도 필요한 필드는 명시적으로 복사해서 카드에 전달한다.
+        const cardPoi = {
+            id: resolvedPlaceId,
+            displayName: displayNameOverride || poi.displayName || name,
+            formattedAddress: poi.formattedAddress || "",
+            location: poi.location || position || safePosition,
+            primaryType: poi.primaryType || "",
+            primaryTypeDisplayName: poi.primaryTypeDisplayName || "",
+            rating: poi.rating,
+            userRatingCount: poi.userRatingCount,
+            businessStatus: poi.businessStatus || "",
+            currentOpeningHours: poi.currentOpeningHours || null,
+            photos: Array.isArray(poi.photos) ? poi.photos : []
+        };
+
+        // Google 상세 조회가 끝난 뒤 Places API (New) 사진/평점/리뷰수를 그대로 카드에 반영한다.
+        updateGooglePoiCard(cardPoi, autoPlace, {
+            loadPhoto: true,
+            forceTransportCategory
         });
     } catch (error) {
         console.warn("Google POI 상세정보 조회 실패:", error);
@@ -3073,17 +3922,26 @@ async function renderGooglePoiMainPhoto(placeImage, placeIcon, poi, autoPlace, v
 
     showFallback();
 
+    const MAX_PLACE_PHOTOS = 5;
     const photoUrls = [];
     const seen = new Set();
+
     const pushUrl = url => {
-        if (!url || seen.has(url) || photoUrls.length >= 3) return;
+        if (
+            !url ||
+            seen.has(url) ||
+            photoUrls.length >= MAX_PLACE_PHOTOS
+        ) {
+            return;
+        }
+
         seen.add(url);
         photoUrls.push(url);
     };
 
-    // 1순위: Places API (New) Photo 객체에서 최대 3장
+    // 1순위: Places API (New) Photo 객체에서 최대 5장
     const googlePhotos = Array.isArray(poi?.photos) ? poi.photos : [];
-    for (const photo of googlePhotos.slice(0, 3)) {
+    for (const photo of googlePhotos.slice(0, MAX_PLACE_PHOTOS)) {
         try {
             if (typeof photo?.getURI === "function") {
                 pushUrl(photo.getURI({ maxWidth: 1200, maxHeight: 800 }));
@@ -3105,7 +3963,14 @@ async function renderGooglePoiMainPhoto(placeImage, placeIcon, poi, autoPlace, v
 
     const carousel = document.createElement("div");
     carousel.className = "google-place-photo-carousel";
-    carousel.setAttribute("aria-label", currentLanguage === "ja" ? "場所の写真" : currentLanguage === "en" ? "Place photos" : "장소 사진");
+    carousel.setAttribute(
+        "aria-label",
+        currentLanguage === "ja"
+            ? "場所の写真"
+            : currentLanguage === "en"
+                ? "Place photos"
+                : "장소 사진"
+    );
 
     const track = document.createElement("div");
     track.className = "google-place-photo-track";
@@ -3118,7 +3983,13 @@ async function renderGooglePoiMainPhoto(placeImage, placeIcon, poi, autoPlace, v
 
         const img = document.createElement("img");
         img.className = "google-place-main-photo";
-        img.alt = `${poi?.displayName || selectedGooglePoi?.name || "장소"} ${currentLanguage === "ja" ? "写真" : currentLanguage === "en" ? "photo" : "사진"} ${index + 1}`;
+        const photoLabel = currentLanguage === "ja"
+            ? "写真"
+            : currentLanguage === "en"
+                ? "photo"
+                : "사진";
+        const placeName = poi?.displayName || selectedGooglePoi?.name || "장소";
+        img.alt = `${placeName} ${photoLabel} ${index + 1}`;
         img.loading = index === 0 ? "eager" : "lazy";
         img.draggable = false;
         img.src = url;
@@ -3224,7 +4095,7 @@ function debugGooglePoiPhotos(poi, autoPlace) {
 }
 
 function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
-    const { loadPhoto = true } = options;
+    const { loadPhoto = true, forceTransportCategory = false } = options;
     debugGooglePoiPhotos(poi, autoPlace);
     const name =
         poi.displayName ||
@@ -3232,24 +4103,36 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
             ? "선택한 장소"
             : "選択した場所");
 
-    const category =
-        poi.primaryTypeDisplayName ||
-        getGooglePoiTypeLabel(
-            poi.primaryType ? [poi.primaryType] : []
+    const category = forceTransportCategory || isStationPoiType(poi.primaryType)
+        ? (currentLanguage === "ko" ? "교통" : "交通")
+        : (
+            poi.primaryTypeDisplayName ||
+            getGooglePoiTypeLabel(
+                poi.primaryType ? [poi.primaryType] : []
+            )
         );
 
     // Place 가 있으면 Cheese Map 별점/리뷰를 우선 표시합니다.
+    // 없으면 Google / AutoPlace 평점으로 보완합니다.
     const placeAvg = Number(autoPlace?.avgRating);
     const placeReviews = Number(autoPlace?.reviewCount);
     const hasPlaceStats = autoPlace?.placeId && (
         Number.isFinite(placeAvg) || Number.isFinite(placeReviews)
     );
+    const directRating = Number(poi?.rating);
+    const backendRating = Number(autoPlace?.rating);
     const rating = hasPlaceStats && Number.isFinite(placeAvg)
         ? placeAvg
-        : Number(poi.rating);
+        : (Number.isFinite(directRating) && directRating > 0
+            ? directRating
+            : backendRating);
+    const directReviewCount = Number(poi?.userRatingCount);
+    const backendReviewCount = Number(autoPlace?.userRatingCount);
     const reviewCount = hasPlaceStats && Number.isFinite(placeReviews)
         ? placeReviews
-        : Number(poi.userRatingCount);
+        : (Number.isFinite(directReviewCount) && directReviewCount > 0
+            ? directReviewCount
+            : backendReviewCount);
 
     const placeName = document.getElementById("placeName");
     const placeCategory = document.getElementById("placeCategory");
@@ -3263,7 +4146,9 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
     const saveButton = document.getElementById("saveButton");
 
     if (placeName) {
-        placeName.textContent = autoPlace?.placeName || autoPlace?.name || name;
+        placeName.textContent = getPlaceDisplayName(
+            autoPlace?.placeName || autoPlace?.name || name
+        );
     }
 
     if (placeCategory) {
@@ -3735,79 +4620,167 @@ function normalizeSearchText(value) {
 }
 
 
-function searchPlace() {
-    const input =
-        document.getElementById(
-            "searchInput"
-        );
-
-    const keyword =
-        normalizeSearchText(
-            input?.value
-        );
-
+async function searchPlace() {
+    const input = document.getElementById("searchInput");
+    const rawKeyword = String(input?.value || "").trim();
+    const keyword = normalizeSearchText(rawKeyword);
 
     if (!keyword) {
-        showToast(
-            "toast.searchRequired"
-        );
-
+        showToast("toast.searchRequired");
         input?.focus();
         return;
     }
 
+    /*
+        검색창 검색도 지도 POI 클릭과 동일하게 Google Place ID -> Place Details
+        흐름을 사용한다. 기존 로컬 places 객체를 먼저 열면 역 검색에서
+        사진/평점/리뷰 수가 없는 샘플 데이터 카드로 떨어질 수 있다.
+    */
+    try {
+        const { Place } = await google.maps.importLibrary("places");
+        const center = googleMap?.getCenter?.();
+        const centerPoint = center
+            ? {
+                lat: typeof center.lat === "function" ? center.lat() : Number(center.lat),
+                lng: typeof center.lng === "function" ? center.lng() : Number(center.lng)
+            }
+            : null;
 
-    const result =
-        Object.entries(places)
-            .find(([, place]) => {
-                const searchableText = [
-                    place.name.ko,
-                    place.name.ja,
-                    place.category.ko,
-                    place.category.ja,
-                    place.address.ko,
-                    place.address.ja
-                ]
-                    .map(normalizeSearchText)
-                    .join(" ");
+        const stationQuery = /(?:역|駅|station|jr|전철|철도|지하철|metro|subway)/iu.test(rawKeyword);
 
-                return searchableText.includes(
-                    keyword
+        const request = {
+            textQuery: rawKeyword,
+            fields: [
+                "id",
+                "displayName",
+                "location",
+                "primaryType",
+                "primaryTypeDisplayName",
+                "photos",
+                "rating",
+                "userRatingCount",
+                "formattedAddress"
+            ],
+            language: currentLanguage === "ko" ? "ko" : "ja",
+            region: "JP",
+            maxResultCount: 20
+        };
+
+        if (centerPoint && Number.isFinite(centerPoint.lat) && Number.isFinite(centerPoint.lng)) {
+            request.locationBias = {
+                center: centerPoint,
+                radius: 50000
+            };
+        }
+
+        const { places: googleResults = [] } = await Place.searchByText(request);
+
+        if (googleResults.length) {
+            const stationTypes = new Set([
+                "train_station",
+                "subway_station",
+                "transit_station"
+            ]);
+
+            const ranked = googleResults
+                .map((candidate, index) => {
+                    const type = String(candidate?.primaryType || "").toLowerCase();
+                    const isStation = stationTypes.has(type);
+                    const photoCount = Array.isArray(candidate?.photos) ? candidate.photos.length : 0;
+                    const reviewCount = Number(candidate?.userRatingCount) || 0;
+                    const rating = Number(candidate?.rating) || 0;
+
+                    let score = 1000 - index * 10;
+
+                    if (stationQuery) {
+                        score += isStation ? 3000 : -1200;
+                    }
+
+                    if (photoCount > 0) score += 500 + Math.min(photoCount, 10) * 15;
+                    if (reviewCount > 0) score += 400 + Math.min(reviewCount, 5000) / 25;
+                    if (rating > 0) score += rating * 20;
+
+                    return { candidate, score };
+                })
+                .sort((a, b) => b.score - a.score);
+
+            const best = ranked[0]?.candidate;
+
+            if (best?.id) {
+                const position = best.location
+                    ? {
+                        lat: typeof best.location.lat === "function"
+                            ? best.location.lat()
+                            : Number(best.location.lat),
+                        lng: typeof best.location.lng === "function"
+                            ? best.location.lng()
+                            : Number(best.location.lng)
+                    }
+                    : centerPoint;
+
+                console.debug("검색창 Google Place 선택:", {
+                    query: rawKeyword,
+                    id: best.id,
+                    name: best.displayName,
+                    type: best.primaryType,
+                    photos: Array.isArray(best.photos) ? best.photos.length : 0,
+                    rating: best.rating,
+                    userRatingCount: best.userRatingCount
+                });
+
+                await openGooglePoi(
+                    best.id,
+                    position,
+                    best.displayName || rawKeyword,
+                    {
+                        displayNameOverride: best.displayName || "",
+                        photoSearchNames: [best.displayName || rawKeyword]
+                    }
                 );
-            });
 
+                if (position) {
+                    googleMap?.panTo(position);
+                    googleMap?.setZoom(16);
+                }
+
+                showToast("toast.searchFound");
+                return;
+            }
+        }
+    } catch (error) {
+        console.warn("Google Places 검색 실패, 로컬 검색으로 fallback:", error);
+    }
+
+    // Google 검색이 실패한 경우에만 기존 로컬 장소 데이터로 fallback한다.
+    const result = Object.entries(places)
+        .find(([, place]) => {
+            const searchableText = [
+                place.name.ko,
+                place.name.ja,
+                place.category.ko,
+                place.category.ja,
+                place.address.ko,
+                place.address.ja
+            ]
+                .map(normalizeSearchText)
+                .join(" ");
+
+            return searchableText.includes(keyword);
+        });
 
     if (!result) {
-        showToast(
-            "toast.noResult"
-        );
-
+        showToast("toast.noResult");
         return;
     }
 
-
-    const [placeKey, place] =
-        result;
-
+    const [placeKey, place] = result;
 
     openPlace(placeKey);
-
-    filterCategory(
-        place.type
-    );
-
-    googleMap?.panTo(
-        place.position
-    );
-
+    filterCategory(place.type);
+    googleMap?.panTo(place.position);
     googleMap?.setZoom(16);
-
-
-    showToast(
-        "toast.searchFound"
-    );
+    showToast("toast.searchFound");
 }
-
 
 document
     .getElementById("searchButton")

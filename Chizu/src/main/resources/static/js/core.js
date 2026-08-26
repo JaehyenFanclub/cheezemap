@@ -1309,6 +1309,10 @@ function applyLanguage(language) {
             currentLanguage === "ko" ? "한국어" : currentLanguage === "ja" ? "日本語" : "English";
     }
 
+    if (typeof renderCurrentAreaName === "function") {
+        renderCurrentAreaName();
+    }
+
     renderRecommendedPlaces();
     updatePlaceCard(selectedPlaceKey);
     updateHeaderAuthState();

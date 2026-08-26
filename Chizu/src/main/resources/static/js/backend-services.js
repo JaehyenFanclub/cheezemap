@@ -21,7 +21,15 @@ window.CheeseApi = {
         update: (placeId, body) => apiRequest(`/place/${placeId}`, { method: "PUT", auth: true, body }),
         delete: placeId => apiRequest(`/place/${placeId}`, { method: "DELETE", auth: true }),
         photo: {
-            create: (placeId, file) => { const form = new FormData(); form.append("file", file); return apiRequest(`/place/${placeId}/photo`, { method: "POST", auth: true, body: form }); },
+            create: (placeId, file) => {
+                const form = new FormData();
+                form.append("file", file);
+                return apiRequest(`/place/${placeId}/photo`, {
+                    method: "POST",
+                    auth: true,
+                    body: form
+                });
+            },
             get: (placeId, photoId) => apiRequest(`/place/${placeId}/photo/${photoId}`),
             delete: (placeId, photoId) => apiRequest(`/place/${placeId}/photo/${photoId}`, { method: "DELETE", auth: true })
         }
@@ -34,16 +42,37 @@ window.CheeseApi = {
         update: (placeId, menuId, body) => apiRequest(`/place/${placeId}/menu/${menuId}`, { method: "PUT", auth: true, body }),
         delete: (placeId, menuId) => apiRequest(`/place/${placeId}/menu/${menuId}`, { method: "DELETE", auth: true }),
         photo: {
-            create: (placeId, menuId, file) => { const form = new FormData(); form.append("file", file); return apiRequest(`/place/${placeId}/menu/${menuId}/photo`, { method: "POST", auth: true, body: form }); },
+            create: (placeId, menuId, file) => {
+                const form = new FormData();
+                form.append("file", file);
+                return apiRequest(`/place/${placeId}/menu/${menuId}/photo`, {
+                    method: "POST",
+                    auth: true,
+                    body: form
+                });
+            },
             get: (placeId, menuId, photoId) => apiRequest(`/place/${placeId}/menu/${menuId}/photo/${photoId}`),
-            delete: (placeId, menuId, photoId) => apiRequest(`/place/${placeId}/menu/${menuId}/photo/${photoId}`, { method: "DELETE", auth: true })
+            delete: (placeId, menuId, photoId) => apiRequest(
+                `/place/${placeId}/menu/${menuId}/photo/${photoId}`,
+                {
+                    method: "DELETE",
+                    auth: true
+                }
+            )
         }
     },
 
     review: {
         list: placeId => apiRequest(`/place/${placeId}/review`),
         create: (placeId, formData) => apiRequest(`/place/${placeId}/review`, { method: "POST", auth: true, body: formData }),
-        update: (placeId, reviewId, formData) => apiRequest(`/place/${placeId}/review/${reviewId}/edit`, { method: "PUT", auth: true, body: formData }),
+        update: (placeId, reviewId, formData) => apiRequest(
+            `/place/${placeId}/review/${reviewId}/edit`,
+            {
+                method: "PUT",
+                auth: true,
+                body: formData
+            }
+        ),
         delete: (placeId, reviewId) => apiRequest(`/place/${placeId}/review/${reviewId}/delete`, { method: "DELETE", auth: true }),
         like: (placeId, reviewId) => apiRequest(`/place/${placeId}/review/${reviewId}/like`, { method: "POST", auth: true }),
         my: async () => {
@@ -66,7 +95,27 @@ window.CheeseApi = {
         clone: (groupId, body) => apiRequest(`/group/${groupId}/clone`, { method: "POST", auth: true, body }),
         update: (groupId, body) => apiRequest(`/group/${groupId}/update`, { method: "PUT", auth: true, body }),
         delete: groupId => apiRequest(`/group/${groupId}/delete`, { method: "DELETE", auth: true }),
-        addPlace: (groupId, placeId) => apiRequest(`/group/${groupId}/addPlace`, { method: "POST", auth: true, body: { groupId: Number(groupId), placeId: Number(placeId) } }),
-        deletePlace: (groupId, placeId) => apiRequest(`/group/${groupId}/deletePlace`, { method: "DELETE", auth: true, body: { groupId: Number(groupId), placeId: Number(placeId) } })
+        addPlace: (groupId, placeId) => apiRequest(
+            `/group/${groupId}/addPlace`,
+            {
+                method: "POST",
+                auth: true,
+                body: {
+                    groupId: Number(groupId),
+                    placeId: Number(placeId)
+                }
+            }
+        ),
+        deletePlace: (groupId, placeId) => apiRequest(
+            `/group/${groupId}/deletePlace`,
+            {
+                method: "DELETE",
+                auth: true,
+                body: {
+                    groupId: Number(groupId),
+                    placeId: Number(placeId)
+                }
+            }
+        )
     }
 };
