@@ -4,6 +4,7 @@ package org.example.place.service;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.example.config.JwtTokenProvider;
+import org.example.autoPlace.Entity.AutoPlace;
 import org.example.place.domain.Place;
 import org.example.place.dto.PlaceCreateRequest;
 import org.example.place.dto.PlaceResponse;
@@ -14,6 +15,8 @@ import org.example.user.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +30,21 @@ public class PlaceService {
 
 
     @Transactional
+    public Place getOrCreateFromAutoPlace(AutoPlace autoPlace) {
+        if (autoPlace == null || autoPlace.getAutoPlaceId() == null || autoPlace.getAutoPlaceId().isBlank()) {
+            throw new IllegalArgumentException("AutoPlace 정보가 올바르지 않습니다.");
+        }
+
+        String googlePlaceId = autoPlace.getAutoPlaceId().trim();
+        Place existing = findExistingForAutoPlace(googlePlaceId);
+        if (existing != null) {
+            existing.attachSourceKey(googlePlaceId);
+            return syncPlaceFromAutoPlace(existing, autoPlace);
+        }
+        return createPlaceFromAutoPlace(autoPlace, googlePlaceId);
+    }
+
+    @Transactional
     public PlaceResponse createPlace(PlaceCreateRequest request, String token){
         Long userId = Long.parseLong(jwtTokenProvider.getSubject(token));
 
@@ -35,6 +53,9 @@ public class PlaceService {
 
         String sourceKey = blankToNull(request.getGooglePlaceId());
         Place existing = findExistingPlace(sourceKey, request.getPlaceInformation());
+        if (existing == null && sourceKey != null) {
+            existing = findExistingForAutoPlace(sourceKey);
+        }
         if (existing != null) {
             existing.attachSourceKey(sourceKey);
             return PlaceResponse.from(existing);
@@ -146,6 +167,74 @@ public class PlaceService {
     }
 
 
+    private Place createPlaceFromAutoPlace(AutoPlace autoPlace, String googlePlaceId) {
+        Place place = Place.builder()
+                .googlePlaceId(googlePlaceId)
+                .placeName(defaultAutoPlaceName(autoPlace.getName()))
+                .placeCategory(defaultAutoPlaceCategory(autoPlace.getCategory()))
+                .placeAddress(autoPlace.getAddress())
+                .placeInformation("Google Maps POI / " + googlePlaceId)
+                .placeDate(new Date())
+                .placeLatitude(autoPlace.getAutoLatitude())
+                .placeLongitude(autoPlace.getAutoLongitude())
+                .build();
+
+        try {
+            return placeRepository.saveAndFlush(place);
+        } catch (DataIntegrityViolationException ex) {
+            Place existing = findExistingForAutoPlace(googlePlaceId);
+            if (existing == null) {
+                throw ex;
+            }
+            existing.attachSourceKey(googlePlaceId);
+            return syncPlaceFromAutoPlace(existing, autoPlace);
+        }
+    }
+
+    private Place syncPlaceFromAutoPlace(Place place, AutoPlace autoPlace) {
+        place.updateFromGoogle(
+                defaultAutoPlaceName(autoPlace.getName()),
+                defaultAutoPlaceCategory(autoPlace.getCategory()),
+                autoPlace.getAddress(),
+                autoPlace.getAutoLatitude(),
+                autoPlace.getAutoLongitude()
+        );
+        return place;
+    }
+
+    private static String defaultAutoPlaceName(String name) {
+        if (name == null || name.isBlank()) {
+            return "이름 없음";
+        }
+        return name.trim();
+    }
+
+    private static String defaultAutoPlaceCategory(String category) {
+        if (category == null || category.isBlank()) {
+            return "establishment";
+        }
+        return category.trim();
+    }
+
+    private Place findExistingForAutoPlace(String googlePlaceId) {
+        Place byGoogleId = placeRepository.findByGooglePlaceId(googlePlaceId).orElse(null);
+        if (byGoogleId != null) {
+            return byGoogleId;
+        }
+
+        Place byGoogleInfo = placeRepository
+                .findFirstByPlaceInformationOrderByPlaceIdAsc("Google Maps POI / " + googlePlaceId)
+                .orElse(null);
+        if (byGoogleInfo != null) {
+            return byGoogleInfo;
+        }
+
+        // 예전 프론트: google_* 키를 정적 장소로 오인해 POST 한 orphan
+        return placeRepository
+                .findFirstByPlaceInformationEndingWithOrderByPlaceIdAsc("CHEESE MAP / google_" + googlePlaceId)
+                .orElse(null);
+    }
+
     private Place findExistingPlace(String sourceKey, String placeInformation) {
         if (sourceKey != null) {
             Place byKey = placeRepository.findByGooglePlaceId(sourceKey).orElse(null);
@@ -178,6 +267,8 @@ public class PlaceService {
                 .placeDate(place.getPlaceDate())
                 .placeLatitude(place.getPlaceLatitude())
                 .placeLongitude(place.getPlaceLongitude())
+                .avgRating(place.getAvgRating())
+                .reviewCount(place.getReviewCount())
                 .userId(place.getUser() != null ? place.getUser().getId() : null)
                 .build();
 

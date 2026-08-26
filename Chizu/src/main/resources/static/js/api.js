@@ -27,7 +27,6 @@ async function apiRequest(path, options = {}) {
 
     const headers = { ...extraHeaders };
     let requestBody = body;
-
     if (auth) {
         const token = getAuthToken();
         if (!token) throw new Error("로그인이 필요합니다.");

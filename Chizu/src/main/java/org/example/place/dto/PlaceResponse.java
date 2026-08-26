@@ -24,6 +24,8 @@ public class PlaceResponse {
     private Date placeDate;
     private Double placeLatitude;
     private Double placeLongitude;
+    private double avgRating;
+    private int reviewCount;
     private Long userId;
 
     public static PlaceResponse from(Place place) {
@@ -38,6 +40,8 @@ public class PlaceResponse {
                 .placeDate(place.getPlaceDate())
                 .placeLatitude(place.getPlaceLatitude())
                 .placeLongitude(place.getPlaceLongitude())
+                .avgRating(place.getAvgRating())
+                .reviewCount(place.getReviewCount())
                 .userId(place.getUser() != null ? place.getUser().getId() : null)
                 .build();
     }

@@ -46,6 +46,7 @@ public class GroupService {
         return new CreateResponseDto(message, "201", group.getGroupId());
     }
 
+    @Transactional(readOnly = true)
     public GetResponseDto getGroupDetail(Long groupId){
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 그룹입니다."));

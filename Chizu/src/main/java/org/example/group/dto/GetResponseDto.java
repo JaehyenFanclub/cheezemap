@@ -1,6 +1,7 @@
 package org.example.group.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
@@ -18,7 +19,8 @@ public record GetResponseDto(
         @Schema(description = "그룹 이름", example = "오사카 라멘집 이름")
         String groupName,
 
-        @Schema(description = "생성한 유저ID", example = "111")
+        @JsonProperty("placeIds")
+        @Schema(description = "그룹에 저장된 장소 ID 목록", example = "[11, 12]")
         List<Long> placeId
 ) {
 

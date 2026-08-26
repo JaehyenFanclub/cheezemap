@@ -192,7 +192,7 @@ function isPlaceLiked(placeKey) {
 }
 
 
-function togglePlaceLike(placeKey) {
+async function togglePlaceLike(placeKey) {
     if (
         !placeKey ||
         !places[placeKey]
@@ -234,6 +234,11 @@ function togglePlaceLike(placeKey) {
         showToast(
             "toast.saved"
         );
+
+        // 백엔드는 증가만 지원합니다. 좋아요 추가 시에만 preference(like=2)를 기록합니다.
+        if (typeof recordPlacePreferenceAction === "function") {
+            await recordPlacePreferenceAction("like", placeKey);
+        }
     }
 
     writeStorage(

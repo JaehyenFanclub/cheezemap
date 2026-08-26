@@ -1,8 +1,10 @@
 /* =====================================================
    프론트 지도 장소 <-> Spring Boot Place / AutoPlace 연결
 
-   - CHEESE MAP 정적 장소: 기존 Place API 사용
-   - Google 장소: AutoPlace API를 통해 기존 Place와 연결
+   - CHEESE MAP 정적 장소: Place API 사용
+   - Google 장소:
+       1) 이미 Place 연결(localStorage / 세션)이 있으면 GET /place/{id}
+       2) 없을 때만 AutoPlace API → Place getOrCreate
    - 브라우저에는 placeId 매핑을 캐시
 ===================================================== */
 
@@ -56,15 +58,149 @@ function getFrontendKeyForKnownBackendId(placeId) {
     const links = readBackendPlaceLinks();
     const target = Number(placeId);
     for (const [externalKey, id] of Object.entries(links)) {
-        if (Number(id) === target && externalKey.startsWith("static:")) {
+        if (Number(id) !== target) continue;
+        if (externalKey.startsWith("static:")) {
             return externalKey.slice(7);
+        }
+        if (externalKey.startsWith("google:")) {
+            return `google_${externalKey.slice(7)}`;
         }
     }
     return null;
 }
 
+function frontendKeyFromExternalKey(externalKey) {
+    const key = String(externalKey || "");
+    if (key.startsWith("static:")) {
+        return key.slice(7);
+    }
+    if (key.startsWith("google:")) {
+        return `google_${key.slice(7)}`;
+    }
+    return null;
+}
+
+function frontendKeyForBackendPlace(data) {
+    if (!data) return null;
+    const remembered = getFrontendKeyForKnownBackendId(data.placeId);
+    if (remembered) return remembered;
+    if (data.googlePlaceId) return `google_${data.googlePlaceId}`;
+    if (data.externalKey) return frontendKeyFromExternalKey(data.externalKey);
+    return null;
+}
+
+/** 그룹/마이페이지가 새로고침 후에도 백엔드 장소를 그릴 수 있도록 places 에 등록합니다. */
+function registerFrontendPlaceFromBackend(data) {
+    const frontendKey = frontendKeyForBackendPlace(data);
+    if (!frontendKey) return null;
+
+    const googlePlaceId = data.googlePlaceId
+        || (String(frontendKey).startsWith("google_") ? frontendKey.slice(7) : null);
+    const externalKey = googlePlaceId
+        ? `google:${googlePlaceId}`
+        : (String(frontendKey).startsWith("google_") ? null : `static:${frontendKey}`);
+
+    if (externalKey && data.placeId) {
+        rememberBackendPlace(externalKey, { ...data, placeId: Number(data.placeId) });
+    }
+
+    if (typeof places === "object" && places && !places[frontendKey]) {
+        const name = data.placeName || data.name || "장소";
+        const category = data.placeCategory || data.category || "";
+        const address = data.placeAddress || data.address || "";
+        places[frontendKey] = {
+            name: { ko: name, ja: name, en: name },
+            category: { ko: category, ja: category, en: category },
+            type: "tour",
+            rating: Number(data.avgRating || data.rating) || 0,
+            reviewCount: Number(data.reviewCount || data.userRatingCount) || 0,
+            address: { ko: address, ja: address, en: address },
+            crowd: { ko: "보통", ja: "普通", en: "Normal" },
+            icon: "ti-map-pin",
+            color: "linear-gradient(135deg, #ffe5a7, #f4bc45)",
+            position: {
+                lat: Number(data.placeLatitude ?? data.autoLatitude),
+                lng: Number(data.placeLongitude ?? data.autoLongitude)
+            }
+        };
+    }
+
+    return frontendKey;
+}
+
+/** 로그인 상태에서 Place 조회 시 view preference(hit_count)가 쌓이도록 호출합니다. */
+async function recordPlaceViewIfLoggedIn(placeId) {
+    const id = Number(placeId);
+    if (!Number.isFinite(id) || id <= 0 || !getAuthToken()) {
+        return;
+    }
+    try {
+        await apiRequest(`/place/${id}`, { auth: true });
+    } catch (error) {
+        console.warn("place view preference 기록 실패:", error);
+    }
+}
+
+/**
+ * like / save / view 등 Place preference 액션을 백엔드에 기록합니다.
+ * ensureCurrentPlaceKey 가 만든 google_* 키도 AutoPlace Place 로 연결합니다.
+ */
+async function recordPlacePreferenceAction(action, placeKey = selectedPlaceKey) {
+    if (!action || !getAuthToken()) {
+        return;
+    }
+    try {
+        const backendPlace = await ensureBackendPlace(placeKey);
+        const placeId = Number(backendPlace?.placeId);
+        if (!Number.isFinite(placeId) || placeId <= 0) {
+            return;
+        }
+        await apiRequest(`/place/${placeId}/preference/${action}`, {
+            method: "POST",
+            auth: true
+        });
+    } catch (error) {
+        console.warn(`place ${action} preference 기록 실패:`, error);
+    }
+}
+
+function normalizeGooglePlaceId(placeId) {
+    const raw = String(placeId || "").trim();
+    if (!raw) return "";
+    return raw.startsWith("places/") ? raw.slice("places/".length) : raw;
+}
+
+function buildGooglePlaceDescriptor(googlePlaceId, source = null) {
+    const normalizedId = normalizeGooglePlaceId(googlePlaceId);
+    const poi = source || (
+        normalizeGooglePlaceId(selectedGooglePoi?.placeId) === normalizedId
+            ? selectedGooglePoi
+            : null
+    );
+    const googleKey = `google_${normalizedId}`;
+    const cached = places[googleKey];
+
+    return {
+        externalKey: `google:${normalizedId}`,
+        googlePlaceId: normalizedId,
+        frontendKey: null,
+        name: poi?.name || localizedValue(cached?.name) || "Google Place",
+        category: poi?.category || localizedValue(cached?.category) || "Google Maps",
+        address: poi?.address || localizedValue(cached?.address) || "",
+        phone: "",
+        information: `Google Maps POI / ${normalizedId}`,
+        lat: Number(poi?.position?.lat ?? cached?.position?.lat),
+        lng: Number(poi?.position?.lng ?? cached?.position?.lng)
+    };
+}
+
 function getActivePlaceDescriptor(placeKey = selectedPlaceKey) {
-    if (placeKey && places[placeKey]) {
+    // ensureCurrentPlaceKey / 그룹저장이 만든 google_* 임시 키는 정적 장소가 아닙니다.
+    if (placeKey && String(placeKey).startsWith("google_")) {
+        return buildGooglePlaceDescriptor(String(placeKey).slice("google_".length));
+    }
+
+    if (placeKey && places[placeKey] && !String(placeKey).startsWith("google_")) {
         const p = places[placeKey];
         return {
             externalKey: `static:${placeKey}`,
@@ -80,18 +216,7 @@ function getActivePlaceDescriptor(placeKey = selectedPlaceKey) {
     }
 
     if (selectedGooglePoi?.placeId) {
-        return {
-            externalKey: `google:${selectedGooglePoi.placeId}`,
-            googlePlaceId: selectedGooglePoi.placeId,
-            frontendKey: null,
-            name: selectedGooglePoi.name || "Google Place",
-            category: selectedGooglePoi.category || "Google Maps",
-            address: selectedGooglePoi.address || "",
-            phone: "",
-            information: `Google Maps POI / ${selectedGooglePoi.placeId}`,
-            lat: Number(selectedGooglePoi.position?.lat),
-            lng: Number(selectedGooglePoi.position?.lng)
-        };
+        return buildGooglePlaceDescriptor(selectedGooglePoi.placeId, selectedGooglePoi);
     }
 
     return null;
@@ -106,45 +231,72 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
 
     // 1. 메모리 캐시
     if (backendPlaceCache.has(descriptor.externalKey)) {
-        return backendPlaceCache.get(descriptor.externalKey);
+        const cached = backendPlaceCache.get(descriptor.externalKey);
+        if (Number(cached?.placeId) > 0) {
+            return cached;
+        }
     }
 
-    // 2. 기존에 연결된 placeId가 있으면 기존 Place 조회
-    // Google 장소는 photoReferences까지 받아야 하므로 AutoPlace API를 사용한다.
+    // 같은 세션에서 이미 Place 를 알고 있으면 재사용
+    if (
+        descriptor.googlePlaceId &&
+        normalizeGooglePlaceId(selectedGooglePoi?.placeId) === descriptor.googlePlaceId &&
+        Number(selectedGooglePoi?.backendPlaceId) > 0
+    ) {
+        const knownId = Number(selectedGooglePoi.backendPlaceId);
+        const known = {
+            placeId: knownId,
+            googlePlaceId: descriptor.googlePlaceId,
+            placeName: descriptor.name,
+            placeCategory: descriptor.category,
+            placeAddress: descriptor.address,
+            placeLatitude: descriptor.lat,
+            placeLongitude: descriptor.lng,
+            externalKey: descriptor.externalKey,
+            isAutoPlace: true,
+            autoPlaceId: selectedGooglePoi?.autoPlace?.autoPlaceId || descriptor.googlePlaceId,
+            photoUrls: Array.isArray(selectedGooglePoi?.autoPlace?.photoUrls)
+                ? selectedGooglePoi.autoPlace.photoUrls
+                : []
+        };
+        rememberBackendPlace(descriptor.externalKey, known);
+        return known;
+    }
+
     const links = readBackendPlaceLinks();
     const linkedId = Number(links[descriptor.externalKey]);
 
-    if (
-        !descriptor.googlePlaceId &&
-        Number.isFinite(linkedId) &&
-        linkedId > 0
-    ) {
+    // 2. 이미 Place 로 연결된 경우 (정적/Google 공통)
+    // Place 테이블에 있으면 GET /place 만으로 충분합니다.
+    // AutoPlace 는 연결이 없을 때 최초 생성/동기화용입니다.
+    if (Number.isFinite(linkedId) && linkedId > 0) {
         try {
-            const existing = await apiRequest(`/place/${linkedId}`);
-
-            rememberBackendPlace(
-                descriptor.externalKey,
-                existing
+            const existing = await apiRequest(
+                `/place/${linkedId}`,
+                getAuthToken() ? { auth: true } : {}
             );
 
-            return {
+            const reused = {
                 ...existing,
-                externalKey: descriptor.externalKey
+                placeId: Number(existing.placeId) || linkedId,
+                googlePlaceId: existing.googlePlaceId || descriptor.googlePlaceId || null,
+                externalKey: descriptor.externalKey,
+                isAutoPlace: Boolean(descriptor.googlePlaceId),
+                autoPlaceId: descriptor.googlePlaceId || null,
+                photoUrls: backendPlaceCache.get(descriptor.externalKey)?.photoUrls || []
             };
+
+            rememberBackendPlace(descriptor.externalKey, reused);
+            return reused;
         } catch {
-            // 기존 DB에서 사라진 경우 브라우저 캐시 제거
             forgetBackendPlace(descriptor.externalKey);
         }
     }
 
 
     /* =====================================================
-       GOOGLE 장소
-       현재 백엔드 AutoPlaceController 규격에 맞춤
-       GET /api/places/{googlePlaceId}
-       응답: autoPlaceId, name, category, address,
-             autoLatitude, autoLongitude, rating,
-             userRatingCount, photoUrls
+       GOOGLE 장소 (Place 연결이 아직 없을 때만)
+       GET /api/places/{googlePlaceId} → AutoPlace + Place getOrCreate
     ===================================================== */
     if (descriptor.googlePlaceId) {
         const pendingKey = descriptor.externalKey;
@@ -154,32 +306,47 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
         }
 
         const requestPromise = (async () => {
-            const encodedGooglePlaceId = encodeURIComponent(descriptor.googlePlaceId);
+            const googlePlaceId = normalizeGooglePlaceId(descriptor.googlePlaceId);
+            const encodedGooglePlaceId = encodeURIComponent(googlePlaceId);
             const autoPlace = await apiRequest(`/api/places/${encodedGooglePlaceId}`);
 
             if (!autoPlace?.autoPlaceId) {
                 throw new Error("Google 장소 정보를 AutoPlace 백엔드에서 가져오지 못했습니다.");
             }
 
+            const placeId = Number(autoPlace.placeId);
             const normalized = {
                 ...autoPlace,
                 autoPlaceId: String(autoPlace.autoPlaceId),
-                googlePlaceId: String(autoPlace.autoPlaceId || descriptor.googlePlaceId),
+                placeId: Number.isFinite(placeId) && placeId > 0 ? placeId : null,
+                googlePlaceId: String(autoPlace.googlePlaceId || autoPlace.autoPlaceId || googlePlaceId),
                 placeName: autoPlace.name || descriptor.name,
                 placeCategory: autoPlace.category || descriptor.category,
                 placeAddress: autoPlace.address || descriptor.address,
                 placeLatitude: autoPlace.autoLatitude ?? descriptor.lat,
                 placeLongitude: autoPlace.autoLongitude ?? descriptor.lng,
-                rating: Number(autoPlace.rating) || 0,
-                userRatingCount: Number(autoPlace.userRatingCount) || 0,
+                rating: Number(autoPlace.avgRating ?? autoPlace.rating) || 0,
+                userRatingCount: Number(autoPlace.reviewCount ?? autoPlace.userRatingCount) || 0,
+                avgRating: Number(autoPlace.avgRating) || 0,
+                reviewCount: Number(autoPlace.reviewCount) || 0,
                 photoUrls: Array.isArray(autoPlace.photoUrls) ? autoPlace.photoUrls.filter(Boolean) : [],
                 externalKey: descriptor.externalKey,
                 isAutoPlace: true
             };
 
-            // AutoPlace는 String ID 구조입니다. 숫자 Place ID가 필요한 리뷰/메뉴 API에는
-            // undefined를 보내지 않도록 호출부에서 명시적으로 구분합니다.
-            backendPlaceCache.set(descriptor.externalKey, normalized);
+            if (normalized.placeId) {
+                rememberBackendPlace(descriptor.externalKey, normalized);
+                if (
+                    normalizeGooglePlaceId(selectedGooglePoi?.placeId) === googlePlaceId
+                ) {
+                    selectedGooglePoi.placeId = googlePlaceId;
+                    selectedGooglePoi.backendPlaceId = normalized.placeId;
+                    selectedGooglePoi.autoPlace = normalized;
+                }
+                await recordPlaceViewIfLoggedIn(normalized.placeId);
+            } else {
+                backendPlaceCache.set(descriptor.externalKey, normalized);
+            }
             return normalized;
         })();
 
@@ -213,6 +380,7 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
             placePhone: descriptor.phone,
             placeInformation: descriptor.information,
             placeDate: new Date().toISOString(),
+            googlePlaceId: descriptor.googlePlaceId || null,
 
             placeLatitude:
                 Number.isFinite(descriptor.lat)
@@ -242,20 +410,24 @@ async function getBackendPlaceById(placeId) {
     if (backendPlaceIdCache.has(key)) return backendPlaceIdCache.get(key);
 
     const data = await apiRequest(`/place/${placeId}`);
-    const frontendKey = getFrontendKeyForKnownBackendId(placeId);
-    const externalKey = frontendKey ? `static:${frontendKey}` : null;
-    const normalized = externalKey ? { ...data, externalKey } : data;
+    const googlePlaceId = data.googlePlaceId || null;
+    let frontendKey = getFrontendKeyForKnownBackendId(placeId);
+    if (!frontendKey && googlePlaceId) {
+        frontendKey = `google_${googlePlaceId}`;
+    }
+    const externalKey = frontendKey
+        ? (String(frontendKey).startsWith("google_")
+            ? `google:${frontendKey.slice(7)}`
+            : `static:${frontendKey}`)
+        : null;
+    const normalized = { ...data, frontendKey, externalKey };
 
     backendPlaceIdCache.set(key, normalized);
-    if (externalKey) backendPlaceCache.set(externalKey, normalized);
-    return normalized;
-}
-
-function frontendKeyFromExternalKey(externalKey) {
-    if (String(externalKey || "").startsWith("static:")) {
-        return String(externalKey).slice(7);
+    if (externalKey) {
+        rememberBackendPlace(externalKey, normalized);
     }
-    return null;
+    registerFrontendPlaceFromBackend(normalized);
+    return normalized;
 }
 
 async function backendPlaceIdToFrontendKey(placeId) {
@@ -264,7 +436,8 @@ async function backendPlaceIdToFrontendKey(placeId) {
 
     try {
         const place = await getBackendPlaceById(placeId);
-        return frontendKeyFromExternalKey(place.externalKey);
+        return registerFrontendPlaceFromBackend(place)
+            || frontendKeyFromExternalKey(place.externalKey);
     } catch {
         return null;
     }
