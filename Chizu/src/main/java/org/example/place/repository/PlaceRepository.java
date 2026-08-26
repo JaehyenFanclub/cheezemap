@@ -15,6 +15,9 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
 
     Optional<Place> findFirstByPlaceInformationOrderByPlaceIdAsc(String placeInformation);
 
+    /** 예전 프론트가 google_* 키를 정적 장소로 POST 할 때 생긴 orphan 조회용 */
+    Optional<Place> findFirstByPlaceInformationEndingWithOrderByPlaceIdAsc(String placeInformationSuffix);
+
     @Query("""
             select p from Place p
             where p.placeLatitude is not null

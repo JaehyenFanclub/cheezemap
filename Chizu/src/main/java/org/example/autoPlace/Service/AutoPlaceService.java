@@ -9,7 +9,7 @@ import org.example.autoPlace.Entity.AutoPlace;
 import org.example.autoPlace.Entity.AutoPlacePhoto;
 import org.example.autoPlace.Repository.AutoPlaceRepository;
 import org.example.place.domain.Place;
-import org.example.place.repository.PlaceRepository;
+import org.example.place.service.PlaceService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -27,7 +27,7 @@ import java.util.*;
 public class AutoPlaceService {
 
     private final AutoPlaceRepository autoPlaceRepository;
-    private final PlaceRepository placeRepository;
+    private final PlaceService placeService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -57,6 +57,9 @@ public class AutoPlaceService {
         }
 
         String normalizedPlaceId = placeId.trim();
+        if (normalizedPlaceId.startsWith("places/")) {
+            normalizedPlaceId = normalizedPlaceId.substring("places/".length());
+        }
 
         synchronized (lockFor(normalizedPlaceId)) {
             Optional<AutoPlace> existing = autoPlaceRepository.findById(normalizedPlaceId);
@@ -75,7 +78,7 @@ public class AutoPlaceService {
                     }
                 }
 
-                return AutoPlaceResponseDto.fromEntity(place);
+                return toResponse(place);
             }
 
             GooglePlaceResponseDTO googleData = fetchFromGoogleApi(normalizedPlaceId);
@@ -95,8 +98,13 @@ public class AutoPlaceService {
             applyGoogleData(place, googleData);
 
             AutoPlace savedAutoPlace = autoPlaceRepository.saveAndFlush(place);
-            return AutoPlaceResponseDto.fromEntity(savedAutoPlace);
+            return toResponse(savedAutoPlace);
         }
+    }
+
+    private AutoPlaceResponseDto toResponse(AutoPlace autoPlace) {
+        Place place = placeService.getOrCreateFromAutoPlace(autoPlace);
+        return AutoPlaceResponseDto.fromEntity(autoPlace, place);
     }
 
     private boolean needsGoogleEnrichment(AutoPlace place) {

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.autoPlace.Entity.AutoPlace;
 import org.example.autoPlace.Entity.AutoPlacePhoto;
+import org.example.place.domain.Place;
 
 import java.time.LocalTime;
 import java.util.Collections;
@@ -20,6 +21,8 @@ import java.util.stream.Collectors;
 public class AutoPlaceResponseDto {
 
     private String autoPlaceId;
+    private Long placeId;
+    private String googlePlaceId;
     private String name;
     private String category;
     private String address;
@@ -28,13 +31,17 @@ public class AutoPlaceResponseDto {
     private Double autoLatitude;
     private Double autoLongitude;
 
-    // 추가된 필드
-    private Double rating;            // 평점 (예: 4.5)
-    private Integer userRatingCount;  // 리뷰 수 (예: 1250)
+    // Google AutoPlace 평점 (참고용)
+    private Double rating;
+    private Integer userRatingCount;
+
+    // Cheese Map Place 평점/리뷰
+    private Double avgRating;
+    private Integer reviewCount;
 
     private List<String> photoUrls;
 
-    public static AutoPlaceResponseDto fromEntity(AutoPlace autoPlace) {
+    public static AutoPlaceResponseDto fromEntity(AutoPlace autoPlace, Place place) {
         List<String> photoUrls = (autoPlace.getPhotos() != null)
                 ? autoPlace.getPhotos().stream()
                 .map(AutoPlacePhoto::getPhotoUrl)
@@ -43,6 +50,8 @@ public class AutoPlaceResponseDto {
 
         return AutoPlaceResponseDto.builder()
                 .autoPlaceId(autoPlace.getAutoPlaceId())
+                .placeId(place != null ? place.getPlaceId() : null)
+                .googlePlaceId(place != null ? place.getGooglePlaceId() : autoPlace.getAutoPlaceId())
                 .name(autoPlace.getName())
                 .category(autoPlace.getCategory())
                 .address(autoPlace.getAddress())
@@ -50,11 +59,10 @@ public class AutoPlaceResponseDto {
                 .closeTime(autoPlace.getCloseTime())
                 .autoLatitude(autoPlace.getAutoLatitude())
                 .autoLongitude(autoPlace.getAutoLongitude())
-
-                // 추가된 매핑
                 .rating(autoPlace.getRating())
                 .userRatingCount(autoPlace.getUserRatingCount())
-
+                .avgRating(place != null ? place.getAvgRating() : 0.0)
+                .reviewCount(place != null ? place.getReviewCount() : 0)
                 .photoUrls(photoUrls)
                 .build();
     }
