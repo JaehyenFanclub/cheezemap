@@ -18,6 +18,9 @@ public record ReviewResponse(
         @Schema(description = "작성자 닉네임", example = "길동이")
         String userNickname,
 
+        @Schema(description = "작성자 프로필 사진 URL (없으면 null)", example = "/uploads/user/xxx.jpg")
+        String userPhotoUrl,
+
         @Schema(description = "리뷰 내용", example = "치즈가 맛있어요.")
         String content,
 
