@@ -3,6 +3,158 @@
    현재는 백엔드 연결 전 임시 localStorage 방식
 ===================================================== */
 
+function normalizeHeaderProfilePhotoUrl(photoUrl) {
+    const raw =
+        String(photoUrl || "")
+            .trim();
+
+    if (!raw) {
+        return "";
+    }
+
+    if (/^https?:\/\//i.test(raw)) {
+        return raw;
+    }
+
+    return raw.startsWith("/")
+        ? raw
+        : `/${raw}`;
+}
+
+function renderHeaderProfilePhoto() {
+    const avatar =
+        document.getElementById(
+            "headerProfileAvatar"
+        );
+
+    if (!avatar) return;
+
+    const photoUrl =
+        normalizeHeaderProfilePhotoUrl(
+            currentUser?.photoUrl
+        );
+
+    if (!photoUrl) {
+        avatar.innerHTML = `
+            <i class="ti ti-user"></i>
+        `;
+
+        avatar.classList.remove(
+            "has-photo"
+        );
+
+        return;
+    }
+
+    /*
+        프로필 사진 교체 직후에도 브라우저 캐시 대신
+        서버의 최신 사진을 보이게 합니다.
+    */
+    const separator =
+        photoUrl.includes("?")
+            ? "&"
+            : "?";
+
+    const src =
+        `${photoUrl}${separator}v=${Date.now()}`;
+
+    avatar.innerHTML = `
+        <img
+            src="${src}"
+            alt="프로필 사진"
+            class="header-profile-avatar-image"
+        >
+    `;
+
+    avatar.classList.add(
+        "has-photo"
+    );
+
+    avatar
+        .querySelector("img")
+        ?.addEventListener(
+            "error",
+            () => {
+                avatar.innerHTML = `
+                    <i class="ti ti-user"></i>
+                `;
+
+                avatar.classList.remove(
+                    "has-photo"
+                );
+            },
+            {
+                once: true
+            }
+        );
+}
+
+
+function renderMyPageProfilePhoto() {
+    const avatar =
+        document.querySelector(
+            ".mypage-avatar"
+        );
+
+    if (!avatar) return;
+
+    const photoUrl =
+        normalizeHeaderProfilePhotoUrl(
+            currentUser?.photoUrl
+        );
+
+    if (!photoUrl) {
+        avatar.innerHTML = `
+            <i class="ti ti-user"></i>
+        `;
+
+        avatar.classList.remove(
+            "has-photo"
+        );
+
+        return;
+    }
+
+    const separator =
+        photoUrl.includes("?")
+            ? "&"
+            : "?";
+
+    const src =
+        `${photoUrl}${separator}v=${Date.now()}`;
+
+    avatar.innerHTML = `
+        <img
+            src="${src}"
+            alt="프로필 사진"
+            class="mypage-avatar-image"
+        >
+    `;
+
+    avatar.classList.add(
+        "has-photo"
+    );
+
+    avatar
+        .querySelector("img")
+        ?.addEventListener(
+            "error",
+            () => {
+                avatar.innerHTML = `
+                    <i class="ti ti-user"></i>
+                `;
+
+                avatar.classList.remove(
+                    "has-photo"
+                );
+            },
+            {
+                once: true
+            }
+        );
+}
+
+
 function updateHeaderAuthState() {
     const loginButton =
         document.getElementById(
@@ -51,6 +203,13 @@ function updateHeaderAuthState() {
         profileNickname.textContent =
             currentUser.nickname;
     }
+
+    /*
+        홈 화면 우측 프로필 버튼도
+        /user/mypage에서 받은 currentUser.photoUrl을 사용합니다.
+    */
+    renderHeaderProfilePhoto();
+    renderMyPageProfilePhoto();
 }
 
 
@@ -385,6 +544,8 @@ function renderMyPage() {
         email.textContent =
             currentUser.email;
     }
+
+    renderMyPageProfilePhoto();
 
 
     const content =

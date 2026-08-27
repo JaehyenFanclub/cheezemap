@@ -189,3 +189,22 @@ input:focus {
         font-size:22px
     }
 }
+
+
+/* 현재 저장된 프로필 사진 / 새 사진 미리보기 */
+.profile-edit-avatar {
+    overflow: hidden;
+}
+
+.profile-edit-avatar.has-photo {
+    padding: 0;
+    background: #f3f0e9;
+}
+
+.profile-edit-avatar-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 50%;
+}

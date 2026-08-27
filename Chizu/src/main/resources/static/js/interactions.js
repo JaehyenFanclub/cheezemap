@@ -1081,6 +1081,9 @@ document
                 event.target.checked =
                     false;
 
+                legendCard?.classList.remove(
+                    "show"
+                );
 
                 showToast(
                     "toast.mapNotReady"
@@ -1089,39 +1092,31 @@ document
                 return;
             }
 
+            const enabled =
+                event.target.checked;
 
+            /*
+                실시간 교통을 켜면 혼잡도 범례도 함께 표시합니다.
+                별도 "혼잡도" 스위치는 제거하고 교통 레이어와 한 번에 제어합니다.
+            */
             trafficLayer.setMap(
-                event.target.checked
+                enabled
                     ? googleMap
                     : null
             );
 
+            legendCard?.classList.toggle(
+                "show",
+                enabled
+            );
 
             showToast(
-                event.target.checked
+                enabled
                     ? "toast.trafficOn"
                     : "toast.trafficOff"
             );
         }
     );
-
-
-/* 혼잡도 범례 */
-
-document
-    .getElementById(
-        "crowdToggle"
-    )
-    ?.addEventListener(
-        "change",
-        event => {
-            legendCard?.classList.toggle(
-                "show",
-                event.target.checked
-            );
-        }
-    );
-
 
 /* 위험지역 샘플 기능 */
 

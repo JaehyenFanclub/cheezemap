@@ -1454,3 +1454,45 @@ body:has(#routePanel.show) #placeRouteButton:hover {
 
 
 
+
+
+/* =========================================================
+   홈 화면 우측 프로필 사진
+========================================================= */
+.profile-avatar {
+    overflow: hidden;
+}
+
+.profile-avatar.has-photo {
+    padding: 0;
+    background: #f3f0e9;
+}
+
+.header-profile-avatar-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+
+/* =========================================================
+   마이페이지 프로필 사진
+========================================================= */
+.mypage-avatar {
+    overflow: hidden;
+}
+
+.mypage-avatar.has-photo {
+    padding: 0;
+    background: #f3f0e9;
+}
+
+.mypage-avatar-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 50%;
+}
