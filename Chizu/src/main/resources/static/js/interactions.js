@@ -182,62 +182,318 @@ function enablePlaceActionButtons() {
 }
 
 
-function isPlaceLiked(placeKey) {
-    return Boolean(
+function normalizePlaceStateKey(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+
+    if (/^place:\d+$/.test(raw)) {
+        return raw;
+    }
+
+    if (raw.startsWith("google:")) {
+        const googleId =
+            typeof normalizeGooglePlaceId === "function"
+                ? normalizeGooglePlaceId(raw.slice("google:".length))
+                : raw.slice("google:".length).replace(/^places\//, "");
+
+        return googleId
+            ? `google:${googleId}`
+            : "";
+    }
+
+    if (raw.startsWith("google_")) {
+        const googleId =
+            typeof normalizeGooglePlaceId === "function"
+                ? normalizeGooglePlaceId(raw.slice("google_".length))
+                : raw.slice("google_".length).replace(/^places\//, "");
+
+        return googleId
+            ? `google:${googleId}`
+            : "";
+    }
+
+    return raw;
+}
+
+
+function migrateLegacyPlaceStateKeys(values) {
+    if (!Array.isArray(values)) return [];
+
+    const links =
+        typeof readBackendPlaceLinks === "function"
+            ? readBackendPlaceLinks()
+            : {};
+
+    const migrated = [];
+
+    values.forEach(value => {
+        const raw =
+            normalizePlaceStateKey(value);
+
+        if (!raw) return;
+
+        if (
+            /^place:\d+$/.test(raw) ||
+            raw.startsWith("google:")
+        ) {
+            migrated.push(raw);
+
+            /*
+                Google 별칭에 이미 DB 링크가 있으면 place:id도 함께 보관합니다.
+                반대로 링크가 아직 없어도 google:<id>를 버리지 않습니다.
+            */
+            if (raw.startsWith("google:")) {
+                const linkedId =
+                    Number(links[raw]);
+
+                if (
+                    Number.isFinite(linkedId) &&
+                    linkedId > 0
+                ) {
+                    migrated.push(
+                        `place:${linkedId}`
+                    );
+                }
+            }
+
+            return;
+        }
+
+        if (raw && places[raw]) {
+            const externalKey =
+                `static:${raw}`;
+
+            const linkedId =
+                Number(links[externalKey]);
+
+            if (
+                Number.isFinite(linkedId) &&
+                linkedId > 0
+            ) {
+                migrated.push(
+                    `place:${linkedId}`
+                );
+            }
+        }
+    });
+
+    return [...new Set(migrated)];
+}
+
+
+function getCurrentGoogleStateKey() {
+    const googleId =
+        typeof normalizeGooglePlaceId === "function"
+            ? normalizeGooglePlaceId(
+                selectedGooglePoi?.placeId || ""
+            )
+            : String(
+                selectedGooglePoi?.placeId || ""
+            ).replace(/^places\//, "");
+
+    return googleId
+        ? `google:${googleId}`
+        : "";
+}
+
+
+function getPlaceStateKeys(placeKey = selectedPlaceKey) {
+    const keys = [];
+
+    const backendId =
+        typeof getRememberedBackendPlaceId === "function"
+            ? getRememberedBackendPlaceId(
+                placeKey
+            )
+            : null;
+
+    if (
+        Number.isFinite(Number(backendId)) &&
+        Number(backendId) > 0
+    ) {
+        keys.push(
+            `place:${Number(backendId)}`
+        );
+    }
+
+    const googleKey =
+        getCurrentGoogleStateKey();
+
+    if (googleKey) {
+        keys.push(googleKey);
+    }
+
+    if (
         placeKey &&
-        likedPlaces.includes(
-            placeKey
-        )
+        String(placeKey).startsWith("google_")
+    ) {
+        const googleId =
+            typeof normalizeGooglePlaceId === "function"
+                ? normalizeGooglePlaceId(
+                    String(placeKey).slice(7)
+                )
+                : String(placeKey).slice(7).replace(/^places\//, "");
+
+        if (googleId) {
+            keys.push(
+                `google:${googleId}`
+            );
+        }
+    }
+
+    return [...new Set(keys)];
+}
+
+
+async function ensurePlaceStateKeys(placeKey = selectedPlaceKey) {
+    const keys =
+        getPlaceStateKeys(placeKey);
+
+    let backendId =
+        keys
+            .map(key => {
+                const match =
+                    key.match(/^place:(\d+)$/);
+
+                return match
+                    ? Number(match[1])
+                    : null;
+            })
+            .find(Boolean);
+
+    if (!backendId) {
+        const backendPlace =
+            await ensureBackendPlace(
+                placeKey
+            );
+
+        backendId =
+            Number(
+                backendPlace?.placeId
+            );
+
+        if (
+            Number.isFinite(backendId) &&
+            backendId > 0
+        ) {
+            keys.push(
+                `place:${backendId}`
+            );
+        }
+    }
+
+    const descriptor =
+        typeof getActivePlaceDescriptor === "function"
+            ? getActivePlaceDescriptor(placeKey)
+            : null;
+
+    if (descriptor?.googlePlaceId) {
+        const googleId =
+            normalizeGooglePlaceId(
+                descriptor.googlePlaceId
+            );
+
+        if (googleId) {
+            keys.push(
+                `google:${googleId}`
+            );
+        }
+    }
+
+    return [...new Set(keys)];
+}
+
+likedPlaces = migrateLegacyPlaceStateKeys(likedPlaces);
+writeStorage(STORAGE_KEYS.likes, likedPlaces);
+
+
+function getCurrentBackendStateKey() {
+    return getPlaceStateKeys(
+        selectedPlaceKey
+    ).find(
+        key => /^place:\d+$/.test(key)
+    ) || "";
+}
+
+
+function isPlaceLiked(stateKeyOrKeys) {
+    const keys =
+        Array.isArray(stateKeyOrKeys)
+            ? stateKeyOrKeys
+            : [stateKeyOrKeys];
+
+    return keys.some(
+        key =>
+            key &&
+            likedPlaces.includes(
+                normalizePlaceStateKey(key)
+            )
     );
 }
 
 
-async function togglePlaceLike(placeKey) {
-    if (
-        !placeKey ||
-        !places[placeKey]
-    ) {
-        return;
-    }
-
+async function togglePlaceLike(placeKey = selectedPlaceKey) {
     if (!currentUser) {
-        showToast(
-            "toast.loginRequired"
-        );
-
-        openModal(
-            loginModal
-        );
-
+        showToast("toast.loginRequired");
+        openModal(loginModal);
         return;
     }
 
-    if (
-        isPlaceLiked(
-            placeKey
-        )
-    ) {
+    let stateKeys = [];
+
+    try {
+        stateKeys =
+            await ensurePlaceStateKeys(
+                placeKey
+            );
+    } catch (error) {
+        console.error(
+            "좋아요 장소 연결 실패:",
+            error
+        );
+
+        showToast(
+            currentLanguage === "ko"
+                ? "장소 정보를 불러오지 못했습니다."
+                : currentLanguage === "ja"
+                    ? "場所情報を取得できませんでした。"
+                    : "Could not load place information."
+        );
+        return;
+    }
+
+    if (!stateKeys.length) return;
+
+    const currentlyLiked =
+        isPlaceLiked(stateKeys);
+
+    if (currentlyLiked) {
         likedPlaces =
             likedPlaces.filter(
                 key =>
-                    key !== placeKey
+                    !stateKeys.includes(
+                        normalizePlaceStateKey(key)
+                    )
             );
 
-        showToast(
-            "toast.removed"
-        );
+        showToast("toast.removed");
     } else {
-        likedPlaces.push(
-            placeKey
-        );
+        likedPlaces = [
+            ...new Set([
+                ...likedPlaces,
+                ...stateKeys
+            ])
+        ];
 
-        showToast(
-            "toast.saved"
-        );
+        showToast("toast.saved");
 
-        // 백엔드는 증가만 지원합니다. 좋아요 추가 시에만 preference(like=2)를 기록합니다.
-        if (typeof recordPlacePreferenceAction === "function") {
-            await recordPlacePreferenceAction("like", placeKey);
+        if (
+            typeof recordPlacePreferenceAction === "function"
+        ) {
+            recordPlacePreferenceAction(
+                "like",
+                placeKey
+            ).catch?.(console.warn);
         }
     }
 
@@ -249,29 +505,41 @@ async function togglePlaceLike(placeKey) {
     updateLikeButton();
 
     if (
-        mypageModal?.classList.contains(
-            "show"
-        )
+        mypageModal?.classList.contains("show") &&
+        currentMyPageTab === "likes"
     ) {
         renderMyPage();
     }
 }
 
 
-/* 장소 상세 카드 버튼 상태 갱신 */
-
 function updateLikeButton() {
     enablePlaceActionButtons();
 
-    const currentKey =
-        (selectedPlaceKey && places[selectedPlaceKey])
-            ? selectedPlaceKey
-            : null;
+    const stateKeys =
+        getPlaceStateKeys(
+            selectedPlaceKey
+        );
 
-    const liked = currentKey ? isPlaceLiked(currentKey) : false;
-    const favoriteButton = document.getElementById("favoriteButton");
+    const liked =
+        isPlaceLiked(
+            stateKeys
+        );
 
-    favoriteButton?.classList.toggle("active", liked);
+    const favoriteButton =
+        document.getElementById(
+            "favoriteButton"
+        );
+
+    favoriteButton?.classList.toggle(
+        "active",
+        liked
+    );
+
+    favoriteButton?.classList.toggle(
+        "saved",
+        liked
+    );
 
     if (favoriteButton) {
         favoriteButton.innerHTML = `
@@ -284,50 +552,79 @@ function updateLikeButton() {
         favoriteButton.setAttribute(
             "aria-label",
             currentLanguage === "ko"
-                ? liked ? "좋아요 취소" : "좋아요"
+                ? liked
+                    ? "좋아요 취소"
+                    : "좋아요"
                 : currentLanguage === "ja"
-                    ? liked ? "いいね解除" : "いいね"
-                    : liked ? "Unlike" : "Like"
+                    ? liked
+                        ? "いいね解除"
+                        : "いいね"
+                    : liked
+                        ? "Unlike"
+                        : "Like"
         );
     }
 }
 
+
 function updateSaveButton() {
     enablePlaceActionButtons();
 
-    const currentKey =
-        (selectedPlaceKey && places[selectedPlaceKey])
-            ? selectedPlaceKey
-            : null;
+    const stateKeys =
+        getPlaceStateKeys(
+            selectedPlaceKey
+        );
 
-    const saved = currentKey ? isPlaceFavorite(currentKey) : false;
-    const savePlaceButton = document.getElementById("saveButton");
+    const saved =
+        typeof isPlaceFavorite === "function"
+            ? isPlaceFavorite(
+                stateKeys
+            )
+            : false;
+
+    const savePlaceButton =
+        document.getElementById(
+            "saveButton"
+        );
 
     if (!savePlaceButton) return;
 
-    savePlaceButton.classList.toggle("saved", saved);
+    savePlaceButton.classList.toggle(
+        "saved",
+        Boolean(saved)
+    );
+
+    savePlaceButton.classList.toggle(
+        "active",
+        Boolean(saved)
+    );
+
     savePlaceButton.innerHTML = `
         <i
             class="ti ${saved ? "ti-bookmark-filled" : "ti-bookmark"}"
             aria-hidden="true"
         ></i>
         <span>
-            ${saved
-                ? (currentLanguage === "ko"
-                    ? "저장됨"
-                    : currentLanguage === "ja"
-                        ? "保存済み"
-                        : "Saved")
-                : translate("place.save")}
+            ${
+                saved
+                    ? (
+                        currentLanguage === "ko"
+                            ? "저장됨"
+                            : currentLanguage === "ja"
+                                ? "保存済み"
+                                : "Saved"
+                    )
+                    : translate("place.save")
+            }
         </span>
     `;
 }
+
 
 function updateFavoriteButtons() {
     updateLikeButton();
     updateSaveButton();
 }
-
 
 
 /* 하트 / 좋아요 버튼 */
@@ -652,7 +949,7 @@ document
 
             navigator.geolocation
                 .getCurrentPosition(
-                    position => {
+                    async position => {
                         const currentPosition = {
                             lat:
                                 position
@@ -700,21 +997,34 @@ document
                                                 .SymbolPath
                                                 .CIRCLE,
 
-                                        scale: 8,
+                                        scale: 9,
 
                                         fillColor:
-                                            "#f6c945",
+                                            "#e2a800",
 
                                         fillOpacity:
                                             1,
 
                                         strokeColor:
-                                            "#ffffff",
+                                            "#fff7dc",
 
                                         strokeWeight:
-                                            4
+                                            3
                                     }
                                 });
+
+                        /*
+                            현재 위치 버튼을 눌렀을 때
+                            지도 이동뿐 아니라 왼쪽 "현재 지역" 카드도
+                            같은 좌표 기준으로 즉시 갱신합니다.
+                        */
+                        if (
+                            typeof updateCurrentAreaFromPosition === "function"
+                        ) {
+                            await updateCurrentAreaFromPosition(
+                                currentPosition
+                            );
+                        }
 
 
                         showToast(

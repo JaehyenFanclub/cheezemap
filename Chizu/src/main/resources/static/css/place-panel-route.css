@@ -1782,3 +1782,33 @@ body.dark .google-place-photo-carousel {
     cursor: wait;
     opacity: 0.6;
 }
+
+
+/* =========================================================
+   좋아요 / 즐겨찾기 선택 상태 통일
+   하트의 기존 빨간색 규칙보다 우선하도록 ID + !important 사용
+========================================================= */
+.place-side-panel #favoriteButton.active,
+.place-side-panel #favoriteButton.saved,
+.place-side-panel #saveButton.active,
+.place-side-panel #saveButton.saved {
+    border-color: #e8c14b !important;
+    color: #5d442e !important;
+    background: #fff1b8 !important;
+    box-shadow: 0 3px 10px rgba(160, 112, 23, .10) !important;
+}
+
+.place-side-panel #favoriteButton.active i,
+.place-side-panel #favoriteButton.saved i,
+.place-side-panel #saveButton.active i,
+.place-side-panel #saveButton.saved i {
+    color: #9f6814 !important;
+    fill: currentColor !important;
+}
+
+/* Tabler filled heart에 남아있는 red/currentColor 상속도 치즈색으로 강제 */
+.place-side-panel #favoriteButton .ti-heart-filled,
+.place-side-panel #saveButton .ti-bookmark-filled {
+    color: #9f6814 !important;
+    stroke: #9f6814 !important;
+}

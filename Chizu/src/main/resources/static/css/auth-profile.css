@@ -637,7 +637,7 @@ body.dark .auth-modal .text-button {
 }
 
 .mypage-card:hover {
-    transform: translateY(-1px);
+    transform: none;
 
     border-color: var(--cheese-deep);
 }

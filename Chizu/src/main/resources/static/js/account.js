@@ -326,6 +326,8 @@ const mockReviews = [
 let currentMyPageTab =
     "reviews";
 
+let myPageRenderRequestId = 0;
+
 
 function setMyPageTab(tabName) {
     currentMyPageTab =
@@ -395,18 +397,30 @@ function renderMyPage() {
     }
 
 
+    const renderRequestId =
+        ++myPageRenderRequestId;
+
     if (currentMyPageTab === "reviews") {
-        renderMyReviews(content);
+        renderMyReviews(
+            content,
+            renderRequestId
+        );
     } else if (currentMyPageTab === "likes") {
-        renderMyLikes(content);
+        renderMyLikes(
+            content,
+            renderRequestId
+        );
     } else {
-        renderMyFavorites(content);
+        renderMyFavorites(
+            content,
+            renderRequestId
+        );
     }
 }
 
 
 // 마이페이지 - 기존 백엔드 구조를 그대로 사용해 내가 작성한 리뷰를 모아 표시합니다.
-async function renderMyReviews(container) {
+async function renderMyReviews(container, renderRequestId = myPageRenderRequestId) {
     if (!getAuthToken() || !currentUser?.id) {
         container.innerHTML = `
             <div class="mypage-empty">
@@ -421,6 +435,10 @@ async function renderMyReviews(container) {
             <i class="ti ti-loader-2"></i>
             <p>내 리뷰를 불러오는 중...</p>
         </div>`;
+
+    const stale = () =>
+        renderRequestId !== myPageRenderRequestId ||
+        currentMyPageTab !== "reviews";
 
     try {
         const placeIds = typeof getKnownBackendPlaceIds === "function"
@@ -439,6 +457,8 @@ async function renderMyReviews(container) {
                 }
             })
         );
+
+        if (stale()) return;
 
         const myReviews = reviewGroups.flat().sort((a, b) => {
             return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
@@ -488,6 +508,8 @@ async function renderMyReviews(container) {
                 </article>`;
         }));
 
+        if (stale()) return;
+
         container.innerHTML = cards.join("");
 
         container.querySelectorAll("[data-open-place]").forEach(button => {
@@ -501,6 +523,8 @@ async function renderMyReviews(container) {
             });
         });
     } catch (error) {
+        if (stale()) return;
+
         container.innerHTML = `
             <div class="mypage-empty">
                 <i class="ti ti-alert-circle"></i>
@@ -510,143 +534,322 @@ async function renderMyReviews(container) {
 }
 
 
-function renderMyLikes(container) {
-    if (!likedPlaces.length) {
+async function resolveLikedStateRow(stateKey) {
+    const normalized =
+        typeof normalizePlaceStateKey === "function"
+            ? normalizePlaceStateKey(stateKey)
+            : String(stateKey || "");
+
+    if (/^place:\d+$/.test(normalized)) {
+        const placeId =
+            backendPlaceIdFromStateKey(
+                normalized
+            );
+
+        if (!placeId) return null;
+
+        return {
+            stateKey: normalized,
+            placeId,
+            place:
+                await getBackendPlaceById(
+                    placeId
+                )
+        };
+    }
+
+    if (normalized.startsWith("google:")) {
+        const googlePlaceId =
+            normalized.slice(
+                "google:".length
+            );
+
+        const backendPlace =
+            await ensureBackendPlace(
+                `google_${googlePlaceId}`
+            );
+
+        const placeId =
+            Number(
+                backendPlace?.placeId
+            );
+
+        if (
+            !Number.isFinite(placeId) ||
+            placeId <= 0
+        ) {
+            return null;
+        }
+
+        return {
+            stateKey: normalized,
+            placeId,
+            place:
+                await getBackendPlaceById(
+                    placeId
+                )
+        };
+    }
+
+    return null;
+}
+
+
+async function renderMyLikes(
+    container,
+    renderRequestId = myPageRenderRequestId
+) {
+    const stateKeys =
+        likedPlaces.filter(
+            key => /^place:\d+$/.test(String(key || ""))
+        );
+
+    if (!stateKeys.length) {
         container.innerHTML = `
             <div class="empty-state">
                 <div>
                     <i class="ti ti-heart"></i>
-
-                    <p>
-                        ${translate("empty.likes")}
-                    </p>
+                    <p>${translate("empty.likes")}</p>
                 </div>
             </div>
         `;
-
         return;
     }
 
+    container.innerHTML = `
+        <div class="empty-state">
+            <div>
+                <i class="ti ti-loader-2"></i>
+                <p>
+                    ${
+                        currentLanguage === "ko"
+                            ? "좋아요한 장소를 불러오는 중..."
+                            : "いいねした場所を読み込み中..."
+                    }
+                </p>
+            </div>
+        </div>
+    `;
 
+    const resolvedRows = (
+        await Promise.all(
+            stateKeys.map(async stateKey => {
+                const placeId =
+                    backendPlaceIdFromStateKey(
+                        stateKey
+                    );
+
+                if (!placeId) return null;
+
+                try {
+                    const place =
+                        await getBackendPlaceById(
+                            placeId
+                        );
+
+                    return {
+                        stateKey,
+                        placeId,
+                        place
+                    };
+                } catch (error) {
+                    console.error(
+                        "좋아요 장소 조회 실패:",
+                        placeId,
+                        error
+                    );
+                    return null;
+                }
+            })
+        )
+    ).filter(Boolean);
+
+    if (
+        renderRequestId !== myPageRenderRequestId ||
+        currentMyPageTab !== "likes"
+    ) {
+        return;
+    }
+
+    const seenPlaceIds = new Set();
+
+    const rows =
+        resolvedRows.filter(row => {
+            if (
+                !row?.placeId ||
+                seenPlaceIds.has(row.placeId)
+            ) {
+                return false;
+            }
+
+            seenPlaceIds.add(row.placeId);
+            return true;
+        });
+
+    if (!rows.length) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div>
+                    <i class="ti ti-heart"></i>
+                    <p>${translate("empty.likes")}</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    /*
+        마이페이지 좋아요 카드의 장소 정보는
+        무조건 백엔드 GET /place/{placeId} 응답만 사용합니다.
+        Google 캐시 / AutoPlace / stateKey 보정값을 섞지 않습니다.
+    */
     container.innerHTML =
-        likedPlaces
-            .filter(placeKey => {
-                return Boolean(
-                    places[placeKey]
-                );
-            })
-            .map(placeKey => {
-                const place =
-                    places[placeKey];
+        rows.map(({ stateKey, placeId, place }) => `
+            <article class="mypage-card">
+                <strong>
+                    ${escapeGroupHtml(
+                        place?.placeName ||
+                        `장소 #${placeId}`
+                    )}
+                </strong>
 
-                return `
-                    <article class="mypage-card">
-                        <strong>
-                            ${
-                                place.name[
-                                    currentLanguage
-                                ]
-                            }
-                        </strong>
+                ${
+                    place?.placeCategory
+                        ? `
+                            <p class="mypage-place-category">
+                                ${escapeGroupHtml(
+                                    place.placeCategory
+                                )}
+                            </p>
+                        `
+                        : ""
+                }
 
-                        <span>
-                            ★ ${place.rating}
-                        </span>
+                ${
+                    place?.placeAddress
+                        ? `
+                            <p class="mypage-place-address">
+                                <i class="ti ti-map-pin"></i>
+                                ${escapeGroupHtml(
+                                    place.placeAddress
+                                )}
+                            </p>
+                        `
+                        : ""
+                }
 
-                        <p>
-                            ${
-                                place.address[
-                                    currentLanguage
-                                ]
-                            }
-                        </p>
+                <div class="mypage-card-actions">
+                    <button
+                        type="button"
+                        data-open-liked-place="${placeId}"
+                    >
+                        ${
+                            currentLanguage === "ko"
+                                ? "장소 보기"
+                                : currentLanguage === "ja"
+                                    ? "場所を見る"
+                                    : "View place"
+                        }
+                    </button>
 
-                        <div class="mypage-card-actions">
-                            <button
-                                type="button"
-                                data-open-place="${placeKey}"
-                            >
-                                ${
-                                    currentLanguage === "ko"
-                                        ? "장소 보기"
-                                        : "場所を見る"
-                                }
-                            </button>
-
-                            <button
-                                type="button"
-                                data-remove-like="${placeKey}"
-                            >
-                                ${
-                                    currentLanguage === "ko"
-                                        ? "좋아요 취소"
-                                        : currentLanguage === "ja"
-                                            ? "いいね取消"
-                                            : "Unlike"
-                                }
-                            </button>
-                        </div>
-                    </article>
-                `;
-            })
-            .join("");
-
+                    <button
+                        type="button"
+                        data-remove-like-state="${stateKey}"
+                    >
+                        ${
+                            currentLanguage === "ko"
+                                ? "좋아요 삭제"
+                                : currentLanguage === "ja"
+                                    ? "いいね削除"
+                                    : "Remove"
+                        }
+                    </button>
+                </div>
+            </article>
+        `).join("");
 
     container
         .querySelectorAll(
-            "[data-open-place]"
+            "[data-open-liked-place]"
         )
         .forEach(button => {
             button.addEventListener(
                 "click",
-                () => {
-                    const placeKey =
-                        button.dataset.openPlace;
+                async () => {
+                    const placeId =
+                        Number(
+                            button.dataset.openLikedPlace
+                        );
 
                     closeModal(mypageModal);
 
-                    openPlace(placeKey);
-
-                    googleMap?.panTo(
-                        places[placeKey]
-                            .position
-                    );
-
-                    googleMap?.setZoom(15);
+                    if (
+                        typeof openBackendPlaceById === "function"
+                    ) {
+                        await openBackendPlaceById(
+                            placeId
+                        );
+                    }
                 }
             );
         });
 
-
     container
         .querySelectorAll(
-            "[data-remove-like]"
+            "[data-remove-like-state]"
         )
         .forEach(button => {
             button.addEventListener(
                 "click",
                 () => {
-                    const placeKey =
-                        button.dataset.removeLike;
+                    const stateKey =
+                        button.dataset.removeLikeState;
 
-                    togglePlaceLike(
-                        placeKey
+                    likedPlaces =
+                        likedPlaces.filter(
+                            key => key !== stateKey
+                        );
+
+                    writeStorage(
+                        STORAGE_KEYS.likes,
+                        likedPlaces
                     );
 
-                    /*
-                        togglePlaceLike 내부에서도 마이페이지 갱신하지만
-                        현재 탭을 확실히 유지해서 즉시 카드가 사라지게 합니다.
-                    */
+                    const card =
+                        button.closest(
+                            ".mypage-card"
+                        );
+
+                    card?.remove();
+
+                    updateLikeButton?.();
+                    updateFavoriteButtons?.();
+
+                    const content =
+                        document.getElementById(
+                            "mypageContent"
+                        );
+
                     if (
-                        currentMyPageTab ===
-                        "likes"
+                        content &&
+                        !content.querySelector(
+                            ".mypage-card"
+                        )
                     ) {
-                        renderMyPage();
+                        content.innerHTML = `
+                            <div class="empty-state">
+                                <div>
+                                    <i class="ti ti-heart"></i>
+                                    <p>${translate("empty.likes")}</p>
+                                </div>
+                            </div>
+                        `;
                     }
                 }
             );
         });
 }
+
 
 
 // 마이페이지 리뷰 수정 - 실제 review API 사용

@@ -34,13 +34,102 @@ function writeBackendPlaceLinks(value) {
     localStorage.setItem(BACKEND_PLACE_LINK_KEY, JSON.stringify(value || {}));
 }
 
+function hasMeaningfulBackendValue(value) {
+    return value !== undefined &&
+        value !== null &&
+        String(value).trim() !== "";
+}
+
+function mergeBackendPlaceData(existing, incoming, externalKey = null) {
+    const oldData =
+        existing && typeof existing === "object"
+            ? existing
+            : {};
+
+    const newData =
+        incoming && typeof incoming === "object"
+            ? incoming
+            : {};
+
+    const merged = {
+        ...oldData,
+        ...newData
+    };
+
+    /*
+        AutoPlace/임시 응답의 빈 값이
+        이미 GET /place/{id}에서 받은 정상 DB 값을 덮어쓰지 못하게 합니다.
+    */
+    [
+        "placeName",
+        "placeCategory",
+        "placeAddress",
+        "placePhone",
+        "placeInformation",
+        "googlePlaceId",
+        "placeLatitude",
+        "placeLongitude"
+    ].forEach(field => {
+        if (
+            !hasMeaningfulBackendValue(newData[field]) &&
+            hasMeaningfulBackendValue(oldData[field])
+        ) {
+            merged[field] =
+                oldData[field];
+        }
+    });
+
+    if (externalKey) {
+        merged.externalKey =
+            externalKey;
+    } else if (oldData.externalKey) {
+        merged.externalKey =
+            oldData.externalKey;
+    }
+
+    return merged;
+}
+
 function rememberBackendPlace(externalKey, data) {
     if (!externalKey || !data?.placeId) return;
-    const links = readBackendPlaceLinks();
-    links[externalKey] = Number(data.placeId);
-    writeBackendPlaceLinks(links);
-    backendPlaceCache.set(externalKey, { ...data, externalKey });
-    backendPlaceIdCache.set(String(data.placeId), { ...data, externalKey });
+
+    const placeId =
+        Number(data.placeId);
+
+    const idKey =
+        String(placeId);
+
+    const existing =
+        backendPlaceIdCache.get(idKey) ||
+        backendPlaceCache.get(externalKey) ||
+        null;
+
+    const merged =
+        mergeBackendPlaceData(
+            existing,
+            data,
+            externalKey
+        );
+
+    const links =
+        readBackendPlaceLinks();
+
+    links[externalKey] =
+        placeId;
+
+    writeBackendPlaceLinks(
+        links
+    );
+
+    backendPlaceCache.set(
+        externalKey,
+        merged
+    );
+
+    backendPlaceIdCache.set(
+        idKey,
+        merged
+    );
 }
 
 function forgetBackendPlace(externalKey) {
@@ -127,6 +216,651 @@ function registerFrontendPlaceFromBackend(data) {
 
     return frontendKey;
 }
+
+
+const backendPlaceDisplayNameCache = new Map();
+
+function isGenericBackendPlaceName(value) {
+    const name = String(value || "").trim().toLowerCase();
+
+    return !name ||
+        name === "선택한 장소" ||
+        name === "選択した場所" ||
+        name === "selected place" ||
+        name === "google place" ||
+        name === "place";
+}
+
+/*
+    마이페이지 좋아요/즐겨찾기/리뷰에서 공통으로 사용할 장소명 보정 함수.
+    DB에 정상 이름이 있으면 그대로 사용하고,
+    오래된 "선택한 장소" 레코드일 때만 googlePlaceId로 실제 이름을 한 번 조회합니다.
+*/
+async function resolveBackendPlaceDisplayName(placeOrId) {
+    let place =
+        typeof placeOrId === "object" && placeOrId
+            ? placeOrId
+            : null;
+
+    const placeId =
+        Number(
+            place?.placeId ??
+            placeOrId
+        );
+
+    if (!place && Number.isFinite(placeId) && placeId > 0) {
+        place =
+            await getBackendPlaceById(
+                placeId
+            );
+    }
+
+    const backendName =
+        String(
+            place?.placeName ||
+            place?.name ||
+            ""
+        ).trim();
+
+    if (!isGenericBackendPlaceName(backendName)) {
+        return backendName;
+    }
+
+    const cacheKey =
+        Number.isFinite(placeId) && placeId > 0
+            ? `place:${placeId}`
+            : `google:${String(place?.googlePlaceId || "")}`;
+
+    const cached =
+        backendPlaceDisplayNameCache.get(
+            cacheKey
+        );
+
+    if (
+        cached &&
+        !isGenericBackendPlaceName(cached)
+    ) {
+        return cached;
+    }
+
+    let googlePlaceId =
+        String(
+            place?.googlePlaceId || ""
+        ).trim();
+
+    /*
+        일부 과거 Place 레코드에 googlePlaceId가 비어 있어도
+        frontend/backend 연결표에서 Google ID를 복원합니다.
+    */
+    if (
+        !googlePlaceId &&
+        Number.isFinite(placeId) &&
+        placeId > 0
+    ) {
+        let frontendKey =
+            getFrontendKeyForKnownBackendId(
+                placeId
+            );
+
+        if (
+            !frontendKey &&
+            typeof backendPlaceIdToFrontendKey === "function"
+        ) {
+            try {
+                frontendKey =
+                    await backendPlaceIdToFrontendKey(
+                        placeId
+                    );
+            } catch {}
+        }
+
+        if (
+            String(frontendKey || "")
+                .startsWith("google_")
+        ) {
+            googlePlaceId =
+                String(frontendKey)
+                    .slice("google_".length);
+        }
+    }
+
+    if (
+        googlePlaceId &&
+        typeof normalizeGooglePlaceId === "function"
+    ) {
+        googlePlaceId =
+            normalizeGooglePlaceId(
+                googlePlaceId
+            );
+    }
+
+    /*
+        먼저 프론트 캐시에 실제 이름이 있으면 API를 다시 호출하지 않습니다.
+    */
+    if (googlePlaceId) {
+        const googleKey =
+            `google_${googlePlaceId}`;
+
+        const cachedPlace =
+            places?.[googleKey];
+
+        const localNameValue =
+            cachedPlace?.name;
+
+        const localName =
+            localNameValue &&
+            typeof localNameValue === "object"
+                ? (
+                    localNameValue[currentLanguage] ||
+                    localNameValue.ko ||
+                    localNameValue.ja ||
+                    localNameValue.en ||
+                    ""
+                )
+                : String(
+                    localNameValue || ""
+                );
+
+        if (
+            localName &&
+            !isGenericBackendPlaceName(localName)
+        ) {
+            backendPlaceDisplayNameCache.set(
+                cacheKey,
+                localName
+            );
+
+            return localName;
+        }
+    }
+
+    if (
+        googlePlaceId &&
+        typeof fetchGooglePoiDetails === "function"
+    ) {
+        try {
+            const googlePlace =
+                await fetchGooglePoiDetails(
+                    googlePlaceId
+                );
+
+            const actualName =
+                String(
+                    googlePlace?.displayName || ""
+                ).trim();
+
+            if (
+                actualName &&
+                !isGenericBackendPlaceName(
+                    actualName
+                )
+            ) {
+                backendPlaceDisplayNameCache.set(
+                    cacheKey,
+                    actualName
+                );
+
+                const googleKey =
+                    `google_${googlePlaceId}`;
+
+                if (typeof places === "object" && places) {
+                    const existing =
+                        places[googleKey] || {};
+
+                    places[googleKey] = {
+                        ...existing,
+                        name: {
+                            ko: actualName,
+                            ja: actualName,
+                            en: actualName
+                        }
+                    };
+                }
+
+                return actualName;
+            }
+        } catch (error) {
+            console.debug(
+                "마이페이지 장소명 보정 실패:",
+                error
+            );
+        }
+    }
+
+    /*
+        "선택한 장소"라는 잘못된 문자열은 최종 UI에 절대 출력하지 않습니다.
+    */
+    return Number.isFinite(placeId) && placeId > 0
+        ? `장소 #${placeId}`
+        : "장소";
+}
+
+
+
+const myPagePlaceMetaCache = new Map();
+
+function isGenericBackendDisplayName(value) {
+    const text = String(value || "").trim().toLowerCase();
+
+    return !text ||
+        text === "선택한 장소" ||
+        text === "選択した場所" ||
+        text === "selected place" ||
+        text === "google place" ||
+        text === "place";
+}
+
+function isGenericBackendCategory(value) {
+    const text = String(value || "").trim().toLowerCase();
+
+    return !text ||
+        text === "google maps" ||
+        text === "google 지도 장소" ||
+        text === "google マップの場所" ||
+        text === "google maps place" ||
+        text === "장소" ||
+        text === "スポット" ||
+        text === "place";
+}
+
+function cleanUserFacingCategory(value) {
+    const text = String(value || "").trim();
+
+    /*
+        과거 placeInformation에 들어가던
+        "관광 명소 / CHEESE MAP / google_..." 같은 기술 문자열은
+        카테고리로 절대 노출하지 않습니다.
+    */
+    if (
+        /CHEESE MAP/i.test(text) ||
+        /Google Maps POI/i.test(text) ||
+        /google_[A-Za-z0-9_-]+/i.test(text)
+    ) {
+        return "";
+    }
+
+    return text;
+}
+
+function localizeCachedPlaceValue(value) {
+    if (value && typeof value === "object") {
+        return (
+            value[currentLanguage] ||
+            value.ko ||
+            value.ja ||
+            value.en ||
+            ""
+        );
+    }
+
+    return String(value || "");
+}
+
+async function resolveBackendPlaceCardMeta(placeOrId, stateKey = "") {
+    let place =
+        typeof placeOrId === "object" && placeOrId
+            ? placeOrId
+            : null;
+
+    const placeId =
+        Number(
+            place?.placeId ??
+            placeOrId
+        );
+
+    if (!place && Number.isFinite(placeId) && placeId > 0) {
+        place =
+            await getBackendPlaceById(
+                placeId
+            );
+    }
+
+    /*
+        google:* 상태키가 있으면 그것을 캐시 키로 사용합니다.
+        place:*만 사용하면 과거 DB 레코드의 빈 주소 결과와
+        Google 보정 결과가 서로 같은 캐시에 섞일 수 있습니다.
+    */
+    const suppliedStateKey =
+        String(
+            stateKey || ""
+        ).trim();
+
+    const cacheKey =
+        suppliedStateKey.startsWith("google:")
+            ? suppliedStateKey
+            : (
+                Number.isFinite(placeId) && placeId > 0
+                    ? `place:${placeId}`
+                    : `google:${String(place?.googlePlaceId || "")}`
+            );
+
+    const cachedMeta =
+        myPagePlaceMetaCache.get(
+            cacheKey
+        );
+
+    /*
+        이미 이름/카테고리/주소가 전부 준비되어 있으면 즉시 재사용합니다.
+    */
+    if (
+        cachedMeta?.name &&
+        cachedMeta?.category &&
+        cachedMeta?.address
+    ) {
+        return cachedMeta;
+    }
+
+    let name =
+        String(
+            place?.placeName ||
+            place?.name ||
+            ""
+        ).trim();
+
+    let category =
+        cleanUserFacingCategory(
+            place?.placeCategory ||
+            place?.category ||
+            ""
+        );
+
+    let address =
+        String(
+            place?.placeAddress ||
+            place?.address ||
+            ""
+        ).trim();
+
+    let googlePlaceId =
+        String(
+            place?.googlePlaceId ||
+            ""
+        ).trim();
+
+    /*
+        마이페이지 좋아요/즐겨찾기 상태키가 google:<placeId>인 경우
+        DB Place에 googlePlaceId가 비어 있어도 상태키 자체에 정확한 Google ID가 있습니다.
+        이 값을 가장 먼저 복원에 사용합니다.
+    */
+    const normalizedStateKey =
+        String(stateKey || "").trim();
+
+    if (
+        !googlePlaceId &&
+        normalizedStateKey.startsWith("google:")
+    ) {
+        googlePlaceId =
+            normalizedStateKey.slice(
+                "google:".length
+            );
+    }
+
+    if (
+        !googlePlaceId &&
+        normalizedStateKey.startsWith("google_")
+    ) {
+        googlePlaceId =
+            normalizedStateKey.slice(
+                "google_".length
+            );
+    }
+
+    /*
+        과거 DB 레코드에 googlePlaceId가 비어 있으면
+        backend ↔ frontend 연결정보에서 Google ID를 복원합니다.
+    */
+    if (
+        !googlePlaceId &&
+        Number.isFinite(placeId) &&
+        placeId > 0
+    ) {
+        let frontendKey =
+            typeof getFrontendKeyForKnownBackendId === "function"
+                ? getFrontendKeyForKnownBackendId(
+                    placeId
+                )
+                : null;
+
+        if (
+            !frontendKey &&
+            typeof backendPlaceIdToFrontendKey === "function"
+        ) {
+            try {
+                frontendKey =
+                    await backendPlaceIdToFrontendKey(
+                        placeId
+                    );
+            } catch {}
+        }
+
+        if (
+            String(frontendKey || "")
+                .startsWith("google_")
+        ) {
+            googlePlaceId =
+                String(frontendKey)
+                    .slice("google_".length);
+        }
+    }
+
+    if (
+        googlePlaceId &&
+        typeof normalizeGooglePlaceId === "function"
+    ) {
+        googlePlaceId =
+            normalizeGooglePlaceId(
+                googlePlaceId
+            );
+    }
+
+    /*
+        먼저 현재 프론트 캐시에 들어 있는 실제 Google 장소정보를 사용합니다.
+    */
+    if (googlePlaceId) {
+        const googleKey =
+            `google_${googlePlaceId}`;
+
+        const cachedPlace =
+            places?.[googleKey];
+
+        const cachedName =
+            localizeCachedPlaceValue(
+                cachedPlace?.name
+            ).trim();
+
+        const cachedCategory =
+            cleanUserFacingCategory(
+                localizeCachedPlaceValue(
+                    cachedPlace?.category
+                )
+            );
+
+        const cachedAddress =
+            localizeCachedPlaceValue(
+                cachedPlace?.address
+            ).trim();
+
+        if (
+            isGenericBackendDisplayName(name) &&
+            cachedName &&
+            !isGenericBackendDisplayName(cachedName)
+        ) {
+            name = cachedName;
+        }
+
+        if (
+            isGenericBackendCategory(category) &&
+            cachedCategory &&
+            !isGenericBackendCategory(cachedCategory)
+        ) {
+            category = cachedCategory;
+        }
+
+        if (!address && cachedAddress) {
+            address = cachedAddress;
+        }
+    }
+
+    /*
+        이름/카테고리/주소 중 하나라도 부족하면 Google Place Details를 한 번만 조회합니다.
+        특히 DB placeAddress가 비어 있는 호텔 등의 주소를 여기서 보완합니다.
+    */
+    const needsGoogleDetails =
+        Boolean(
+            googlePlaceId &&
+            (
+                isGenericBackendDisplayName(name) ||
+                isGenericBackendCategory(category) ||
+                !address
+            )
+        );
+
+    if (
+        needsGoogleDetails &&
+        typeof fetchGooglePoiDetails === "function"
+    ) {
+        try {
+            const googlePlace =
+                await fetchGooglePoiDetails(
+                    googlePlaceId
+                );
+
+            const googleName =
+                String(
+                    googlePlace?.displayName || ""
+                ).trim();
+
+            const googleAddress =
+                String(
+                    googlePlace?.formattedAddress || ""
+                ).trim();
+
+            let googleCategory = "";
+
+            if (
+                typeof getGooglePoiCategoryLabel === "function"
+            ) {
+                googleCategory =
+                    getGooglePoiCategoryLabel(
+                        googlePlace
+                    );
+            }
+
+            if (
+                !googleCategory ||
+                isGenericBackendCategory(
+                    googleCategory
+                )
+            ) {
+                googleCategory =
+                    String(
+                        googlePlace?.primaryTypeDisplayName ||
+                        ""
+                    ).trim();
+            }
+
+            googleCategory =
+                cleanUserFacingCategory(
+                    googleCategory
+                );
+
+            if (
+                isGenericBackendDisplayName(name) &&
+                googleName &&
+                !isGenericBackendDisplayName(googleName)
+            ) {
+                name = googleName;
+            }
+
+            if (
+                isGenericBackendCategory(category) &&
+                googleCategory &&
+                !isGenericBackendCategory(googleCategory)
+            ) {
+                category = googleCategory;
+            }
+
+            if (!address && googleAddress) {
+                address = googleAddress;
+            }
+
+            /*
+                다음 마이페이지 조회에서도 Google API를 다시 부르지 않도록
+                프론트 places 캐시에도 보정값을 남깁니다.
+            */
+            const googleKey =
+                `google_${googlePlaceId}`;
+
+            if (typeof places === "object" && places) {
+                const existing =
+                    places[googleKey] || {};
+
+                places[googleKey] = {
+                    ...existing,
+                    name: name
+                        ? {
+                            ko: name,
+                            ja: name,
+                            en: name
+                        }
+                        : existing.name,
+                    category: category
+                        ? {
+                            ko: category,
+                            ja: category,
+                            en: category
+                        }
+                        : existing.category,
+                    address: address
+                        ? {
+                            ko: address,
+                            ja: address,
+                            en: address
+                        }
+                        : existing.address
+                };
+            }
+        } catch (error) {
+            console.debug(
+                "마이페이지 장소 메타데이터 보정 실패:",
+                error
+            );
+        }
+    }
+
+    /*
+        기술 문자열은 마지막 단계에서도 제거합니다.
+    */
+    category =
+        cleanUserFacingCategory(
+            category
+        );
+
+    if (isGenericBackendCategory(category)) {
+        category = "";
+    }
+
+    if (isGenericBackendDisplayName(name)) {
+        name =
+            Number.isFinite(placeId) && placeId > 0
+                ? `장소 #${placeId}`
+                : "장소";
+    }
+
+    const result = {
+        name,
+        category,
+        address
+    };
+
+    myPagePlaceMetaCache.set(
+        cacheKey,
+        result
+    );
+
+    return result;
+}
+
 
 /** 로그인 상태에서 Place 조회 시 view preference(hit_count)가 쌓이도록 호출합니다. */
 async function recordPlaceViewIfLoggedIn(placeId) {
@@ -229,132 +963,134 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
         throw new Error("장소 정보를 확인할 수 없습니다.");
     }
 
-    // 1. 메모리 캐시
-    if (backendPlaceCache.has(descriptor.externalKey)) {
-        const cached = backendPlaceCache.get(descriptor.externalKey);
-        if (Number(cached?.placeId) > 0) {
-            return cached;
-        }
+    const externalKey = descriptor.externalKey;
+
+    // 1) 메모리 캐시
+    const memoryCached = backendPlaceCache.get(externalKey);
+    if (Number(memoryCached?.placeId) > 0) {
+        return memoryCached;
     }
 
-    // 같은 세션에서 이미 Place 를 알고 있으면 재사용
-    if (
-        descriptor.googlePlaceId &&
-        normalizeGooglePlaceId(selectedGooglePoi?.placeId) === descriptor.googlePlaceId &&
-        Number(selectedGooglePoi?.backendPlaceId) > 0
-    ) {
-        const knownId = Number(selectedGooglePoi.backendPlaceId);
-        const known = {
-            placeId: knownId,
-            googlePlaceId: descriptor.googlePlaceId,
-            placeName: descriptor.name,
-            placeCategory: descriptor.category,
-            placeAddress: descriptor.address,
-            placeLatitude: descriptor.lat,
-            placeLongitude: descriptor.lng,
-            externalKey: descriptor.externalKey,
-            isAutoPlace: true,
-            autoPlaceId: selectedGooglePoi?.autoPlace?.autoPlaceId || descriptor.googlePlaceId,
-            photoUrls: Array.isArray(selectedGooglePoi?.autoPlace?.photoUrls)
-                ? selectedGooglePoi.autoPlace.photoUrls
-                : []
-        };
-        rememberBackendPlace(descriptor.externalKey, known);
-        return known;
-    }
-
+    // 2) 저장된 frontend <-> DB placeId 연결
     const links = readBackendPlaceLinks();
-    const linkedId = Number(links[descriptor.externalKey]);
+    const linkedId = Number(links[externalKey]);
 
-    // 2. 이미 Place 로 연결된 경우 (정적/Google 공통)
-    // Place 테이블에 있으면 GET /place 만으로 충분합니다.
-    // AutoPlace 는 연결이 없을 때 최초 생성/동기화용입니다.
     if (Number.isFinite(linkedId) && linkedId > 0) {
         try {
-            const existing = await apiRequest(
-                `/place/${linkedId}`,
-                getAuthToken() ? { auth: true } : {}
-            );
+            /*
+                단순 상세 복원은 인증 없이 조회합니다.
+                /place/{id}에 토큰을 넣으면 백엔드가 view preference를 올리므로,
+                UI 복원 때문에 조회 가중치가 중복 증가하지 않게 합니다.
+            */
+            const existing = await apiRequest(`/place/${linkedId}`);
 
             const reused = {
                 ...existing,
-                placeId: Number(existing.placeId) || linkedId,
-                googlePlaceId: existing.googlePlaceId || descriptor.googlePlaceId || null,
-                externalKey: descriptor.externalKey,
-                isAutoPlace: Boolean(descriptor.googlePlaceId),
-                autoPlaceId: descriptor.googlePlaceId || null,
-                photoUrls: backendPlaceCache.get(descriptor.externalKey)?.photoUrls || []
+                placeId: Number(existing?.placeId) || linkedId,
+                googlePlaceId:
+                    existing?.googlePlaceId ||
+                    descriptor.googlePlaceId ||
+                    null,
+                externalKey
             };
 
-            rememberBackendPlace(descriptor.externalKey, reused);
+            rememberBackendPlace(externalKey, reused);
             return reused;
-        } catch {
-            forgetBackendPlace(descriptor.externalKey);
+        } catch (error) {
+            console.warn("기존 장소 연결 조회 실패, 다시 연결합니다:", error);
+            forgetBackendPlace(externalKey);
         }
     }
 
-
-    /* =====================================================
-       GOOGLE 장소 (Place 연결이 아직 없을 때만)
-       GET /api/places/{googlePlaceId} → AutoPlace + Place getOrCreate
-    ===================================================== */
+    // 3) Google POI
     if (descriptor.googlePlaceId) {
-        const pendingKey = descriptor.externalKey;
+        const pendingKey = externalKey;
 
         if (backendPlacePending.has(pendingKey)) {
             return backendPlacePending.get(pendingKey);
         }
 
         const requestPromise = (async () => {
-            const googlePlaceId = normalizeGooglePlaceId(descriptor.googlePlaceId);
-            const encodedGooglePlaceId = encodeURIComponent(googlePlaceId);
-            const autoPlace = await apiRequest(`/api/places/${encodedGooglePlaceId}`);
+            const googlePlaceId =
+                normalizeGooglePlaceId(descriptor.googlePlaceId);
 
-            if (!autoPlace?.autoPlaceId) {
-                throw new Error("Google 장소 정보를 AutoPlace 백엔드에서 가져오지 못했습니다.");
+            /*
+                현재 백엔드의 /api/places/{googlePlaceId}는
+                AutoPlace 조회/생성 + PlaceService.getOrCreateFromAutoPlace()까지
+                수행한 뒤 AutoPlaceResponseDto.placeId를 반환합니다.
+
+                따라서 프론트에서 Google 장소를 다시 POST /place 할 필요가 없습니다.
+            */
+            const response = await apiRequest(
+                `/api/places/${encodeURIComponent(googlePlaceId)}`
+            );
+
+            const numericPlaceId = Number(response?.placeId);
+
+            if (!Number.isFinite(numericPlaceId) || numericPlaceId <= 0) {
+                throw new Error(
+                    "백엔드에서 Google 장소의 placeId를 반환하지 않았습니다."
+                );
             }
 
-            const placeId = Number(autoPlace.placeId);
             const normalized = {
-                ...autoPlace,
-                autoPlaceId: String(autoPlace.autoPlaceId),
-                // AutoPlace API가 Place getOrCreate 후 placeId를 내려줍니다.
-                placeId: Number.isFinite(placeId) && placeId > 0 ? placeId : null,
-                // Google Place ID는 정규화된 값을 유지합니다.
-                googlePlaceId: String(googlePlaceId),
-                placeName: autoPlace.name || descriptor.name,
-                placeCategory: autoPlace.category || descriptor.category,
-                placeAddress: autoPlace.address || descriptor.address,
-                placeLatitude: autoPlace.autoLatitude ?? descriptor.lat,
-                placeLongitude: autoPlace.autoLongitude ?? descriptor.lng,
-                rating: Number(autoPlace.avgRating ?? autoPlace.rating) || 0,
-                userRatingCount: Number(autoPlace.reviewCount ?? autoPlace.userRatingCount) || 0,
-                avgRating: Number(autoPlace.avgRating) || 0,
-                reviewCount: Number(autoPlace.reviewCount) || 0,
-                photoUrls: Array.isArray(autoPlace.photoUrls) ? autoPlace.photoUrls.filter(Boolean) : [],
-                externalKey: descriptor.externalKey,
+                ...response,
+                placeId: numericPlaceId,
+                googlePlaceId:
+                    normalizeGooglePlaceId(
+                        response?.googlePlaceId ||
+                        googlePlaceId
+                    ),
+                autoPlaceId:
+                    String(response?.autoPlaceId || googlePlaceId),
+                placeName:
+                    response?.name ||
+                    descriptor.name ||
+                    "Google Place",
+                placeCategory:
+                    response?.category ||
+                    descriptor.category ||
+                    "",
+                placeAddress:
+                    response?.address ||
+                    descriptor.address ||
+                    "",
+                placeLatitude:
+                    response?.autoLatitude ??
+                    descriptor.lat,
+                placeLongitude:
+                    response?.autoLongitude ??
+                    descriptor.lng,
+                rating:
+                    Number(response?.rating) || 0,
+                avgRating:
+                    Number(response?.avgRating) || 0,
+                reviewCount:
+                    Number(response?.reviewCount) || 0,
+                photoUrls:
+                    Array.isArray(response?.photoUrls)
+                        ? response.photoUrls.filter(Boolean)
+                        : [],
+                externalKey,
                 isAutoPlace: true
             };
 
-            // Place는 백엔드 AutoPlace → getOrCreateFromAutoPlace 로 이미 연결됩니다.
-            // 여기서 POST /place 를 다시 호출하면 중복 Place가 생길 수 있습니다.
-            if (normalized.placeId) {
-                rememberBackendPlace(descriptor.externalKey, normalized);
-                if (
-                    normalizeGooglePlaceId(selectedGooglePoi?.placeId) === googlePlaceId
-                ) {
-                    selectedGooglePoi.placeId = googlePlaceId;
-                    selectedGooglePoi.backendPlaceId = normalized.placeId;
-                    selectedGooglePoi.autoPlace = normalized;
-                }
-                await recordPlaceViewIfLoggedIn(normalized.placeId);
-            } else {
-                backendPlaceCache.set(descriptor.externalKey, normalized);
+            rememberBackendPlace(externalKey, normalized);
+
+            if (
+                selectedGooglePoi &&
+                normalizeGooglePlaceId(selectedGooglePoi.placeId) === googlePlaceId
+            ) {
+                selectedGooglePoi.placeId = googlePlaceId;
+                selectedGooglePoi.backendPlaceId = numericPlaceId;
+                selectedGooglePoi.autoPlace = normalized;
             }
+
             return normalized;
         })();
 
         backendPlacePending.set(pendingKey, requestPromise);
+
         try {
             return await requestPromise;
         } finally {
@@ -362,12 +1098,8 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
         }
     }
 
-
-    /* =====================================================
-       기존 CHEESE MAP 정적 장소
-       기존 방식 그대로 유지
-    ===================================================== */
-
+    // 4) CHEESE MAP 정적 장소
+    // 정적 장소는 기존 백엔드 API상 사용자가 최초 등록해야 하므로 로그인 필요.
     if (!getAuthToken()) {
         throw new Error(
             "이 장소를 처음 사용할 때는 로그인이 필요합니다."
@@ -385,12 +1117,10 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
             placeInformation: descriptor.information,
             placeDate: new Date().toISOString(),
             googlePlaceId: descriptor.googlePlaceId || null,
-
             placeLatitude:
                 Number.isFinite(descriptor.lat)
                     ? descriptor.lat
                     : null,
-
             placeLongitude:
                 Number.isFinite(descriptor.lng)
                     ? descriptor.lng
@@ -398,40 +1128,383 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
         }
     });
 
-    rememberBackendPlace(
-        descriptor.externalKey,
-        created
-    );
-
-    return {
+    const normalizedCreated = {
         ...created,
-        externalKey: descriptor.externalKey
+        placeId: Number(created?.placeId),
+        externalKey
     };
+
+    rememberBackendPlace(externalKey, normalizedCreated);
+    return normalizedCreated;
 }
 
-async function getBackendPlaceById(placeId) {
-    const key = String(placeId);
-    if (backendPlaceIdCache.has(key)) return backendPlaceIdCache.get(key);
 
-    const data = await apiRequest(`/place/${placeId}`);
-    const googlePlaceId = data.googlePlaceId || null;
-    let frontendKey = getFrontendKeyForKnownBackendId(placeId);
-    if (!frontendKey && googlePlaceId) {
-        frontendKey = `google_${googlePlaceId}`;
+/*
+    좋아요/즐겨찾기 UI는 백엔드 Place의 숫자 placeId를 식별자로 사용합니다.
+
+    현재 백엔드는 like/save를 개인별 on/off 상태로 조회하는 API가 아니라
+    추천 가중치(hit_count)를 누적하는 API만 제공하므로,
+    선택 여부 자체는 localStorage에 유지하되 식별자는 DB placeId로 통일합니다.
+*/
+function backendStateKey(placeId) {
+    const id = Number(placeId);
+    return Number.isFinite(id) && id > 0
+        ? `place:${id}`
+        : "";
+}
+
+function backendPlaceIdFromStateKey(stateKey) {
+    const match = String(stateKey || "").match(/^place:(\d+)$/);
+    return match ? Number(match[1]) : null;
+}
+
+function getRememberedBackendPlaceId(placeKey = selectedPlaceKey) {
+    if (
+        selectedGooglePoi?.backendPlaceId &&
+        (
+            !placeKey ||
+            String(placeKey).startsWith("google_")
+        )
+    ) {
+        return Number(selectedGooglePoi.backendPlaceId);
     }
-    const externalKey = frontendKey
-        ? (String(frontendKey).startsWith("google_")
-            ? `google:${frontendKey.slice(7)}`
-            : `static:${frontendKey}`)
+
+    const cardId = Number(placeCard?.dataset?.backendPlaceId);
+    if (Number.isFinite(cardId) && cardId > 0) {
+        return cardId;
+    }
+
+    const descriptor = getActivePlaceDescriptor(placeKey);
+    if (!descriptor?.externalKey) return null;
+
+    const cachedId = Number(
+        backendPlaceCache.get(descriptor.externalKey)?.placeId
+    );
+    if (Number.isFinite(cachedId) && cachedId > 0) {
+        return cachedId;
+    }
+
+    const linkedId = Number(
+        readBackendPlaceLinks()[descriptor.externalKey]
+    );
+
+    return Number.isFinite(linkedId) && linkedId > 0
+        ? linkedId
         : null;
-    const normalized = { ...data, frontendKey, externalKey };
+}
 
-    backendPlaceIdCache.set(key, normalized);
-    if (externalKey) {
-        rememberBackendPlace(externalKey, normalized);
+async function ensureBackendStateKey(placeKey = selectedPlaceKey) {
+    const remembered = getRememberedBackendPlaceId(placeKey);
+    if (remembered) {
+        return backendStateKey(remembered);
     }
-    registerFrontendPlaceFromBackend(normalized);
-    return normalized;
+
+    const backendPlace = await ensureBackendPlace(placeKey);
+    return backendStateKey(backendPlace?.placeId);
+}
+
+async function openBackendPlaceById(placeId) {
+    const backendPlace = await getBackendPlaceById(placeId);
+
+    const position = {
+        lat: Number(backendPlace?.placeLatitude),
+        lng: Number(backendPlace?.placeLongitude)
+    };
+
+    const safePosition =
+        Number.isFinite(position.lat) &&
+        Number.isFinite(position.lng)
+            ? position
+            : null;
+
+    /*
+        DB PlaceResponse에 googlePlaceId가 있으면 그 ID로 실제 Google POI를 다시 엽니다.
+        과거 데이터에서 googlePlaceId가 비어 있더라도 frontend 연결키가 google_*이면
+        그 키에서 Google Place ID를 복원합니다.
+    */
+    let googlePlaceId =
+        normalizeGooglePlaceId(
+            backendPlace?.googlePlaceId || ""
+        );
+
+    if (!googlePlaceId) {
+        const frontendKey =
+            getFrontendKeyForKnownBackendId(placeId);
+
+        if (
+            frontendKey &&
+            String(frontendKey).startsWith("google_")
+        ) {
+            googlePlaceId =
+                normalizeGooglePlaceId(
+                    String(frontendKey).slice(7)
+                );
+        }
+    }
+
+    if (
+        googlePlaceId &&
+        typeof openGooglePoi === "function"
+    ) {
+        let fallbackName =
+            String(
+                backendPlace?.placeName || ""
+            ).trim();
+
+        const genericFallbackName = [
+            "",
+            "선택한 장소",
+            "選択した場所",
+            "selected place",
+            "google place",
+            "place"
+        ].includes(
+            fallbackName.toLowerCase()
+        );
+
+        if (genericFallbackName) {
+            const googleKey =
+                `google_${googlePlaceId}`;
+
+            const cachedNameValue =
+                places?.[googleKey]?.name;
+
+            const cachedName =
+                cachedNameValue &&
+                typeof cachedNameValue === "object"
+                    ? (
+                        cachedNameValue[currentLanguage] ||
+                        cachedNameValue.ko ||
+                        cachedNameValue.ja ||
+                        cachedNameValue.en ||
+                        ""
+                    )
+                    : String(
+                        cachedNameValue || ""
+                    );
+
+            fallbackName =
+                cachedName;
+        }
+
+        await openGooglePoi(
+            googlePlaceId,
+            safePosition,
+            fallbackName,
+            {
+                // 마이페이지 "장소 보기" → 상세 패널 + 지도 이동/확대
+                focusMap: true,
+                focusZoom: 16
+            }
+        );
+        return;
+    }
+
+    /*
+        Google ID가 없는 정적 Place라도 DB 주소/좌표를 places 캐시에 복원해서
+        장소 상세 카드의 위치가 비지 않게 합니다.
+    */
+    const frontendKey =
+        await backendPlaceIdToFrontendKey(placeId);
+
+    if (frontendKey) {
+        const existing = places[frontendKey] || {};
+
+        places[frontendKey] = {
+            ...existing,
+            name: existing.name || {
+                ko: backendPlace?.placeName || "",
+                ja: backendPlace?.placeName || "",
+                en: backendPlace?.placeName || ""
+            },
+            category: existing.category || {
+                ko: backendPlace?.placeCategory || "",
+                ja: backendPlace?.placeCategory || "",
+                en: backendPlace?.placeCategory || ""
+            },
+            address: {
+                ko: backendPlace?.placeAddress || "",
+                ja: backendPlace?.placeAddress || "",
+                en: backendPlace?.placeAddress || ""
+            },
+            position:
+                safePosition ||
+                existing.position ||
+                null
+        };
+
+        openPlace(frontendKey);
+
+        if (safePosition) {
+            googleMap?.panTo(safePosition);
+            googleMap?.setZoom(16);
+        }
+        return;
+    }
+
+    if (safePosition) {
+        googleMap?.panTo(safePosition);
+        googleMap?.setZoom(16);
+    }
+}
+
+
+function isCanonicalBackendPlace(place) {
+    if (!place || typeof place !== "object") {
+        return false;
+    }
+
+    const validId =
+        Number.isFinite(
+            Number(place.placeId)
+        ) &&
+        Number(place.placeId) > 0;
+
+    /*
+        핵심은 값이 비어 있는지가 아니라
+        정식 PlaceResponse의 필드 자체가 존재하는지 확인하는 것입니다.
+        실제로 주소가 없는 장소도 있을 수 있기 때문입니다.
+    */
+    const hasNameField =
+        Object.prototype.hasOwnProperty.call(
+            place,
+            "placeName"
+        );
+
+    const hasCategoryField =
+        Object.prototype.hasOwnProperty.call(
+            place,
+            "placeCategory"
+        );
+
+    const hasAddressField =
+        Object.prototype.hasOwnProperty.call(
+            place,
+            "placeAddress"
+        );
+
+    return Boolean(
+        validId &&
+        hasNameField &&
+        hasCategoryField &&
+        hasAddressField
+    );
+}
+
+async function getBackendPlaceById(
+    placeId,
+    options = {}
+) {
+    const id =
+        Number(placeId);
+
+    if (
+        !Number.isFinite(id) ||
+        id <= 0
+    ) {
+        throw new Error(
+            "유효한 장소 ID가 아닙니다."
+        );
+    }
+
+    const key =
+        String(id);
+
+    const forceRefresh =
+        options === true ||
+        Boolean(
+            options?.forceRefresh
+        );
+
+    const cached =
+        backendPlaceIdCache.get(
+            key
+        );
+
+    /*
+        앞으로는 "정식 PlaceResponse 형태"의 캐시만 재사용합니다.
+        AutoPlace/임시 응답이 먼저 캐시돼 있어도 자동으로 DB Place를 다시 조회합니다.
+    */
+    if (
+        !forceRefresh &&
+        cached &&
+        isCanonicalBackendPlace(
+            cached
+        )
+    ) {
+        return cached;
+    }
+
+    const data =
+        await apiRequest(
+            `/place/${id}`
+        );
+
+    const googlePlaceId =
+        data.googlePlaceId ||
+        null;
+
+    let frontendKey =
+        getFrontendKeyForKnownBackendId(
+            id
+        );
+
+    if (
+        !frontendKey &&
+        googlePlaceId
+    ) {
+        frontendKey =
+            `google_${googlePlaceId}`;
+    }
+
+    const externalKey =
+        frontendKey
+            ? (
+                String(frontendKey)
+                    .startsWith("google_")
+                    ? `google:${frontendKey.slice(7)}`
+                    : `static:${frontendKey}`
+            )
+            : null;
+
+    const normalized = {
+        ...data,
+        placeId: id,
+        frontendKey,
+        externalKey
+    };
+
+    /*
+        서버에서 받은 정식 Place 응답을 기준으로 캐시를 갱신합니다.
+        기존 부분 데이터와 합칠 때도 정상 DB 값은 빈 값으로 덮이지 않습니다.
+    */
+    if (externalKey) {
+        rememberBackendPlace(
+            externalKey,
+            normalized
+        );
+    } else {
+        backendPlaceIdCache.set(
+            key,
+            mergeBackendPlaceData(
+                cached,
+                normalized,
+                null
+            )
+        );
+    }
+
+    const canonical =
+        backendPlaceIdCache.get(
+            key
+        ) ||
+        normalized;
+
+    registerFrontendPlaceFromBackend(
+        canonical
+    );
+
+    return canonical;
 }
 
 async function backendPlaceIdToFrontendKey(placeId) {

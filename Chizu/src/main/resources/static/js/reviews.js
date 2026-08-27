@@ -379,6 +379,7 @@ document.getElementById("reviewComposeSubmitButton")?.addEventListener("click", 
         reviewCacheByPlace.delete(
             String(reviewPlaceId)
         );
+        invalidateMyReviewsPageCache();
 
         closeModal(
             reviewComposeModal
@@ -453,6 +454,7 @@ document.getElementById("placeReviewList")?.addEventListener("click", async even
                 }
             );
             reviewCacheByPlace.delete(String(activeReviewBackendPlace.placeId));
+            invalidateMyReviewsPageCache();
             await renderPlaceReviews(selectedPlaceKey);
             showToast("리뷰가 수정되었습니다.");
         } catch (error) { showToast(error.message); }
@@ -463,7 +465,18 @@ document.getElementById("placeReviewList")?.addEventListener("click", async even
         try {
             await apiRequest(`/place/${activeReviewBackendPlace.placeId}/review/${reviewId}/delete`, { method: "DELETE", auth: true });
             reviewCacheByPlace.delete(String(activeReviewBackendPlace.placeId));
-            await renderPlaceReviews(selectedPlaceKey);
+            invalidateMyReviewsPageCache();
+
+            /*
+                서버 삭제가 성공했으면 현재 리뷰 카드를 즉시 제거한 뒤,
+                별점/리뷰 개수 계산은 비동기 재조회로 맞춥니다.
+            */
+            item.remove();
+
+            renderPlaceReviews(
+                selectedPlaceKey
+            ).catch(console.error);
+
             showToast("리뷰가 삭제되었습니다.");
         } catch (error) { showToast(error.message); }
         return;
@@ -479,6 +492,7 @@ document.getElementById("placeReviewList")?.addEventListener("click", async even
                 }
             );
             reviewCacheByPlace.delete(String(activeReviewBackendPlace.placeId));
+            invalidateMyReviewsPageCache();
             await renderPlaceReviews(selectedPlaceKey);
             showToast(result?.msg || "처리되었습니다.");
         } catch (error) { showToast(error.message); }
@@ -486,13 +500,22 @@ document.getElementById("placeReviewList")?.addEventListener("click", async even
 });
 
 async function openMyReviewPlace(placeId) {
-    const backendPlace = await getBackendPlaceById(placeId);
+    closeModal(mypageModal);
+
+    if (
+        typeof openBackendPlaceById === "function"
+    ) {
+        await openBackendPlaceById(placeId);
+        return;
+    }
+
+    const backendPlace =
+        await getBackendPlaceById(placeId);
+
     const position = {
         lat: Number(backendPlace?.placeLatitude),
         lng: Number(backendPlace?.placeLongitude)
     };
-
-    closeModal(mypageModal);
 
     if (
         backendPlace?.googlePlaceId &&
@@ -500,35 +523,293 @@ async function openMyReviewPlace(placeId) {
     ) {
         await openGooglePoi(
             backendPlace.googlePlaceId,
-            Number.isFinite(position.lat) && Number.isFinite(position.lng)
+            Number.isFinite(position.lat) &&
+            Number.isFinite(position.lng)
                 ? position
                 : null,
             backendPlace.placeName || ""
         );
+    }
+}
+
+
+/*
+   마이페이지 내 리뷰 캐시
+   - 첫 조회 후 60초 동안 재사용
+   - 리뷰 작성/수정/삭제 시 즉시 무효화
+   - 탭을 빠르게 바꿔도 늦게 끝난 리뷰 요청이 다른 탭을 덮어쓰지 않음
+*/
+const MY_REVIEWS_CACHE_TTL = 60 * 1000;
+
+let myReviewsPageCache = {
+    userKey: "",
+    loadedAt: 0,
+    cards: null
+};
+
+function getMyReviewsUserCacheKey() {
+    const id = Number(currentUser?.id);
+    if (Number.isFinite(id) && id > 0) {
+        return `id:${id}`;
+    }
+
+    return `nickname:${String(currentUser?.nickname || "").trim()}`;
+}
+
+function invalidateMyReviewsPageCache() {
+    myReviewsPageCache = {
+        userKey: "",
+        loadedAt: 0,
+        cards: null
+    };
+}
+
+function isMyReviewsPageCacheFresh() {
+    return Boolean(
+        myReviewsPageCache.cards &&
+        myReviewsPageCache.userKey === getMyReviewsUserCacheKey() &&
+        Date.now() - myReviewsPageCache.loadedAt < MY_REVIEWS_CACHE_TTL
+    );
+}
+
+
+const correctedReviewPlaceNameCache = new Map();
+
+function isGenericStoredPlaceName(value) {
+    const name = String(value || "").trim().toLowerCase();
+
+    return !name ||
+        name === "선택한 장소" ||
+        name === "選択した場所" ||
+        name === "selected place" ||
+        name === "google place" ||
+        name === "place";
+}
+
+async function resolveStoredReviewPlaceName(placeId, place) {
+    const backendName = String(
+        place?.placeName ||
+        place?.name ||
+        ""
+    ).trim();
+
+    if (!isGenericStoredPlaceName(backendName)) {
+        return backendName || `장소 #${placeId}`;
+    }
+
+    const cacheKey = String(placeId);
+
+    const cachedCorrected =
+        correctedReviewPlaceNameCache.get(
+            cacheKey
+        );
+
+    if (
+        cachedCorrected &&
+        !isGenericStoredPlaceName(
+            cachedCorrected
+        )
+    ) {
+        return cachedCorrected;
+    }
+
+    /*
+        DB의 placeName이 "선택한 장소"인 오래된 레코드도
+        frontendKey / backend place link에서 Google Place ID를 복원합니다.
+    */
+    let frontendKey =
+        typeof getFrontendKeyForKnownBackendId === "function"
+            ? getFrontendKeyForKnownBackendId(placeId)
+            : null;
+
+    if (
+        !frontendKey &&
+        typeof backendPlaceIdToFrontendKey === "function"
+    ) {
+        try {
+            frontendKey =
+                await backendPlaceIdToFrontendKey(
+                    placeId
+                );
+        } catch {}
+    }
+
+    /*
+        프론트 places 캐시에 이미 실제 Google 장소명이 있으면
+        Google API를 다시 호출하지 않고 바로 사용합니다.
+    */
+    if (
+        frontendKey &&
+        places?.[frontendKey]
+    ) {
+        const localNameValue =
+            places[frontendKey].name;
+
+        const localName =
+            typeof localNameValue === "object"
+                ? (
+                    localNameValue[currentLanguage] ||
+                    localNameValue.ko ||
+                    localNameValue.ja ||
+                    localNameValue.en ||
+                    ""
+                )
+                : String(localNameValue || "");
+
+        if (
+            localName &&
+            !isGenericStoredPlaceName(
+                localName
+            )
+        ) {
+            correctedReviewPlaceNameCache.set(
+                cacheKey,
+                localName
+            );
+
+            return localName;
+        }
+    }
+
+    let googlePlaceId = String(
+        place?.googlePlaceId || ""
+    ).trim();
+
+    if (
+        !googlePlaceId &&
+        String(frontendKey || "")
+            .startsWith("google_")
+    ) {
+        googlePlaceId =
+            String(frontendKey)
+                .slice("google_".length);
+    }
+
+    if (
+        googlePlaceId &&
+        typeof normalizeGooglePlaceId === "function"
+    ) {
+        googlePlaceId =
+            normalizeGooglePlaceId(
+                googlePlaceId
+            );
+    }
+
+    if (
+        googlePlaceId &&
+        typeof fetchGooglePoiDetails === "function"
+    ) {
+        try {
+            const googlePlace =
+                await fetchGooglePoiDetails(
+                    googlePlaceId
+                );
+
+            const actualName = String(
+                googlePlace?.displayName || ""
+            ).trim();
+
+            if (
+                actualName &&
+                !isGenericStoredPlaceName(
+                    actualName
+                )
+            ) {
+                correctedReviewPlaceNameCache.set(
+                    cacheKey,
+                    actualName
+                );
+
+                /*
+                    다음 마이페이지 렌더에서도 바로 쓰도록
+                    프론트 places 캐시의 이름도 실제 이름으로 보정합니다.
+                */
+                const googleKey =
+                    `google_${googlePlaceId}`;
+
+                if (typeof places === "object") {
+                    const existing =
+                        places[googleKey] || {};
+
+                    places[googleKey] = {
+                        ...existing,
+                        name: {
+                            ko: actualName,
+                            ja: actualName,
+                            en: actualName
+                        }
+                    };
+                }
+
+                return actualName;
+            }
+        } catch (error) {
+            console.debug(
+                "리뷰 장소명 보정 실패:",
+                error
+            );
+        }
+    }
+
+    /*
+        "선택한 장소"는 캐시에 절대 저장하지 않습니다.
+        다음 렌더에서 연결정보가 준비되면 다시 실제 이름을 찾을 수 있습니다.
+    */
+    return `장소 #${placeId}`;
+}
+
+function renderMyReviewCards(container, cards) {
+    if (!cards?.length) {
+        container.innerHTML =
+            `<div class="mypage-empty">
+                <i class="ti ti-message-circle"></i>
+                <p>${translate("empty.reviews")}</p>
+            </div>`;
         return;
     }
 
-    const key = await backendPlaceIdToFrontendKey(placeId);
-    if (key && places[key]) {
-        openPlace(key);
-        googleMap?.panTo(places[key].position);
-        googleMap?.setZoom(15);
-        return;
-    }
-
-    if (Number.isFinite(position.lat) && Number.isFinite(position.lng)) {
-        googleMap?.panTo(position);
-        googleMap?.setZoom(15);
-    }
-
-    showToast("장소 상세정보를 열 수 없습니다.");
+    container.innerHTML =
+        cards.join("");
 }
 
 /* 마이페이지의 내 리뷰를 서버 데이터로 교체 */
-async function renderMyReviews(container) {
+async function renderMyReviews(
+    container,
+    renderRequestId =
+        typeof myPageRenderRequestId === "number"
+            ? myPageRenderRequestId
+            : 0
+) {
     if (!getAuthToken()) {
         container.innerHTML =
             `<div class="mypage-empty"><p>${translate("empty.reviews")}</p></div>`;
+        return;
+    }
+
+    const isStale = () => {
+        const currentRequestId =
+            typeof myPageRenderRequestId === "number"
+                ? myPageRenderRequestId
+                : renderRequestId;
+
+        return (
+            renderRequestId !== currentRequestId ||
+            (
+                typeof currentMyPageTab === "string" &&
+                currentMyPageTab !== "reviews"
+            ) ||
+            container !== document.getElementById("mypageContent")
+        );
+    };
+
+    /*
+        같은 사용자가 방금 이미 불러온 리뷰라면 DB를 다시 순회하지 않고 즉시 표시.
+    */
+    if (isMyReviewsPageCacheFresh()) {
+        renderMyReviewCards(
+            container,
+            myReviewsPageCache.cards
+        );
         return;
     }
 
@@ -536,95 +817,105 @@ async function renderMyReviews(container) {
         `<div class="mypage-empty"><p>리뷰를 불러오는 중...</p></div>`;
 
     try {
-        /*
-            현재 백엔드에는 "내 리뷰 전용 API"가 없으므로
-            프론트에서 이미 연결한 DB placeId들을 기준으로
-            각 장소 리뷰를 가져온 뒤 로그인 사용자의 리뷰만 추립니다.
-
-            중요:
-            백엔드 /user/mypage 응답에 userId가 없는 버전도 있으므로
-            userId가 있으면 ID로 비교하고,
-            없으면 닉네임으로 비교합니다.
-        */
         const placeIds =
             typeof getKnownBackendPlaceIds === "function"
                 ? getKnownBackendPlaceIds()
                 : [];
 
         if (!placeIds.length) {
-            container.innerHTML =
-                `<div class="mypage-empty">
-                    <i class="ti ti-message-circle"></i>
-                    <p>${translate("empty.reviews")}</p>
-                </div>`;
+            if (isStale()) return;
+
+            myReviewsPageCache = {
+                userKey: getMyReviewsUserCacheKey(),
+                loadedAt: Date.now(),
+                cards: []
+            };
+
+            renderMyReviewCards(container, []);
             return;
         }
 
         const myUserId =
-            Number(
-                currentUser?.id
-            );
+            Number(currentUser?.id);
 
         const myNickname =
-            String(
-                currentUser?.nickname || ""
-            ).trim();
+            String(currentUser?.nickname || "").trim();
+
+        /*
+            기존에는 placeId 하나씩 순차 await 해서 느렸습니다.
+            이제 모든 장소의 Place + Review 요청을 병렬 실행합니다.
+            getBackendPlaceById 자체도 메모리 캐시를 우선 사용합니다.
+        */
+        const groups =
+            await Promise.all(
+                placeIds.map(async placeId => {
+                    const [
+                        place,
+                        placeReviews
+                    ] = await Promise.all([
+                        getBackendPlaceById(placeId)
+                            .catch(() => null),
+
+                        apiRequest(
+                            `/place/${placeId}/review`
+                        ).catch(() => [])
+                    ]);
+
+                    return {
+                        placeId,
+                        place,
+                        placeReviews:
+                            Array.isArray(placeReviews)
+                                ? placeReviews
+                                : []
+                    };
+                })
+            );
+
+        if (isStale()) return;
+
+        const groupsWithNames =
+            await Promise.all(
+                groups.map(async group => ({
+                    ...group,
+                    resolvedPlaceName:
+                        await resolveStoredReviewPlaceName(
+                            group.placeId,
+                            group.place
+                        )
+                }))
+            );
+
+        if (isStale()) return;
 
         const cards = [];
 
-        for (const placeId of placeIds) {
-            const [
-                place,
-                placeReviews
-            ] = await Promise.all([
-                getBackendPlaceById(
-                    placeId
-                ).catch(
-                    () => null
-                ),
-
-                apiRequest(
-                    `/place/${placeId}/review`
-                ).catch(
-                    () => []
-                )
-            ]);
-
+        groupsWithNames.forEach(({
+            placeId,
+            place,
+            placeReviews,
+            resolvedPlaceName
+        }) => {
             const mine =
-                (placeReviews || [])
+                placeReviews
                     .filter(review => {
                         const reviewUserId =
-                            Number(
-                                review.userId
-                            );
+                            Number(review.userId);
 
-                        /*
-                            userId가 양쪽 모두 존재하면
-                            가장 정확한 ID 비교 사용
-                        */
                         if (
                             Number.isFinite(myUserId) &&
                             myUserId > 0 &&
                             Number.isFinite(reviewUserId) &&
                             reviewUserId > 0
                         ) {
-                            return (
-                                reviewUserId ===
-                                myUserId
-                            );
+                            return reviewUserId === myUserId;
                         }
 
-                        /*
-                            현재 백엔드 MyPageResponse에 userId가 없는 경우
-                            ReviewResponse의 userNickname과
-                            로그인 사용자 nickname으로 판별
-                        */
                         return Boolean(
                             myNickname &&
                             String(
                                 review.userNickname || ""
-                            ).trim() ===
-                                myNickname
+                            ).trim() === myNickname
                         );
                     });
 
@@ -642,9 +933,8 @@ async function renderMyReviews(container) {
                             </span>
 
                             <div class="mypage-review-place-row">
-                                <i class="ti ti-map-pin"></i>
                                 <strong class="mypage-review-place">
-                                    ${escapeGroupHtml(place?.placeName || "장소")}
+                                    ${escapeGroupHtml(resolvedPlaceName || `장소 #${placeId}`)}
                                 </strong>
                             </div>
 
@@ -723,23 +1013,23 @@ async function renderMyReviews(container) {
                     </article>
                 `);
             });
-        }
+        });
 
-        if (!cards.length) {
-            container.innerHTML =
-                `<div class="mypage-empty">
-                    <i class="ti ti-message-circle"></i>
-                    <p>${translate("empty.reviews")}</p>
-                </div>`;
-            return;
-        }
+        if (isStale()) return;
 
-        container.innerHTML =
-            cards.join("");
+        myReviewsPageCache = {
+            userKey: getMyReviewsUserCacheKey(),
+            loadedAt: Date.now(),
+            cards
+        };
 
-
-
+        renderMyReviewCards(
+            container,
+            cards
+        );
     } catch (error) {
+        if (isStale()) return;
+
         console.error(
             "내 리뷰 조회 실패:",
             error
@@ -962,6 +1252,7 @@ document
                             placeId
                         )
                     );
+                    invalidateMyReviewsPageCache();
 
                     await renderMyReviews(
                         document.getElementById(
@@ -1018,6 +1309,36 @@ document
                     return;
                 }
 
+                const mypageContent =
+                    document.getElementById(
+                        "mypageContent"
+                    );
+
+                /*
+                    삭제 확인 직후 화면에서 먼저 제거합니다.
+                    서버 응답을 기다리는 동안 카드가 남아있는 현상을 없앱니다.
+                */
+                card.remove();
+
+                if (
+                    mypageContent &&
+                    !mypageContent.querySelector(
+                        "[data-my-review-id]"
+                    )
+                ) {
+                    renderMyReviewCards(
+                        mypageContent,
+                        []
+                    );
+                }
+
+                reviewCacheByPlace.delete(
+                    String(
+                        placeId
+                    )
+                );
+                invalidateMyReviewsPageCache();
+
                 try {
                     await apiRequest(
                         `/place/${placeId}/review/${reviewId}/delete`,
@@ -1030,18 +1351,10 @@ document
                         }
                     );
 
-                    reviewCacheByPlace.delete(
-                        String(
-                            placeId
-                        )
-                    );
-
-                    await renderMyReviews(
-                        document.getElementById(
-                            "mypageContent"
-                        )
-                    );
-
+                    /*
+                        현재 사이드패널에서 같은 장소를 보고 있다면
+                        상세 리뷰만 뒤에서 새로 받아옵니다.
+                    */
                     if (
                         activeReviewBackendPlace &&
                         Number(
@@ -1049,9 +1362,9 @@ document
                         ) ===
                         placeId
                     ) {
-                        await renderPlaceReviews(
+                        renderPlaceReviews(
                             selectedPlaceKey
-                        );
+                        ).catch(console.error);
                     }
 
                     showToast(
@@ -1062,6 +1375,25 @@ document
                         "내 리뷰 삭제 실패:",
                         error
                     );
+
+                    /*
+                        서버 삭제가 실패한 경우 DB 상태가 정답이므로
+                        해당 탭만 다시 불러와 카드를 복원합니다.
+                    */
+                    invalidateMyReviewsPageCache();
+
+                    if (
+                        mypageContent &&
+                        typeof currentMyPageTab === "string" &&
+                        currentMyPageTab === "reviews"
+                    ) {
+                        renderMyReviews(
+                            mypageContent,
+                            typeof myPageRenderRequestId === "number"
+                                ? myPageRenderRequestId
+                                : 0
+                        ).catch(console.error);
+                    }
 
                     showToast(
                         error.message

@@ -802,6 +802,38 @@ async function reverseGeocodeCurrentArea(position) {
     return result ? normalizeCurrentAreaParts(result) : null;
 }
 
+async function updateCurrentAreaFromPosition(position) {
+    currentAreaLocationState = "loading";
+    renderCurrentAreaName();
+
+    try {
+        currentAreaAddressParts =
+            await reverseGeocodeCurrentArea(
+                position
+            );
+
+        currentAreaLocationState =
+            currentAreaAddressParts
+                ? "ready"
+                : "unavailable";
+    } catch (error) {
+        console.warn(
+            "현재 지역 역지오코딩 실패:",
+            error
+        );
+
+        currentAreaAddressParts = null;
+        currentAreaLocationState = "unavailable";
+    }
+
+    renderCurrentAreaName();
+
+    return currentAreaAddressParts;
+}
+
+window.updateCurrentAreaFromPosition =
+    updateCurrentAreaFromPosition;
+
 function refreshCurrentAreaFromGeolocation() {
     currentAreaLocationState = "loading";
     currentAreaAddressParts = null;
@@ -815,22 +847,16 @@ function refreshCurrentAreaFromGeolocation() {
 
     navigator.geolocation.getCurrentPosition(
         async position => {
-            try {
-                const coords = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                };
+            const coords = {
+                lat:
+                    position.coords.latitude,
+                lng:
+                    position.coords.longitude
+            };
 
-                currentAreaAddressParts = await reverseGeocodeCurrentArea(coords);
-                currentAreaLocationState = currentAreaAddressParts
-                    ? "ready"
-                    : "unavailable";
-            } catch (error) {
-                console.warn("현재 지역 역지오코딩 실패:", error);
-                currentAreaLocationState = "unavailable";
-            }
-
-            renderCurrentAreaName();
+            await updateCurrentAreaFromPosition(
+                coords
+            );
         },
         error => {
             console.warn("현재 위치를 가져오지 못했습니다:", error);
@@ -3306,6 +3332,15 @@ function getGooglePoiTypeLabel(types = []) {
         university: { ko: "대학교", ja: "大学" },
         park: { ko: "공원", ja: "公園" },
         lodging: { ko: "숙박 시설", ja: "宿泊施設" },
+        hotel: { ko: "호텔", ja: "ホテル" },
+        motel: { ko: "모텔", ja: "モーテル" },
+        hostel: { ko: "호스텔", ja: "ホステル" },
+        guest_house: { ko: "게스트하우스", ja: "ゲストハウス" },
+        inn: { ko: "숙박 시설", ja: "宿泊施設" },
+        resort_hotel: { ko: "리조트 호텔", ja: "リゾートホテル" },
+        bed_and_breakfast: { ko: "숙박 시설", ja: "B&B" },
+        extended_stay_hotel: { ko: "레지던스 호텔", ja: "長期滞在型ホテル" },
+        japanese_inn: { ko: "료칸", ja: "旅館" },
         convenience_store: { ko: "편의점", ja: "コンビニ" }
     };
 
@@ -3462,6 +3497,38 @@ async function resolveNearbyPlacePhotoFallback(searchNames = [], position = null
 }
 
 
+function isGenericPoiDisplayName(value) {
+    const name =
+        String(value || "")
+            .trim()
+            .toLowerCase();
+
+    return !name ||
+        name === "선택한 장소" ||
+        name === "選択した場所" ||
+        name === "selected place" ||
+        name === "google place" ||
+        name === "place";
+}
+
+function firstRealPoiDisplayName(...values) {
+    for (const value of values) {
+        const name =
+            String(value || "")
+                .trim();
+
+        if (
+            name &&
+            !isGenericPoiDisplayName(name)
+        ) {
+            return name;
+        }
+    }
+
+    return "";
+}
+
+
 async function openGooglePoi(placeId, fallbackPosition, fallbackName = "", options = {}) {
     const normalizedPlaceId = typeof normalizeGooglePlaceId === "function"
         ? normalizeGooglePlaceId(placeId)
@@ -3489,10 +3556,47 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "", optio
 
     const safeName = hasRealFallbackName
         ? rawFallbackName
-        : (currentLanguage === "ko" ? "선택한 장소" : "選択した場所");
+        : (
+            currentLanguage === "ko"
+                ? "장소 정보 불러오는 중..."
+                : currentLanguage === "ja"
+                    ? "場所情報を読み込み中..."
+                    : "Loading place..."
+        );
 
-    const displayNameOverride = String(options?.displayNameOverride || "").trim();
-    const forceTransportCategory = Boolean(options?.forceTransportCategory);
+    const rawDisplayNameOverride =
+        String(
+            options?.displayNameOverride || ""
+        ).trim();
+
+    const displayNameOverride =
+        isGenericPoiDisplayName(
+            rawDisplayNameOverride
+        )
+            ? ""
+            : rawDisplayNameOverride;
+
+    const forceTransportCategory =
+        Boolean(
+            options?.forceTransportCategory
+        );
+
+    /*
+        마이페이지의 "장소 보기"처럼 외부 목록에서 장소를 열 때만
+        지도도 해당 장소로 이동 + 확대합니다.
+        일반 지도 POI 클릭에는 강제 확대를 적용하지 않습니다.
+    */
+    const focusMap =
+        Boolean(
+            options?.focusMap
+        );
+
+    const focusZoom =
+        Number.isFinite(
+            Number(options?.focusZoom)
+        )
+            ? Number(options.focusZoom)
+            : 16;
 
     const fallbackPoi = {
         id: normalizedPlaceId,
@@ -3536,6 +3640,10 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "", optio
 
     if (safePosition) {
         googleMap.panTo(safePosition);
+
+        if (focusMap) {
+            googleMap.setZoom(focusZoom);
+        }
     }
 
     try {
@@ -3578,16 +3686,33 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "", optio
             }
             : safePosition;
 
-        const resolvedName = String(displayNameOverride || poi.displayName || rawFallbackName || "").trim();
-        const hasResolvedName = Boolean(resolvedName) &&
-            resolvedName !== "선택한 장소" &&
-            resolvedName !== "選択した場所" &&
-            resolvedName.toLowerCase() !== "selected place" &&
-            resolvedName.toLowerCase() !== "place";
+        /*
+            DB 좌표가 조금 다르거나 fallback 좌표만 있었더라도,
+            Google 상세정보의 실제 좌표가 도착하면 그 위치로 다시 정확히 맞춥니다.
+        */
+        if (
+            focusMap &&
+            position &&
+            Number.isFinite(Number(position.lat)) &&
+            Number.isFinite(Number(position.lng))
+        ) {
+            googleMap.panTo({
+                lat: Number(position.lat),
+                lng: Number(position.lng)
+            });
+            googleMap.setZoom(focusZoom);
+        }
 
-        const name = hasResolvedName
-            ? resolvedName
-            : safeName;
+        const resolvedName =
+            firstRealPoiDisplayName(
+                poi.displayName,
+                displayNameOverride,
+                rawFallbackName
+            );
+
+        const name =
+            resolvedName ||
+            safeName;
 
         const resolvedPlaceId = typeof normalizeGooglePlaceId === "function"
             ? normalizeGooglePlaceId(poi.id || normalizedPlaceId)
@@ -3614,7 +3739,19 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "", optio
         try {
             autoPlace = await ensureBackendPlace();
             selectedGooglePoi.autoPlace = autoPlace;
-            selectedGooglePoi.backendPlaceId = autoPlace.placeId;
+            selectedGooglePoi.backendPlaceId =
+                Number(autoPlace.placeId);
+
+            if (placeCard) {
+                placeCard.dataset.backendPlaceId =
+                    String(autoPlace.placeId);
+            }
+
+            if (
+                typeof updateFavoriteButtons === "function"
+            ) {
+                updateFavoriteButtons();
+            }
         } catch (backendError) {
             console.warn("AutoPlace 백엔드 연결 실패:", backendError);
         }
@@ -3624,7 +3761,21 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "", optio
         // 표시 이름만 바꾸더라도 필요한 필드는 명시적으로 복사해서 카드에 전달한다.
         const cardPoi = {
             id: resolvedPlaceId,
-            displayName: displayNameOverride || poi.displayName || name,
+            displayName:
+                firstRealPoiDisplayName(
+                    poi.displayName,
+                    displayNameOverride,
+                    name,
+                    autoPlace?.placeName,
+                    autoPlace?.name
+                ) ||
+                (
+                    currentLanguage === "ko"
+                        ? "장소 정보 불러오는 중..."
+                        : currentLanguage === "ja"
+                            ? "場所情報を読み込み中..."
+                            : "Loading place..."
+                ),
             formattedAddress: poi.formattedAddress || "",
             location: poi.location || position || safePosition,
             primaryType: poi.primaryType || "",
@@ -4054,21 +4205,87 @@ async function renderGooglePoiMainPhoto(placeImage, placeIcon, poi, autoPlace, v
     updateCarousel(0);
 }
 
+function isGenericPlaceCategory(value) {
+    const text =
+        String(value || "")
+            .trim()
+            .toLowerCase();
+
+    return !text ||
+        text === "google 지도 장소" ||
+        text === "google マップの場所" ||
+        text === "google maps place" ||
+        text === "장소" ||
+        text === "スポット" ||
+        text === "place";
+}
+
+function getGooglePoiCategoryLabel(poi, forceTransportCategory = false) {
+    if (
+        forceTransportCategory ||
+        isStationPoiType(poi?.primaryType)
+    ) {
+        return currentLanguage === "ko"
+            ? "교통"
+            : currentLanguage === "ja"
+                ? "交通"
+                : "Transit";
+    }
+
+    const mapped =
+        getGooglePoiTypeLabel(
+            poi?.primaryType
+                ? [poi.primaryType]
+                : []
+        );
+
+    const hasMappedCategory =
+        !isGenericPlaceCategory(
+            mapped
+        );
+
+    if (hasMappedCategory) {
+        return mapped;
+    }
+
+    const apiDisplay =
+        String(
+            poi?.primaryTypeDisplayName || ""
+        ).trim();
+
+    if (apiDisplay) {
+        return apiDisplay;
+    }
+
+    return currentLanguage === "ko"
+        ? "장소"
+        : currentLanguage === "ja"
+            ? "スポット"
+            : "Place";
+}
+
+
 function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
     const { loadPhoto = true, forceTransportCategory = false } = options;
     const name =
-        poi.displayName ||
-        (currentLanguage === "ko"
-            ? "선택한 장소"
-            : "選択した場所");
+        firstRealPoiDisplayName(
+            poi?.displayName,
+            autoPlace?.placeName,
+            autoPlace?.name,
+            selectedGooglePoi?.name
+        ) ||
+        (
+            currentLanguage === "ko"
+                ? "장소 정보 불러오는 중..."
+                : currentLanguage === "ja"
+                    ? "場所情報を読み込み中..."
+                    : "Loading place..."
+        );
 
-    const category = forceTransportCategory || isStationPoiType(poi.primaryType)
-        ? (currentLanguage === "ko" ? "교통" : "交通")
-        : (
-            poi.primaryTypeDisplayName ||
-            getGooglePoiTypeLabel(
-                poi.primaryType ? [poi.primaryType] : []
-            )
+    const category =
+        getGooglePoiCategoryLabel(
+            poi,
+            forceTransportCategory
         );
 
     // Place 가 있으면 Cheese Map 별점/리뷰를 우선 표시합니다.
@@ -4104,13 +4321,43 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
     const saveButton = document.getElementById("saveButton");
 
     if (placeName) {
-        placeName.textContent = getPlaceDisplayName(
-            autoPlace?.placeName || autoPlace?.name || name
-        );
+        const actualName =
+            firstRealPoiDisplayName(
+                poi?.displayName,
+                autoPlace?.placeName,
+                autoPlace?.name,
+                selectedGooglePoi?.name,
+                name
+            ) ||
+            (
+                currentLanguage === "ko"
+                    ? "장소 정보 불러오는 중..."
+                    : currentLanguage === "ja"
+                        ? "場所情報を読み込み中..."
+                        : "Loading place..."
+            );
+
+        /*
+            "선택한 장소"는 어떤 경로로도 화면 제목에 출력하지 않습니다.
+        */
+        placeName.textContent =
+            getPlaceDisplayName(
+                actualName
+            );
     }
 
     if (placeCategory) {
-        placeCategory.textContent = autoPlace?.placeCategory || autoPlace?.category || category;
+        const backendCategory =
+            autoPlace?.placeCategory ||
+            autoPlace?.category ||
+            "";
+
+        placeCategory.textContent =
+            !isGenericPlaceCategory(
+                backendCategory
+            )
+                ? backendCategory
+                : category;
     }
 
     if (placeRating) {
@@ -4137,13 +4384,21 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
     setPlaceCardRatingRowVisible(safeReviewCount);
 
     if (placeAddress) {
+        /*
+            Google POI 카드에서는 현재 클릭한 실제 Place의 주소를 가장 우선합니다.
+            DB/AutoPlace에 예전 빈 주소나 임시 주소가 남아 있어도
+            실제 Google formattedAddress가 있으면 그 값을 사용합니다.
+        */
         placeAddress.textContent =
+            poi.formattedAddress ||
             autoPlace?.placeAddress ||
             autoPlace?.address ||
-            poi.formattedAddress ||
+            selectedGooglePoi?.address ||
             (currentLanguage === "ko"
                 ? "주소 정보 없음"
-                : "住所情報なし");
+                : currentLanguage === "ja"
+                    ? "住所情報なし"
+                    : "Address unavailable");
     }
 
     renderGoogleBusinessInfo(poi);
@@ -4169,10 +4424,49 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
     }
 
     if (placeCard) {
-        placeCard.dataset.placeKey = "";
-        placeCard.dataset.googlePlaceId = poi.id || "";
-        if (autoPlace?.placeId) {
-            placeCard.dataset.backendPlaceId = String(autoPlace.placeId);
+        const normalizedGoogleId =
+            typeof normalizeGooglePlaceId === "function"
+                ? normalizeGooglePlaceId(
+                    poi.id ||
+                    selectedGooglePoi?.placeId ||
+                    ""
+                )
+                : String(
+                    poi.id ||
+                    selectedGooglePoi?.placeId ||
+                    ""
+                ).replace(/^places\//, "");
+
+        const googleKey =
+            normalizedGoogleId
+                ? `google_${normalizedGoogleId}`
+                : "";
+
+        if (googleKey) {
+            selectedPlaceKey = googleKey;
+            placeCard.dataset.placeKey = googleKey;
+        }
+
+        placeCard.dataset.googlePlaceId =
+            normalizedGoogleId;
+
+        const backendId =
+            Number(
+                autoPlace?.placeId ||
+                selectedGooglePoi?.backendPlaceId
+            );
+
+        if (
+            Number.isFinite(backendId) &&
+            backendId > 0
+        ) {
+            placeCard.dataset.backendPlaceId =
+                String(backendId);
+
+            if (selectedGooglePoi) {
+                selectedGooglePoi.backendPlaceId =
+                    backendId;
+            }
         } else {
             delete placeCard.dataset.backendPlaceId;
         }
