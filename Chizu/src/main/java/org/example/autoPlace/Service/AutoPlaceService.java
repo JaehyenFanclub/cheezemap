@@ -115,31 +115,45 @@ public class AutoPlaceService {
     }
 
     private void applyGoogleData(AutoPlace place, GooglePlaceResponseDTO googleData) {
-        if (googleData == null) return;
-
-        if (googleData.getDisplayName() != null
-                && googleData.getDisplayName().getText() != null
-                && !googleData.getDisplayName().getText().isBlank()) {
-            place.setName(googleData.getDisplayName().getText());
-        } else if (place.getName() == null || place.getName().isBlank()) {
-            place.setName("이름 없음");
+        if (googleData == null) {
+            throw new IllegalArgumentException("Google API 응답 데이터가 null입니다.");
         }
 
-        if (googleData.getFormattedAddress() != null && !googleData.getFormattedAddress().isBlank()) {
-            place.setAddress(googleData.getFormattedAddress());
+        // 1. 장소 이름 추출 및 검증
+        String name = (googleData.getDisplayName() != null && googleData.getDisplayName().getText() != null)
+                ? googleData.getDisplayName().getText().trim()
+                : null;
+
+        // 2. 주소 추출 및 검증
+        String address = (googleData.getFormattedAddress() != null)
+                ? googleData.getFormattedAddress().trim()
+                : null;
+
+        // 3. 필수 정보(이름, 주소) 누락 시 저장 차단 (예외 발생)
+        if (name == null || name.isBlank() || address == null || address.isBlank()) {
+            throw new IllegalArgumentException(
+                    "유효하지 않은 장소 데이터입니다. 필수 정보 누락 - [이름: " + name + ", 주소: " + address + "]"
+            );
         }
 
+        // 검증 통과 시 필드 세팅
+        place.setName(name);
+        place.setAddress(address);
+
+        // 카테고리 세팅
         if (googleData.getTypes() != null && !googleData.getTypes().isEmpty()) {
             place.setCategory(googleData.getTypes().get(0));
         } else if (place.getCategory() == null || place.getCategory().isBlank()) {
             place.setCategory("establishment");
         }
 
+        // 위치 정보
         if (googleData.getLocation() != null) {
             place.setAutoLatitude(googleData.getLocation().getLatitude());
             place.setAutoLongitude(googleData.getLocation().getLongitude());
         }
 
+        // 평점 및 리뷰 수
         if (googleData.getRating() != null) {
             place.setRating(googleData.getRating());
         }
@@ -147,7 +161,7 @@ public class AutoPlaceService {
             place.setUserRatingCount(googleData.getUserRatingCount());
         }
 
-        // 기존 사진이 없을 때만 추가하여 중복 저장을 막습니다.
+        // 기존 사진이 없을 때만 추가하여 중복 저장 방지
         if (!hasPhotos(place)) {
             applyPhotosFromGoogle(place, googleData);
         }
