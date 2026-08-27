@@ -151,7 +151,7 @@ public class UserController {
 
     @Operation(
             summary = "마이페이지 수정",
-            description = "JWT 토큰으로 로그인한 유저의 닉네임, 전화번호, 이름, 프로필 사진을 수정합니다. multipart/form-data로 전송하며, photo 파일 필드를 전달하면 프로필 사진을 저장합니다.",
+            description = "JWT 토큰으로 로그인한 유저의 닉네임, 전화번호, 이름, 프로필 사진을 수정합니다. 비밀번호 변경은 currentPassword, newPassword, newPasswordConfirm을 모두 전달할 때만 수행됩니다. multipart/form-data로 전송하며, photo 파일 필드를 전달하면 프로필 사진을 저장합니다.",
             parameters = {
                     @Parameter(
                             name = JwtAuthenticationFilter.TOKEN_HEADER,

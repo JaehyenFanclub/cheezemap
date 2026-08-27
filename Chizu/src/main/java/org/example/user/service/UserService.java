@@ -124,12 +124,49 @@ public class UserService {
         }
 
         user.updateProfile(newUserName, newUserNickname, newPhone);
+        updatePasswordIfRequested(user, request);
         user.markUpdated(user.getId());
 
         MultipartFile photo = request.getPhoto();
         if (photo != null && !photo.isEmpty()) {
             updateProfilePhoto(user, photo);
         }
+    }
+
+    private void updatePasswordIfRequested(User user, MyPageEditRequest request) {
+        String currentPassword = request.getCurrentPassword();
+        String newPassword = request.getNewPassword();
+        String newPasswordConfirm = request.getNewPasswordConfirm();
+
+        boolean hasAnyPasswordField = isPresent(currentPassword)
+                || isPresent(newPassword)
+                || isPresent(newPasswordConfirm);
+
+        if (!hasAnyPasswordField) {
+            return;
+        }
+
+        if (!isPresent(currentPassword) || !isPresent(newPassword) || !isPresent(newPasswordConfirm)) {
+            throw new IllegalArgumentException("비밀번호 변경 시 현재 비밀번호, 변경할 비밀번호, 변경할 비밀번호 확인이 모두 필요합니다.");
+        }
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호가 올바르지 않습니다.");
+        }
+
+        if (!newPassword.equals(newPasswordConfirm)) {
+            throw new IllegalArgumentException("변경할 비밀번호와 확인 비밀번호가 일치하지 않습니다.");
+        }
+
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호와 동일한 비밀번호로 변경할 수 없습니다.");
+        }
+
+        user.updatePassword(passwordEncoder.encode(newPassword));
+    }
+
+    private boolean isPresent(String value) {
+        return value != null && !value.isBlank();
     }
 
     private void updateProfilePhoto(User user, MultipartFile photo) {
