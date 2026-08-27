@@ -25,6 +25,8 @@ import org.example.review.repository.ReviewLikeRepository;
 import org.example.review.repository.ReviewPhotoRepository;
 import org.example.review.repository.ReviewRepository;
 import org.example.user.entity.User;
+import org.example.user.entity.UserPhoto;
+import org.example.user.repository.UserPhotoRepository;
 import org.example.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,7 @@ public class ReviewService {
     private final PlaceRepository placeRepository;
     private final PlacePreferenceService placePreferenceService;
     private final UserRepository userRepository;
+    private final UserPhotoRepository userPhotoRepository;
     private final ImageStorageService imageStorageService;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklist tokenBlacklist;
@@ -60,12 +63,24 @@ public class ReviewService {
                         Collectors.mapping(ReviewPhoto::getPhotoUrl, Collectors.toList())
                 ));
 
+        List<Long> userIds = reviews.stream()
+                .map(review -> review.getUser().getId())
+                .distinct()
+                .toList();
+        Map<Long, String> userPhotoUrlByUserId = userPhotoRepository.findByUserIdIn(userIds).stream()
+                .collect(Collectors.toMap(
+                        photo -> photo.getUser().getId(),
+                        UserPhoto::getPhotoUrl,
+                        (first, ignored) -> first
+                ));
+
         return reviews.stream()
                 .map(review -> new ReviewResponse(
                         review.getId(),
                         review.getPlace().getPlaceId(),
                         review.getUser().getId(),
                         review.getUser().getUserNickname(),
+                        userPhotoUrlByUserId.get(review.getUser().getId()),
                         review.getContents(),
                         review.getRating(),
                         review.getLikeCount(),
