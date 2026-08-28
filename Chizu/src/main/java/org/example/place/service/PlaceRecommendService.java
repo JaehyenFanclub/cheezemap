@@ -27,9 +27,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PlaceRecommendService {
 
-    private static final double W_RATING = 0.4;
+    private static final double W_RATING = 0.2;
     private static final double W_REVIEW = 0.2;
-    private static final double W_HIT = 0.4;
+    private static final double W_HIT = 0.6;
     private static final double RATING_PRIOR_WEIGHT = 10.0;
     private static final double FALLBACK_PRIOR_RATING = 3.5;
     private static final int CANDIDATE_LIMIT = 100;

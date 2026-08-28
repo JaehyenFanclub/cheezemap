@@ -20,17 +20,32 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PlacePreferenceService {
 
-    public static final int WEIGHT_VIEW = 1;
     public static final int WEIGHT_LIKE = 2;
     public static final int WEIGHT_SAVE = 3;
-    public static final int WEIGHT_REVIEW = 5;
+    public static final int WEIGHT_GROUP_SAVE = 5;
+
+    public static int reviewWeightFromRating(double rating) {
+        int stars = (int) Math.round(clampRating(rating));
+        return switch (stars) {
+            case 1 -> -5;
+            case 2 -> -3;
+            case 3 -> 1;
+            case 4 -> 3;
+            case 5 -> 5;
+            default -> 0;
+        };
+    }
+
+    private static double clampRating(double rating) {
+        return Math.max(1.0, Math.min(5.0, rating));
+    }
 
     private final PlacePreferenceRepository placePreferenceRepository;
     private final PlaceRepository placeRepository;
     private final ObjectProvider<PlacePreferenceService> self;
 
     public void increase(User user, Place place, int weight) {
-        if (user == null || place == null || place.getPlaceId() == null || weight <= 0) {
+        if (user == null || place == null || place.getPlaceId() == null || weight == 0) {
             return;
         }
 

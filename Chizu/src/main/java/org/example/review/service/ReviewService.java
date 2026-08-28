@@ -105,7 +105,7 @@ public class ReviewService {
         review.markCreated(user.getId());
         reviewRepository.save(review);
         refreshPlaceReviewStats(place);
-        placePreferenceService.increase(user, place, PlacePreferenceService.WEIGHT_REVIEW);
+        applyReviewPreference(user, place, PlacePreferenceService.reviewWeightFromRating(request.getRating()));
 
         savePhotos(review, request.getImages(), user.getId());
     }
@@ -119,9 +119,16 @@ public class ReviewService {
         User user = findUserByToken(token);
         Review review = findOwnedReview(placeId, reviewId, user);
 
+        double previousRating = review.getRating();
         review.update(request.getRating(), request.getContent());
         review.markUpdated(user.getId());
         refreshPlaceReviewStats(review.getPlace());
+        applyReviewPreferenceDelta(
+                user,
+                review.getPlace(),
+                previousRating,
+                review.getRating()
+        );
 
         deletePhotos(review, request.getDeleteImageIds());
         savePhotos(review, request.getImages(), user.getId());
@@ -139,6 +146,7 @@ public class ReviewService {
         reviewPhotoRepository.deleteByReviewId(review.getId());
         reviewLikeRepository.deleteByReviewId(review.getId());
         Place place = review.getPlace();
+        applyReviewPreference(user, place, -PlacePreferenceService.reviewWeightFromRating(review.getRating()));
         reviewRepository.delete(review);
         refreshPlaceReviewStats(place);
     }
@@ -226,6 +234,16 @@ public class ReviewService {
         }
 
         reviewPhotoRepository.deleteAll(photos);
+    }
+
+    private void applyReviewPreference(User user, Place place, int weight) {
+        placePreferenceService.increase(user, place, weight);
+    }
+
+    private void applyReviewPreferenceDelta(User user, Place place, double previousRating, double newRating) {
+        int delta = PlacePreferenceService.reviewWeightFromRating(newRating)
+                - PlacePreferenceService.reviewWeightFromRating(previousRating);
+        applyReviewPreference(user, place, delta);
     }
 
     private void refreshPlaceReviewStats(Place place) {

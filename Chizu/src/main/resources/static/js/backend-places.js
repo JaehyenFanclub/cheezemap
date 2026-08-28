@@ -862,7 +862,7 @@ async function resolveBackendPlaceCardMeta(placeOrId, stateKey = "") {
 }
 
 
-/** 로그인 상태에서 Place 조회 시 view preference(hit_count)가 쌓이도록 호출합니다. */
+/** 로그인 상태에서 Place 상세를 조회합니다. 단순 조회는 hit_count에 반영하지 않습니다. */
 async function recordPlaceViewIfLoggedIn(placeId) {
     const id = Number(placeId);
     if (!Number.isFinite(id) || id <= 0 || !getAuthToken()) {
@@ -876,7 +876,7 @@ async function recordPlaceViewIfLoggedIn(placeId) {
 }
 
 /**
- * like / save / view 등 Place preference 액션을 백엔드에 기록합니다.
+ * like / save 등 Place preference 액션을 백엔드에 기록합니다.
  * ensureCurrentPlaceKey 가 만든 google_* 키도 AutoPlace Place 로 연결합니다.
  */
 async function recordPlacePreferenceAction(action, placeKey = selectedPlaceKey) {
@@ -979,8 +979,7 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
         try {
             /*
                 단순 상세 복원은 인증 없이 조회합니다.
-                /place/{id}에 토큰을 넣으면 백엔드가 view preference를 올리므로,
-                UI 복원 때문에 조회 가중치가 중복 증가하지 않게 합니다.
+                단순 조회는 hit_count에 반영하지 않으므로 UI 복원용 조회는 가중치에 영향을 주지 않습니다.
             */
             const existing = await apiRequest(`/place/${linkedId}`);
 
