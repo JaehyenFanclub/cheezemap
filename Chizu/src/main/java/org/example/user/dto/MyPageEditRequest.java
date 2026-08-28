@@ -3,6 +3,7 @@ package org.example.user.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
+import java.time.LocalDate;
 import org.springframework.web.multipart.MultipartFile;
 
 @Getter
@@ -18,6 +19,9 @@ public class MyPageEditRequest {
 
     @Schema(description = "변경할 이름", example = "홍길동")
     private String userName;
+
+    @Schema(description = "생년월일 (기존 값이 없을 때만 설정 가능)", example = "2000-01-01")
+    private LocalDate birth;
 
     @Schema(description = "현재 비밀번호 (비밀번호 변경 시에만 전달)", example = "password123")
     private String currentPassword;

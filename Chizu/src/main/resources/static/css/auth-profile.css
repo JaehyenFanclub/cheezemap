@@ -387,6 +387,73 @@
 }
 
 
+.social-login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin: 18px 0 14px;
+    color: #9a8450;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.social-login-divider::before,
+.social-login-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #ead79c;
+}
+
+.social-login-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+.social-login-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    border: 1px solid #ead79c;
+    border-radius: 11px;
+    color: #6f562c;
+    background: #fffdf7;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background-color 0.18s ease;
+}
+
+.social-login-button:hover {
+    transform: translateY(-1px);
+    border-color: #efbd38;
+    background: #fff8e8;
+}
+
+.social-login-google {
+    color: #4285f4;
+}
+
+.social-login-naver {
+    color: #03c75a;
+}
+
+.social-login-line {
+    color: #06c755;
+}
+
+#socialLoginError {
+    margin-top: 10px;
+}
+
+
 /* 회원가입 버튼 */
 .auth-modal .signup-page-link,
 .auth-modal .text-button {
