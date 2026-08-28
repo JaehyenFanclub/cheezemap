@@ -40,6 +40,61 @@ function formatReviewDate(value) {
     return date.toLocaleDateString(locale);
 }
 
+
+function normalizeReviewUserPhotoUrl(photoUrl) {
+    const raw =
+        String(photoUrl || "")
+            .trim();
+
+    if (!raw) {
+        return "";
+    }
+
+    if (/^https?:\/\//i.test(raw)) {
+        return raw;
+    }
+
+    return raw.startsWith("/")
+        ? raw
+        : `/${raw}`;
+}
+
+function reviewUserAvatarHtml(review) {
+    const photoUrl =
+        normalizeReviewUserPhotoUrl(
+            review?.userPhotoUrl
+        );
+
+    if (photoUrl) {
+        const separator =
+            photoUrl.includes("?")
+                ? "&"
+                : "?";
+
+        return `
+            <span class="place-review-avatar has-photo">
+                <img
+                    src="${escapeGroupHtml(
+                        `${photoUrl}${separator}v=${Date.now()}`
+                    )}"
+                    alt="${escapeGroupHtml(
+                        review?.userNickname ||
+                        "리뷰 작성자"
+                    )} 프로필 사진"
+                    loading="lazy"
+                    onerror="this.parentElement.classList.remove('has-photo'); this.parentElement.innerHTML='<i class=&quot;ti ti-user&quot;></i>';"
+                >
+            </span>
+        `;
+    }
+
+    return `
+        <span class="place-review-avatar">
+            <i class="ti ti-user"></i>
+        </span>
+    `;
+}
+
 async function resolveActiveBackendPlace(placeKey = selectedPlaceKey) {
     try {
         activeReviewBackendPlace = await ensureBackendPlace(placeKey);
@@ -115,8 +170,12 @@ async function renderPlaceReviews(placeKey) {
             <article class="place-review-item" data-review-id="${review.reviewId}" data-review-rating="${review.rating}">
                 <div class="place-review-top">
                     <div class="place-review-user-wrap">
-                        <span class="place-review-user">${escapeGroupHtml(review.userNickname || "CHEESE USER")}</span>
-                        <span class="place-review-rating">${getReviewStars(review.rating)}</span>
+                        ${reviewUserAvatarHtml(review)}
+
+                        <div class="place-review-user-meta">
+                            <span class="place-review-user">${escapeGroupHtml(review.userNickname || "CHEESE USER")}</span>
+                            <span class="place-review-rating">${getReviewStars(review.rating)}</span>
+                        </div>
                     </div>
                     <div class="place-review-actions">
                         ${mine ? `<button type="button" class="place-review-edit-toggle" data-review-edit-toggle>${translate("place.reviewEdit")}</button>

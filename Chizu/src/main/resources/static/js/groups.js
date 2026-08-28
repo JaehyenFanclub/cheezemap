@@ -134,19 +134,44 @@ function getGroupSaveCategoryPreset(
             ? places[placeKey]
             : null;
 
-    const rawCategory = [
-        normalizeGroupSaveText(
-            place?.category
-        ),
-        place?.type,
-        selectedGooglePoi?.primaryType,
-        selectedGooglePoi?.primaryTypeDisplayName,
-        document
-            .getElementById(
-                "placeCategory"
-            )
-            ?.textContent
-    ]
+    /*
+        그룹 목록에 저장된 장소의 카테고리를 표시할 때는
+        "현재 지도에서 열려 있는 다른 장소(selectedGooglePoi / placeCategory)"
+        정보를 섞으면 안 됩니다.
+
+        이전에는 예를 들어:
+        저장 장소 = 호텔
+        현재 지도에서 마지막으로 본 장소 = 카페
+        인 경우 rawCategory에 "호텔 카페"가 같이 들어가고,
+        presets에서 cafe가 hotel보다 먼저 검사되어 호텔도 카페로 표시될 수 있었습니다.
+
+        placeKey로 실제 저장 장소를 찾을 수 있으면 그 장소 데이터만 사용합니다.
+        현재 선택 장소를 저장하는 특수 흐름에서만 전역 POI/DOM 값을 fallback으로 사용합니다.
+    */
+    const hasStoredPlace =
+        Boolean(
+            placeKey &&
+            place
+        );
+
+    const rawCategory = (
+        hasStoredPlace
+            ? [
+                normalizeGroupSaveText(
+                    place?.category
+                ),
+                place?.type
+            ]
+            : [
+                selectedGooglePoi?.primaryType,
+                selectedGooglePoi?.primaryTypeDisplayName,
+                document
+                    .getElementById(
+                        "placeCategory"
+                    )
+                    ?.textContent
+            ]
+    )
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -210,9 +235,9 @@ function getGroupSaveCategoryPreset(
         },
         {
             test:
-                /(hotel|lodging|호텔|숙소|료칸)/i,
+                /(hotel|lodging|motel|hostel|guest_house|inn|resort|호텔|숙소|숙박|료칸)/i,
             key: "hotel",
-            label: "숙박",
+            label: "호텔",
             icon: "ti-bed",
             detail: "호텔 · 숙박"
         },
@@ -1249,7 +1274,6 @@ function renderSelectedGroup() {
             <div class="group-detail-actions">
                 <button type="button" data-group-action="edit"><i class="ti ti-edit"></i>수정</button>
                 <button type="button" data-group-action="share"><i class="ti ti-link"></i>공유</button>
-                <button type="button" data-group-action="message"><i class="ti ti-mail"></i>쪽지</button>
                 <button type="button" class="danger" data-group-action="delete"><i class="ti ti-trash"></i>삭제</button>
             </div>
         </div>
@@ -1292,13 +1316,6 @@ function renderSelectedGroup() {
 
     panel.querySelector('[data-group-action="edit"]')?.addEventListener("click", () => openGroupForm(group));
     panel.querySelector('[data-group-action="share"]')?.addEventListener("click", () => shareGroup(group));
-    panel.querySelector('[data-group-action="message"]')?.addEventListener(
-        "click",
-        () => openMessageCompose({
-            subject: `[${group.groupName}] 일정 관련 쪽지`,
-            body: `${group.groupName} 일정에 대해 이야기하고 싶어요.`
-        })
-    );
     panel.querySelector('[data-group-action="delete"]')?.addEventListener("click", () => deleteGroup(group.groupId));
     panel
         .querySelectorAll(

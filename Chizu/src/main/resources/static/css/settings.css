@@ -4,14 +4,15 @@
 
 .settings-modal {
     width: min(560px, calc(100vw - 32px));
-    max-height: min(760px, calc(100vh - 40px));
-    padding: 30px 26px 24px;
-    overflow-y: auto;
+    max-height: none;
+    height: auto;
+    padding: 22px 26px 18px;
+    overflow: visible;
 }
 
 .settings-heading {
     padding-right: 48px;
-    margin-bottom: 22px;
+    margin-bottom: 14px;
 }
 
 .settings-eyebrow {
@@ -36,7 +37,7 @@
 }
 
 .settings-section {
-    padding: 18px 0;
+    padding: 12px 0;
     border-top: 1px solid var(--gray-200);
 }
 
@@ -44,7 +45,7 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     color: var(--brown);
     font-size: 12px;
     font-weight: 800;
@@ -58,12 +59,12 @@
 .settings-toggle-row,
 .settings-action-row {
     width: 100%;
-    min-height: 64px;
+    min-height: 56px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 18px;
-    padding: 12px 14px;
+    padding: 9px 14px;
     border: 1px solid var(--gray-200);
     border-radius: 14px;
     color: var(--text);
@@ -118,7 +119,7 @@
     box-shadow: 0 0 0 3px rgba(246, 201, 69, 0.18);
 }
 
-/* 추천 장소 표시 스위치 */
+/* 추천 */
 
 .settings-toggle-row {
     cursor: pointer;
@@ -126,6 +127,16 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+}
+
+.settings-toggle-row-compact {
+    padding: 15px 14px;
+}
+
+.settings-recommend-only {
+    border: 1px solid var(--gray-200);
+    border-radius: 14px;
+    background: var(--white);
 }
 
 .settings-toggle-row input {
@@ -172,69 +183,6 @@
 
 .settings-toggle-row input:checked + .settings-switch::after {
     transform: translateX(19px);
-}
-
-/* 추천 기준 */
-
-.settings-choice-block {
-    margin-top: 10px;
-    padding: 14px;
-    border: 1px solid var(--gray-200);
-    border-radius: 14px;
-    background: var(--white);
-}
-
-.settings-choice-copy {
-    margin-bottom: 10px;
-}
-
-.settings-choice-copy strong {
-    display: block;
-    font-size: 13px;
-    font-weight: 800;
-}
-
-.settings-radio-row {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    min-height: 56px;
-    padding: 9px 10px;
-    border-radius: 11px;
-    cursor: pointer;
-}
-
-.settings-radio-row:hover {
-    background: var(--gray-50);
-}
-
-.settings-radio-row input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.settings-radio-mark {
-    position: relative;
-    width: 19px;
-    height: 19px;
-    flex: 0 0 auto;
-    border: 2px solid var(--gray-200);
-    border-radius: 50%;
-    background: var(--white);
-}
-
-.settings-radio-row input:checked + .settings-radio-mark {
-    border-color: var(--yellow-dark);
-}
-
-.settings-radio-row input:checked + .settings-radio-mark::after {
-    content: "";
-    position: absolute;
-    inset: 3px;
-    border-radius: 50%;
-    background: var(--yellow-dark);
 }
 
 /* 데이터 관리 */
@@ -345,4 +293,19 @@ body.dark .settings-select-row select {
     opacity: 0.55;
     cursor: wait;
     transform: none !important;
+}
+
+
+/* 설정창 내부 스크롤 완전 제거 */
+#settingsModal .settings-modal {
+    overflow: visible !important;
+    max-height: none !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#settingsModal .settings-modal::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }

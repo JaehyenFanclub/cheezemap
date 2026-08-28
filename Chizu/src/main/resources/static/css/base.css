@@ -439,23 +439,31 @@ body.dark .header {
     background: var(--white);
     border-right: 1px solid var(--gray-200);
     transition: transform 0.25s;
+
+    /*
+        지도 레이어 항목을 줄인 뒤 남는 하단 빈 공간이
+        설정 버튼 아래로 몰리지 않도록 사이드바를 세로 flex로 사용합니다.
+    */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .sidebar-section {
-    margin-bottom: 24px;
+    margin-bottom: 0;
 }
 
 .section-title {
     margin: 0 0 9px 10px;
     color: var(--gray-400);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 800;
-    letter-spacing: 1.3px;
+    letter-spacing: 1.2px;
 }
 
 .side-item {
     width: 100%;
-    height: 43px;
+    height: 48px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -487,7 +495,7 @@ body.dark .header {
 }
 
 .category-item {
-    min-height: 68px;
+    min-height: 76px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -497,7 +505,7 @@ body.dark .header {
     border-radius: 15px;
     color: var(--gray-600);
     background: var(--white);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -513,13 +521,13 @@ body.dark .header {
 }
 
 .switch-row {
-    height: 43px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 9px;
     color: var(--gray-600);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
 }
 
@@ -560,6 +568,7 @@ body.dark .header {
 .sidebar-footer {
     display: flex;
     gap: 7px;
+    margin-top: 0;
     padding-top: 13px;
     border-top: 1px solid var(--gray-200);
 }

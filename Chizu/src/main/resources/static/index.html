@@ -230,7 +230,10 @@
                     id="profileButton"
                     hidden
                 >
-                    <span class="profile-avatar">
+                    <span
+                        class="profile-avatar"
+                        id="headerProfileAvatar"
+                    >
                         <i class="ti ti-user"></i>
                     </span>
 
@@ -1857,7 +1860,7 @@
             <div class="settings-heading">
                 <span class="settings-eyebrow">CHEESE MAP</span>
                 <h2 id="settingsModalTitle">설정</h2>
-                <p>언어와 추천 방식, 저장 데이터를 관리할 수 있어요.</p>
+                <p>언어와 추천 표시, 저장 데이터를 관리할 수 있어요.</p>
             </div>
 
             <div class="settings-section">
@@ -1886,7 +1889,7 @@
                     <span>추천</span>
                 </div>
 
-                <label class="settings-toggle-row">
+                <label class="settings-toggle-row settings-toggle-row-compact settings-recommend-only">
                     <span>
                         <strong>추천 장소 표시</strong>
                         <small>지도 아래의 주변 추천 장소를 표시합니다.</small>
@@ -1899,40 +1902,6 @@
                     >
                     <span class="settings-switch" aria-hidden="true"></span>
                 </label>
-
-                <div class="settings-choice-block">
-                    <div class="settings-choice-copy">
-                        <strong>추천 기준</strong>
-                        <small>추천 장소를 고르는 기준을 선택합니다.</small>
-                    </div>
-
-                    <label class="settings-radio-row">
-                        <input
-                            type="radio"
-                            name="recommendBasis"
-                            value="gender"
-                            checked
-                        >
-                        <span class="settings-radio-mark"></span>
-                        <span>
-                            <strong>내 성별 기준</strong>
-                            <small>회원가입 때 선택한 성별을 추천에 반영합니다.</small>
-                        </span>
-                    </label>
-
-                    <label class="settings-radio-row">
-                        <input
-                            type="radio"
-                            name="recommendBasis"
-                            value="all"
-                        >
-                        <span class="settings-radio-mark"></span>
-                        <span>
-                            <strong>성별 구분 없이</strong>
-                            <small>성별을 구분하지 않고 전체 기준으로 추천합니다.</small>
-                        </span>
-                    </label>
-                </div>
             </div>
 
             <div class="settings-section">

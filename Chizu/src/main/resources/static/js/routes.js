@@ -390,30 +390,37 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
 
     routePolylines = haloLine ? [haloLine, routeLine] : [routeLine];
 
-    const startInputValue =
-        document.getElementById("startPoint")?.value || "";
+    /*
+        최종 경로에서도 출발지에만 CHEESE MAP 로고 마커를 표시합니다.
+        "출발" 텍스트와 도착지 마커는 제거합니다.
+    */
+    const startMarker =
+        createGoogleStyleRouteMarker({
+            position:
+                path[0],
 
-    const createEndpointMarker = (position, type) => {
-        const isStart = type === "start";
-        const markerText = isStart
-            ? isCurrentLocationText(startInputValue)
-                ? (currentLanguage === "ko" ? "현재 위치" : "現在地")
-                : (currentLanguage === "ko" ? "출발" : "出発")
-            : (currentLanguage === "ko" ? "도착" : "到着");
+            type:
+                "start",
 
-        const marker = createGoogleStyleRouteMarker({
-            position,
-            type,
-            text: markerText,
-            zIndex: 30,
-            clickable: false
+            title:
+                currentLanguage === "ko"
+                    ? "출발지"
+                    : currentLanguage === "ja"
+                        ? "出発地"
+                        : "Origin",
+
+            zIndex:
+                30,
+
+            clickable:
+                false
         });
 
-        routeMarkers.push(marker);
-    };
-
-    createEndpointMarker(path[0], "start");
-    createEndpointMarker(path[path.length - 1], "end");
+    if (startMarker) {
+        routeMarkers.push(
+            startMarker
+        );
+    }
 
     if (fitViewport) {
         if (route.viewport) {
@@ -1597,84 +1604,73 @@ function createGoogleStyleRouteMarker({
     zIndex = 30,
     clickable = false
 }) {
-    const isStart = type === "start";
-    const markerText = isStart
-        ? (currentLanguage === "ko" ? "출발" : "出発")
-        : (currentLanguage === "ko" ? "도착" : "到着");
-
-    const markerTitle = String(text || markerText);
-
     /*
-        Google Maps PinElement 모양은 그대로 쓰고 색만 노란색으로 변경한다.
-        핀 자체는 작게 유지하고, '출발/도착'은 옆의 작은 라벨로 분리해
-        지도 위에서 과하게 커 보이지 않도록 한다.
+        길찾기 마커는 출발지에만 표시합니다.
+        별도 치즈/로고 커스텀 없이 Google Maps 기본 PinElement를 사용합니다.
     */
+    if (type !== "start") {
+        return null;
+    }
+
+    const markerTitle =
+        String(
+            title ||
+            text ||
+            (
+                currentLanguage === "ko"
+                    ? "출발지"
+                    : currentLanguage === "ja"
+                        ? "出発地"
+                        : "Origin"
+            )
+        );
+
     if (
         google.maps.marker?.PinElement &&
         google.maps.marker?.AdvancedMarkerElement
     ) {
-        const pin = new google.maps.marker.PinElement({
-            background: isStart ? "#FFD54A" : "#FBC02D",
-            borderColor: "#8A6508",
-            glyphColor: "#8A6508",
-            scale: 0.82
-        });
+        const pin =
+            new google.maps.marker.PinElement({
+                scale: 1
+            });
 
-        const wrapper = document.createElement("div");
-        wrapper.style.display = "flex";
-        wrapper.style.alignItems = "center";
-        wrapper.style.gap = "3px";
-        wrapper.style.transform = "translateY(-2px)";
+        return new google.maps.marker.AdvancedMarkerElement({
+            map:
+                googleMap,
 
-        const label = document.createElement("span");
-        label.textContent = markerText;
-        label.style.padding = "1px 4px";
-        label.style.borderRadius = "4px";
-        label.style.background = "rgba(255,255,255,0.94)";
-        label.style.border = "1px solid rgba(138,101,8,0.35)";
-        label.style.color = "#5B4300";
-        label.style.fontSize = "10px";
-        label.style.fontWeight = "700";
-        label.style.lineHeight = "14px";
-        label.style.whiteSpace = "nowrap";
-        label.style.boxShadow = "0 1px 2px rgba(0,0,0,0.12)";
-
-        wrapper.append(pin.element, label);
-
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-            map: googleMap,
             position,
-            title: title || markerTitle,
-            content: wrapper,
-            zIndex,
-            gmpClickable: Boolean(clickable)
-        });
 
-        return marker;
+            title:
+                markerTitle,
+
+            content:
+                pin.element,
+
+            zIndex,
+
+            gmpClickable:
+                Boolean(
+                    clickable
+                )
+        });
     }
 
-    /* Advanced Marker를 쓸 수 없는 환경을 위한 안전한 fallback. */
+    /*
+        Advanced Marker를 지원하지 않는 환경에서는
+        Google Maps 기본 Marker를 그대로 사용합니다.
+    */
     return new google.maps.Marker({
-        map: googleMap,
+        map:
+            googleMap,
+
         position,
-        title: title || markerTitle,
+
+        title:
+            markerTitle,
+
         clickable,
-        zIndex,
-        label: {
-            text: markerText,
-            color: "#5B4300",
-            fontSize: "10px",
-            fontWeight: "700"
-        },
-        icon: {
-            path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-            fillColor: isStart ? "#FFD54A" : "#FBC02D",
-            fillOpacity: 1,
-            strokeColor: "#8A6508",
-            strokeWeight: 1.5,
-            scale: 8,
-            anchor: new google.maps.Point(0, 2)
-        }
+
+        zIndex
     });
 }
 
@@ -1683,27 +1679,42 @@ function addTemporaryRouteMarker(
     label,
     title
 ) {
-    const markerType = label === "B" ? "end" : "start";
+    const markerType =
+        label === "B"
+            ? "end"
+            : "start";
 
-    const markerText =
-        markerType === "start"
-            ? isCurrentLocationText(
-                document.getElementById("startPoint")?.value || ""
-              )
-                ? (currentLanguage === "ko" ? "현재 위치" : "現在地")
-                : (currentLanguage === "ko" ? "출발" : "出発")
-            : (currentLanguage === "ko" ? "도착" : "到着");
+    /*
+        도착지는 별도 마커를 표시하지 않습니다.
+        지도 선택 중에도 출발지에만 CHEESE MAP 로고를 표시합니다.
+    */
+    if (
+        markerType !== "start"
+    ) {
+        return null;
+    }
 
-    const marker = createGoogleStyleRouteMarker({
-        position,
-        type: markerType,
-        text: markerText,
-        title,
-        zIndex: 40,
-        clickable: true
-    });
+    const marker =
+        createGoogleStyleRouteMarker({
+            position,
 
-    routeMarkers.push(marker);
+            type:
+                "start",
+
+            title,
+
+            zIndex:
+                40,
+
+            clickable:
+                true
+        });
+
+    if (marker) {
+        routeMarkers.push(
+            marker
+        );
+    }
 
     return marker;
 }
