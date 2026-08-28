@@ -92,16 +92,6 @@ public class PlaceService {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 장소가 존재하지 않습니다."));
 
-        if (token != null && !token.isBlank() && jwtTokenProvider.validateToken(token)) {
-            try {
-                Long userId = Long.valueOf(jwtTokenProvider.getSubject(token));
-                userRepository.findById(userId).ifPresent(user ->
-                        placePreferenceService.increase(user, place, PlacePreferenceService.WEIGHT_VIEW));
-            } catch (JwtException | NumberFormatException ignored) {
-                // 공개 조회이므로 잘못된 토큰은 무시한다.
-            }
-        }
-
         return convertToDTO(place);
     }
 
@@ -129,7 +119,6 @@ public class PlaceService {
             throw new IllegalArgumentException("선호도 액션이 비어 있습니다.");
         }
         return switch (action.trim().toLowerCase()) {
-            case "view" -> PlacePreferenceService.WEIGHT_VIEW;
             case "like" -> PlacePreferenceService.WEIGHT_LIKE;
             case "save" -> PlacePreferenceService.WEIGHT_SAVE;
             default -> throw new IllegalArgumentException("지원하지 않는 선호도 액션입니다.");

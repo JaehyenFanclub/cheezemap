@@ -66,7 +66,7 @@ public class PlaceController {
             parameters = {
                     @Parameter(
                             name = JwtAuthenticationFilter.TOKEN_HEADER,
-                            description = "jwt 토큰. 있으면 해당 사용자 세그먼트의 조회 선호도가 증가합니다.",
+                            description = "jwt 토큰 (선택)",
                             required = false,
                             in = ParameterIn.HEADER,
                             schema = @Schema(type = "string")
@@ -83,7 +83,7 @@ public class PlaceController {
 
     @Operation(
             summary = "장소 선호도 기록",
-            description = "view(조회 1), like(좋아요 2), save(저장 3) 가중치를 해당 사용자 연령/성별 세그먼트의 hit_count에 누적합니다. 새 행이 계속 생기지는 않습니다.",
+            description = "like(좋아요 2), save(저장 3) 가중치를 해당 사용자 연령/성별 세그먼트의 hit_count에 누적합니다. 단순 조회(view)는 선호도에 반영하지 않습니다.",
             parameters = {
                     @Parameter(
                             name = JwtAuthenticationFilter.TOKEN_HEADER,
