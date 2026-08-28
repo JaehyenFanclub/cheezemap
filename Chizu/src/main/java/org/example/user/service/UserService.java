@@ -1,5 +1,6 @@
 package org.example.user.service;
 
+import org.example.auth.enums.SocialProvider;
 import org.example.common.service.ImageStorageService;
 import org.example.common.service.ImageStorageService.ImageFolder;
 import org.example.config.JwtTokenProvider;
@@ -10,6 +11,7 @@ import org.example.user.dto.MyPageEditRequest;
 import org.example.user.dto.MyPageResponse;
 import org.example.user.dto.SignupRequest;
 import org.example.user.entity.User;
+import java.time.LocalDate;
 import org.example.user.entity.UserPhoto;
 import org.example.user.repository.UserPhotoRepository;
 import org.example.user.repository.UserRepository;
@@ -52,6 +54,7 @@ public class UserService {
                 .birth(request.birth())
                 .sex(request.sex())
                 .isAdmin(request.isAdmin())
+                .provider(SocialProvider.LOCAL)
                 .build();
 
         user.markCreated(null);
@@ -112,6 +115,10 @@ public class UserService {
         String newUserName = pickOrDefault(request.getUserName(), user.getUserName(), "이름");
         String newUserNickname = pickOrDefault(request.getUserNickname(), user.getUserNickname(), "닉네임");
         String newPhone = pickOrDefault(request.getUserPhone(), user.getPhone(), "전화번호");
+        LocalDate newBirth = user.getBirth();
+        if (user.getBirth() == null && request.getBirth() != null) {
+            newBirth = request.getBirth();
+        }
 
         if (!newUserNickname.equals(user.getUserNickname())
                 && userRepository.existsByUserNickname(newUserNickname)) {
@@ -123,7 +130,7 @@ public class UserService {
             throw new IllegalArgumentException("이미 사용 중인 전화번호입니다.");
         }
 
-        user.updateProfile(newUserName, newUserNickname, newPhone);
+        user.updateProfile(newUserName, newUserNickname, newPhone, user.getEmail(), newBirth);
         updatePasswordIfRequested(user, request);
         user.markUpdated(user.getId());
 

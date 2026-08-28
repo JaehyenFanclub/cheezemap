@@ -1173,6 +1173,45 @@
             </form>
 
 
+            <div class="social-login-divider">
+                <span data-i18n="auth.orContinueWith">또는 소셜 계정으로</span>
+            </div>
+
+
+            <div class="social-login-buttons">
+                <a
+                    href="/oauth2/authorization/google"
+                    class="social-login-button social-login-google"
+                    data-provider="google"
+                >
+                    Google
+                </a>
+
+                <a
+                    href="/oauth2/authorization/naver"
+                    class="social-login-button social-login-naver"
+                    data-provider="naver"
+                >
+                    Naver
+                </a>
+
+                <a
+                    href="/oauth2/authorization/line"
+                    class="social-login-button social-login-line"
+                    data-provider="line"
+                >
+                    LINE
+                </a>
+            </div>
+
+
+            <p
+                class="form-error"
+                id="socialLoginError"
+                aria-live="polite"
+            ></p>
+
+
             <a
                 href="signup.html"
                 class="text-button signup-page-link"
@@ -2024,7 +2063,7 @@
     -->
 
     <script
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDVHhGDijK1dZClySXTSNAQDGyVwP_FLmg&callback=initGoogleMap&loading=async&libraries=places,routes&language=ja&region=JP&v=weekly"
+        src="https://maps.googleapis.com/maps/api/js?key={GoogleApiKey}&callback=initGoogleMap&loading=async&libraries=places,routes&language=ja&region=JP&v=weekly"
         async
         defer
        

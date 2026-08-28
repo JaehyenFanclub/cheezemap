@@ -1134,8 +1134,61 @@ document.addEventListener(
 
 
 
+/* =====================================================
+   OAuth2 소셜 로그인 콜백 처리
+===================================================== */
+
+async function handleOAuthCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const oauthError = params.get("oauth_error");
+
+    if (!token && !oauthError) {
+        return;
+    }
+
+    params.delete("token");
+    params.delete("oauth_error");
+
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, document.title, nextUrl);
+
+    if (oauthError) {
+        const socialLoginError = document.getElementById("socialLoginError");
+        if (socialLoginError) {
+            socialLoginError.textContent = decodeURIComponent(oauthError);
+        }
+        openModal(loginModal);
+        return;
+    }
+
+    try {
+        setAuthToken(token);
+        await fetchCurrentUser();
+        updateHeaderAuthState();
+        if (typeof updateMessageBadge === "function") updateMessageBadge();
+        if (typeof applyCheeseSettings === "function") applyCheeseSettings();
+        showToast("toast.loginSuccess");
+    } catch (error) {
+        console.error("소셜 로그인 콜백 처리 실패:", error);
+        clearAuthToken();
+        currentUser = null;
+        localStorage.removeItem(STORAGE_KEYS.user);
+        updateHeaderAuthState();
+        const socialLoginError = document.getElementById("socialLoginError");
+        if (socialLoginError) {
+            socialLoginError.textContent = error.message;
+        }
+        openModal(loginModal);
+    }
+}
+
+
 /* 새로고침 후 JWT 로그인 복원 */
 (async function restoreServerLogin() {
+    await handleOAuthCallback();
+
     if (!getAuthToken()) {
         if (currentUser) {
             currentUser = null;

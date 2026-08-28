@@ -18,6 +18,8 @@ const saveButton =
         ".save-button"
     );
 
+let birthEditable = false;
+
 function setProfileMessage(
     text,
     success = false
@@ -129,6 +131,25 @@ function getTrimmedValue(id) {
     ).trim();
 }
 
+function configureBirthField(birth) {
+    const birthInput =
+        document.getElementById(
+            "editBirth"
+        );
+
+    if (!birthInput) return;
+
+    const hasBirth =
+        birth != null &&
+        String(birth).trim() !== "";
+
+    birthEditable = !hasBirth;
+    birthInput.value = hasBirth
+        ? String(birth)
+        : "";
+    birthInput.readOnly = hasBirth;
+}
+
 async function loadProfileForEdit() {
     if (!getAuthToken()) {
         window.location.href =
@@ -171,10 +192,9 @@ async function loadProfileForEdit() {
             .value =
                 user?.phone || "";
 
-        document
-            .getElementById("editBirth")
-            .value =
-                user?.birth || "";
+        configureBirthField(
+            user?.birth
+        );
 
         renderProfileEditAvatar(
             user?.photoUrl
@@ -255,6 +275,11 @@ profileEditForm
             const userPhone =
                 getTrimmedValue(
                     "editPhone"
+                );
+
+            const birth =
+                getTrimmedValue(
+                    "editBirth"
                 );
 
             if (!userName) {
@@ -365,6 +390,13 @@ profileEditForm
                 "userPhone",
                 userPhone
             );
+
+            if (birthEditable && birth) {
+                formData.append(
+                    "birth",
+                    birth
+                );
+            }
 
             if (wantsPasswordChange) {
                 formData.append(
