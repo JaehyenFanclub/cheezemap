@@ -53,7 +53,7 @@ public class PlaceGroupService {
         String message = group.getGroupName()+"에 "+ place.getPlaceName()+"가 추가되었습니다!";
         placeGroupRepository.save(placeGroup);
         if (user != null) {
-            placePreferenceService.increase(user, place, PlacePreferenceService.WEIGHT_SAVE);
+            placePreferenceService.increase(user, place, PlacePreferenceService.WEIGHT_GROUP_SAVE);
         }
         return new MsgResponse(message, "201");
     }
