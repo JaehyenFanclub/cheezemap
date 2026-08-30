@@ -58,6 +58,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/index.html",
+                                "/signup",
+                                "/profile-edit",
                                 "/*.html",
                                 "/css/**",
                                 "/js/**",

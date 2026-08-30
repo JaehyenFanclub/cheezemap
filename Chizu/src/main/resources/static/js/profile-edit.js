@@ -153,7 +153,7 @@ function configureBirthField(birth) {
 async function loadProfileForEdit() {
     if (!getAuthToken()) {
         window.location.href =
-            "index.html";
+            "/";
 
         return;
     }
@@ -212,7 +212,7 @@ async function loadProfileForEdit() {
         setTimeout(
             () => {
                 window.location.href =
-                    "index.html";
+                    "/";
             },
             1000
         );
@@ -484,7 +484,7 @@ profileEditForm
                 setTimeout(
                     () => {
                         window.location.href =
-                            "index.html";
+                            "/";
                     },
                     700
                 );

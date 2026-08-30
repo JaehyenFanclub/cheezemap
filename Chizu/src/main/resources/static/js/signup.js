@@ -256,8 +256,7 @@ form?.addEventListener(
 
 
             setTimeout(() => {
-                window.location.href =
-                    "index.html";
+                window.location.href = "/";
             }, 800);
 
         } catch (error) {
