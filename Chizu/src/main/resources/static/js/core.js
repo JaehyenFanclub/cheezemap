@@ -1171,6 +1171,15 @@ const loadingScreen =
    공통 함수
 ===================================================== */
 
+function escapeGroupHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
 function readStorage(key, fallbackValue) {
     try {
         const value = localStorage.getItem(key);
