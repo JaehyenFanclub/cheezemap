@@ -1151,33 +1151,159 @@ body.dark .side-item.active {
 }
 
 .recommend-mode {
-    min-height: 28px;
-
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    position: relative;
+    z-index: 7;
 
     margin: -2px 0 11px;
-    padding: 6px 9px;
-
-    border: 1px solid #eadcae;
-    border-radius: 999px;
-
-    color: #7b5b22;
-    background: #fff6ce;
-
-    font-size: 9px;
-    font-weight: 800;
 }
 
 .recommend-mode:empty {
     display: none;
 }
 
-.recommend-mode i {
-    font-size: 13px;
+.recommend-audience-selector {
+    position: relative;
 }
 
+.recommend-audience-trigger {
+    min-height: 34px;
+
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 7px 11px;
+
+    border: 1px solid #ead49a;
+    border-radius: 999px;
+
+    color: #5b4528;
+    background: #fff4c8;
+
+    font-size: 11px;
+    font-weight: 800;
+
+    box-shadow: 0 4px 10px rgba(103, 77, 25, 0.07);
+    cursor: pointer;
+}
+
+.recommend-audience-trigger:hover {
+    border-color: #dbb54a;
+    background: #ffedaa;
+}
+
+.recommend-audience-trigger > i:first-child {
+    color: #b77f00;
+    font-size: 14px;
+}
+
+.recommend-audience-chevron {
+    color: #8b6a2f;
+    font-size: 13px;
+    transition: transform 0.18s ease;
+}
+
+.recommend-mode.open .recommend-audience-chevron {
+    transform: rotate(180deg);
+}
+
+.recommend-audience-menu {
+    position: absolute;
+    top: calc(100% + 7px);
+    left: 0;
+
+    width: min(260px, calc(100vw - 64px));
+
+    display: grid;
+    gap: 6px;
+
+    padding: 8px;
+
+    border: 1px solid #ead8a6;
+    border-radius: 14px;
+
+    background: #fffdf7;
+    box-shadow: 0 14px 28px rgba(83, 65, 31, 0.16);
+}
+
+.recommend-audience-menu[hidden] {
+    display: none;
+}
+
+.recommend-audience-option {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    padding: 9px 10px;
+
+    border: 1px solid transparent;
+    border-radius: 11px;
+
+    color: #4b4032;
+    background: transparent;
+
+    text-align: left;
+    cursor: pointer;
+}
+
+.recommend-audience-option:hover {
+    background: #fff6d7;
+}
+
+.recommend-audience-option.active {
+    border-color: #e1bf62;
+    background: #fff1bd;
+}
+
+.recommend-audience-option-icon {
+    width: 28px;
+    height: 28px;
+
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+
+    border-radius: 9px;
+    background: #fff6d6;
+    color: #bd8500;
+
+    font-size: 14px;
+}
+
+.recommend-audience-option[data-audience="male"] .recommend-audience-option-icon {
+    background: #eef5ff;
+    color: #3f77c4;
+}
+
+.recommend-audience-option[data-audience="female"] .recommend-audience-option-icon {
+    background: #fff0f6;
+    color: #d45a8d;
+}
+
+.recommend-audience-option-label {
+    min-width: 0;
+    flex: 1 1 auto;
+
+    color: #4d3d28;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.recommend-audience-option-check {
+    width: 20px;
+    height: 20px;
+
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+
+    color: #b98400;
+    font-size: 12px;
+}
 
 /* 기존 가로 스크롤 카드 → 세로 추천 리스트 */
 

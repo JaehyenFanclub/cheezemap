@@ -164,7 +164,7 @@ async function renderPlaceReviews(placeKey) {
     }
 
     list.innerHTML = reviews.map(review => {
-        const mine = Number(review.userId) === Number(currentUser?.id);
+        const mine = Number(review.userId) === Number(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id);
         const photos = (review.photoUrls || []).map(url => `<img src="${escapeGroupHtml(url)}" alt="리뷰 사진" loading="lazy">`).join("");
         return `
             <article class="place-review-item" data-review-id="${review.reviewId}" data-review-rating="${review.rating}">
@@ -221,27 +221,12 @@ async function renderPlaceMenu(placeKey) {
     }
     if (menuSection) menuSection.style.display = "block";
 
-    let menus = [];
-    try {
-        const backendPlace = await ensureBackendPlace(placeKey);
-        const numericPlaceId = Number(backendPlace?.placeId);
-        if (Number.isFinite(numericPlaceId) && numericPlaceId > 0) {
-            menus = await apiRequest(`/place/${numericPlaceId}/menu`);
-        } else {
-            menus = [];
-        }
-    } catch {
-        menus = [];
-    }
-
-    if (!menus?.length && placeKey && typeof getPlaceMenuData === "function") {
-        menus = getPlaceMenuData(placeKey).map(item => ({
-            menuName: localizedValue(item.menuName),
-            menuValue: item.menuValue,
-            menuInfo: localizedValue(item.menuInfo),
-            photoUrl: item.photoUrl || ""
-        }));
-    }
+    /*
+        현재 백엔드 MenuController에는 장소별 메뉴 목록 GET 엔드포인트가 없습니다.
+        존재하지 않는 GET /place/{placeId}/menu 호출이나 프론트 mock 메뉴를 사용하지 않습니다.
+        목록 API가 추가되기 전까지 메뉴 섹션은 데이터 없음 상태로만 표시합니다.
+    */
+    const menus = [];
 
     if (count) count.textContent = `${menus.length}${translate("place.menuCount")}`;
     if (!menus.length) {
@@ -607,7 +592,11 @@ let myReviewsPageCache = {
 };
 
 function getMyReviewsUserCacheKey() {
-    const id = Number(currentUser?.id);
+    const id = Number(
+        typeof getCurrentUserId === "function"
+            ? getCurrentUserId()
+            : currentUser?.id
+    );
     if (Number.isFinite(id) && id > 0) {
         return `id:${id}`;
     }
@@ -895,7 +884,11 @@ async function renderMyReviews(
         }
 
         const myUserId =
-            Number(currentUser?.id);
+            Number(
+                typeof getCurrentUserId === "function"
+                    ? getCurrentUserId()
+                    : currentUser?.id
+            );
 
         const myNickname =
             String(currentUser?.nickname || "").trim();
