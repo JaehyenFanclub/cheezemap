@@ -1540,6 +1540,244 @@ const nearbyRecommendationState = {
     loadingPromise: null,
     recommendationSource: "none"
 };
+function getRecommendationAudience() {
+    const saved = String(
+        localStorage.getItem(RECOMMEND_AUDIENCE_STORAGE_KEY) || "personal"
+    ).toLowerCase();
+
+    return ["personal", "male", "female"].includes(saved)
+        ? saved
+        : "personal";
+}
+
+function setRecommendationAudience(audience) {
+    const normalized = ["personal", "male", "female"].includes(audience)
+        ? audience
+        : "personal";
+
+    localStorage.setItem(RECOMMEND_AUDIENCE_STORAGE_KEY, normalized);
+    return normalized;
+}
+
+function getRecommendationNickname() {
+    const nickname = String(
+        currentUser?.nickname ||
+        currentUser?.userNickname ||
+        ""
+    ).trim();
+
+    if (nickname) return nickname;
+
+    return currentLanguage === "ja"
+        ? "自分"
+        : currentLanguage === "en"
+            ? "My"
+            : "내";
+}
+
+function getRecommendationAudienceLabel(audience) {
+    if (audience === "male") {
+        return currentLanguage === "ja"
+            ? "男性カテゴリ"
+            : currentLanguage === "en"
+                ? "Men's categories"
+                : "남성 카테고리";
+    }
+
+    if (audience === "female") {
+        return currentLanguage === "ja"
+            ? "女性カテゴリ"
+            : currentLanguage === "en"
+                ? "Women's categories"
+                : "여성 카테고리";
+    }
+
+    const nickname = getRecommendationNickname();
+
+    if (currentLanguage === "ja") {
+        return nickname === "自分"
+            ? "自分向けカテゴリ"
+            : `${nickname}さんのカテゴリ`;
+    }
+
+    if (currentLanguage === "en") {
+        return nickname === "My"
+            ? "My categories"
+            : `${nickname}'s categories`;
+    }
+
+    return nickname === "내"
+        ? "내 맞춤 카테고리"
+        : `${nickname}님의 카테고리`;
+}
+
+function getRecommendationAudienceDescription(audience) {
+    if (audience === "male") {
+        return currentLanguage === "ja"
+            ? "男性ユーザー全体の利用データを反映"
+            : currentLanguage === "en"
+                ? "Based on activity from male users"
+                : "남성 사용자 전체의 이용 데이터 반영";
+    }
+
+    if (audience === "female") {
+        return currentLanguage === "ja"
+            ? "女性ユーザー全体の利用データを反映"
+            : currentLanguage === "en"
+                ? "Based on activity from female users"
+                : "여성 사용자 전체의 이용 데이터 반영";
+    }
+
+    return currentLanguage === "ja"
+        ? "レビュー · いいね · お気に入りなどを反映"
+        : currentLanguage === "en"
+            ? "Based on reviews, likes, favorites and more"
+            : "리뷰 · 좋아요 · 즐겨찾기 등 내 활동 반영";
+}
+
+function getRecommendationAudienceBadge(audience) {
+    if (audience === "male") {
+        return currentLanguage === "ja"
+            ? "男性全体"
+            : currentLanguage === "en"
+                ? "All men"
+                : "남성 전체";
+    }
+
+    if (audience === "female") {
+        return currentLanguage === "ja"
+            ? "女性全体"
+            : currentLanguage === "en"
+                ? "All women"
+                : "여성 전체";
+    }
+
+    return currentLanguage === "ja"
+        ? "個人向け"
+        : currentLanguage === "en"
+            ? "Personal"
+            : "개인 맞춤";
+}
+
+function getRecommendationAudienceIcon(audience) {
+    if (audience === "male") {
+        return "ti-user";
+    }
+
+    if (audience === "female") {
+        return "ti-user-heart";
+    }
+
+    return "ti-sparkles";
+}
+
+function getRecommendationAudienceMenuTitle() {
+    return currentLanguage === "ja"
+        ? "おすすめ 기준 선택"
+        : currentLanguage === "en"
+            ? "Choose recommendation type"
+            : "추천 기준 선택";
+}
+
+function getRecommendationAudienceMenuSubtitle() {
+    return currentLanguage === "ja"
+        ? "見たい 추천 방식을 선택하면 주변 추천 장소가 다시 정렬됩니다."
+        : currentLanguage === "en"
+            ? "Choose how nearby picks should be tailored."
+            : "보고 싶은 추천 방식을 고르면 주변 추천 장소가 다시 정렬됩니다.";
+}
+
+function getActiveRecommendationMapCategory() {
+    return (
+        document.querySelector(
+            ".category-item.active, .filter-chip.active"
+        )?.dataset.category ||
+        "all"
+    );
+}
+
+function renderRecommendationAudienceControl() {
+    const mode = document.getElementById("recommendMode");
+    if (!mode) return;
+
+    const audience = getRecommendationAudience();
+    const options = ["personal", "male", "female"];
+
+    mode.innerHTML = `
+        <div class="recommend-audience-selector">
+            <button
+                type="button"
+                class="recommend-audience-trigger"
+                id="recommendAudienceTrigger"
+                aria-expanded="false"
+                aria-controls="recommendAudienceMenu"
+            >
+                <i class="ti ${getRecommendationAudienceIcon(audience)}"></i>
+                <span>${escapeGroupHtml(getRecommendationAudienceLabel(audience))}</span>
+                <i class="ti ti-chevron-down recommend-audience-chevron"></i>
+            </button>
+
+            <div
+                class="recommend-audience-menu"
+                id="recommendAudienceMenu"
+                hidden
+            >
+                ${options.map(option => `
+                    <button
+                        type="button"
+                        class="recommend-audience-option ${option === audience ? "active" : ""}"
+                        data-audience="${option}"
+                        data-recommend-audience="${option}"
+                    >
+                        <span class="recommend-audience-option-icon">
+                            <i class="ti ${getRecommendationAudienceIcon(option)}"></i>
+                        </span>
+                        <span class="recommend-audience-option-label">
+                            ${escapeGroupHtml(getRecommendationAudienceLabel(option))}
+                        </span>
+                        <span class="recommend-audience-option-check">
+                            <i class="ti ${option === audience ? "ti-check" : "ti-chevron-right"}"></i>
+                        </span>
+                    </button>
+                `).join("")}
+            </div>
+        </div>
+    `;
+
+    const trigger = mode.querySelector("#recommendAudienceTrigger");
+    const menu = mode.querySelector("#recommendAudienceMenu");
+
+    trigger?.addEventListener("click", event => {
+        event.stopPropagation();
+        const willOpen = Boolean(menu?.hidden);
+        if (menu) menu.hidden = !willOpen;
+        trigger.setAttribute("aria-expanded", String(willOpen));
+        mode.classList.toggle("open", willOpen);
+    });
+
+    mode.querySelectorAll("[data-recommend-audience]").forEach(button => {
+        button.addEventListener("click", async () => {
+            const nextAudience = setRecommendationAudience(
+                button.dataset.recommendAudience
+            );
+
+            if (menu) menu.hidden = true;
+            trigger?.setAttribute("aria-expanded", "false");
+            mode.classList.remove("open");
+
+            nearbyRecommendationState.recommendationSource = "none";
+            nearbyRecommendationState.places = [];
+            nearbyRecommendationState.lastLoadedAt = 0;
+
+            renderRecommendationAudienceControl();
+
+            await renderRecommendedPlaces(
+                getActiveRecommendationMapCategory(),
+                { force: true, audience: nextAudience }
+            );
+        });
+    });
+}
 
 function getRecommendationAudience() {
     const saved = String(
