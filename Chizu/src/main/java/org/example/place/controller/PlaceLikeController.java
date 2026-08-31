@@ -7,11 +7,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.example.config.JwtAuthenticationFilter;
 import org.example.place.dto.PlaceLikeResponse;
+import org.example.place.dto.PlaceResponse;
 import org.example.place.service.PlaceLikeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -54,5 +56,24 @@ public class PlaceLikeController {
                 "isLiked", true,
                 "data", response
         ));
+    }
+    @Operation(
+            summary = "내가 좋아요 누른 장소 목록 조회",
+            parameters = {
+                    @Parameter(
+                            name = JwtAuthenticationFilter.TOKEN_HEADER,
+                            description = "JWT 토큰 (필수)",
+                            required = true,
+                            in = ParameterIn.HEADER,
+                            schema = @Schema(type = "string")
+                    )
+            }
+    )
+    @GetMapping("/me/likes")
+    public ResponseEntity<List<PlaceResponse>> getMyLikedPlaces(
+            @RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token
+    ) {
+        List<PlaceResponse> response = placeLikeService.getMyLikedPlaces(token);
+        return ResponseEntity.ok(response);
     }
 }
