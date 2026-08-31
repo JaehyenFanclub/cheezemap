@@ -167,9 +167,20 @@ async function loadProfileForEdit() {
                 }
             );
 
+        const cachedUser = (() => {
+            try {
+                return JSON.parse(
+                    localStorage.getItem("cheeseMapUser") || "null"
+                );
+            } catch {
+                return null;
+            }
+        })();
+
         const user =
             mapMyPageUser(
-                data
+                data,
+                cachedUser
             );
 
         document
@@ -459,9 +470,20 @@ profileEditForm
                         }
                     );
 
+                const cachedUser = (() => {
+                    try {
+                        return JSON.parse(
+                            localStorage.getItem("cheeseMapUser") || "null"
+                        );
+                    } catch {
+                        return null;
+                    }
+                })();
+
                 const latestUser =
                     mapMyPageUser(
-                        latestData
+                        latestData,
+                        cachedUser
                     );
 
                 localStorage.setItem(

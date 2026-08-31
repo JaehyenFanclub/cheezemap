@@ -407,6 +407,11 @@ document.getElementById("logoutButton")?.addEventListener("click", async () => {
         clearAuthToken();
         currentUser = null;
         localStorage.removeItem(STORAGE_KEYS.user);
+        likedPlaces = [];
+        favoritePlaces = [];
+        writeStorage(STORAGE_KEYS.likes, likedPlaces);
+        writeStorage(STORAGE_KEYS.favorites, favoritePlaces);
+        updateFavoriteButtons?.();
         closeModal(mypageModal);
         updateHeaderAuthState();
         showToast("toast.logoutSuccess");
@@ -638,20 +643,52 @@ async function renderMyReviews(container, renderRequestId = myPageRenderRequestI
             const frontendKey = typeof backendPlaceIdToFrontendKey === "function"
                 ? await backendPlaceIdToFrontendKey(review.placeId)
                 : null;
+            const stateKey = frontendKey
+                ? (
+                    String(frontendKey).startsWith("google_")
+                        ? `google:${String(frontendKey).slice(7)}`
+                        : `static:${frontendKey}`
+                )
+                : `place:${review.placeId}`;
+
             let placeName = `장소 #${review.placeId}`;
+            let placeCategory = "";
+            let placeAddress = "";
+
             try {
-                const backendPlace = await getBackendPlaceById(review.placeId);
-                placeName = backendPlace?.placeName || placeName;
+                if (typeof resolveBackendPlaceCardMeta === "function") {
+                    const meta = await resolveBackendPlaceCardMeta(review.placeId, stateKey);
+                    placeName = meta?.name || placeName;
+                    placeCategory = meta?.category || "";
+                    placeAddress = meta?.address || "";
+                } else {
+                    const backendPlace = await getBackendPlaceById(review.placeId);
+                    placeName = backendPlace?.placeName || placeName;
+                    placeCategory = backendPlace?.placeCategory || "";
+                    placeAddress = backendPlace?.placeAddress || "";
+                }
             } catch {}
 
             return `
                 <article class="mypage-card" data-my-review-id="${review.reviewId}" data-my-review-place-id="${review.placeId}" data-my-review-place-key="${frontendKey || ""}" data-edit-rating="${review.rating}">
                     <span>${getReviewStars(review.rating)}</span>
-                    <div class="mypage-review-place-row">
-                        <i class="ti ti-map-pin"></i>
-                        <strong class="mypage-review-place">${escapeGroupHtml(placeName)}</strong>
-                    </div>
-                    <p>${escapeGroupHtml(review.content || "")}</p>
+                    <strong class="mypage-review-place">${escapeGroupHtml(placeName)}</strong>
+                    ${
+                        placeCategory
+                            ? `<p class="mypage-place-category">${escapeGroupHtml(placeCategory)}</p>`
+                            : ""
+                    }
+                    ${
+                        placeAddress
+                            ? `
+                                <p class="mypage-place-address">
+                                    <i class="ti ti-map-pin"></i>
+                                    ${escapeGroupHtml(placeAddress)}
+                                </p>
+                            `
+                            : ""
+                    }
+                    <p class="mypage-review-content">${escapeGroupHtml(review.content || "")}</p>
                     <div class="mypage-card-actions">
                         <button type="button" class="mypage-place-view-button" data-open-review-place="${review.placeId}">${currentLanguage === "ko" ? "장소 보기" : "場所を見る"}</button>
                         <button type="button" data-my-review-edit-toggle aria-expanded="false">${currentLanguage === "ko" ? "수정" : "編集"}</button>
@@ -673,14 +710,13 @@ async function renderMyReviews(container, renderRequestId = myPageRenderRequestI
 
         container.innerHTML = cards.join("");
 
-        container.querySelectorAll("[data-open-place]").forEach(button => {
+        container.querySelectorAll("[data-open-review-place]").forEach(button => {
             button.addEventListener("click", () => {
-                const placeKey = button.dataset.openPlace;
-                if (!places[placeKey]) return;
+                const placeId = Number(button.dataset.openReviewPlace);
                 closeModal(mypageModal);
-                openPlace(placeKey);
-                googleMap?.panTo(places[placeKey].position);
-                googleMap?.setZoom(15);
+                if (typeof openBackendPlaceById === "function") {
+                    openBackendPlaceById(placeId);
+                }
             });
         });
     } catch (error) {
@@ -962,49 +998,51 @@ async function renderMyLikes(
         .forEach(button => {
             button.addEventListener(
                 "click",
-                () => {
-                    const stateKey =
-                        button.dataset.removeLikeState;
+                async () => {
+                    const stateKey = button.dataset.removeLikeState;
+                    const placeId = backendPlaceIdFromStateKey(stateKey);
 
-                    likedPlaces =
-                        likedPlaces.filter(
-                            key => key !== stateKey
+                    if (!placeId) return;
+
+                    try {
+                        const result = await apiRequest(`/api/places/${placeId}/like`, {
+                            method: "POST",
+                            auth: true
+                        });
+
+                        if (result?.isLiked) {
+                            // 서버가 여전히 좋아요 상태라면 서버 목록을 다시 기준으로 맞춥니다.
+                            await syncBackendPlacePreferences?.();
+                            return;
+                        }
+
+                        likedPlaces = likedPlaces.filter(
+                            key => normalizePlaceStateKey(key) !== `place:${placeId}`
                         );
+                        writeStorage(STORAGE_KEYS.likes, likedPlaces);
 
-                    writeStorage(
-                        STORAGE_KEYS.likes,
-                        likedPlaces
-                    );
+                        button.closest(".mypage-card")?.remove();
+                        updateLikeButton?.();
+                        updateFavoriteButtons?.();
 
-                    const card =
-                        button.closest(
-                            ".mypage-card"
-                        );
-
-                    card?.remove();
-
-                    updateLikeButton?.();
-                    updateFavoriteButtons?.();
-
-                    const content =
-                        document.getElementById(
-                            "mypageContent"
-                        );
-
-                    if (
-                        content &&
-                        !content.querySelector(
-                            ".mypage-card"
-                        )
-                    ) {
-                        content.innerHTML = `
-                            <div class="empty-state">
-                                <div>
-                                    <i class="ti ti-heart"></i>
-                                    <p>${translate("empty.likes")}</p>
+                        const content = document.getElementById("mypageContent");
+                        if (content && !content.querySelector(".mypage-card")) {
+                            content.innerHTML = `
+                                <div class="empty-state">
+                                    <div>
+                                        <i class="ti ti-heart"></i>
+                                        <p>${translate("empty.likes")}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
+                        }
+                    } catch (error) {
+                        console.error("좋아요 삭제 실패:", error);
+                        showToast(
+                            currentLanguage === "ko"
+                                ? "좋아요 삭제에 실패했습니다."
+                                : "いいねの削除に失敗しました。"
+                        );
                     }
                 }
             );

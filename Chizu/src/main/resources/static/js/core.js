@@ -111,7 +111,8 @@ const translations = {
         "auth.signupDescription":
             "나만의 도쿄 장소를 저장해보세요.",
 
-        "auth.goSignup": "회원가입",
+        "auth.orContinueWith": "다른 계정으로 로그인 또는 회원가입",
+        "auth.goSignup": "치즈맵 계정으로 회원가입",
         "auth.goLogin": "이미 계정이 있어요",
 
         "mypage.title": "마이페이지",
@@ -249,7 +250,8 @@ const translations = {
         "auth.loginDescription": "Save favorites and travel plans.",
         "auth.signupTitle": "Create a CHEESE MAP account",
         "auth.signupDescription": "Save your favorite places in Tokyo.",
-        "auth.goSignup": "Sign up",
+        "auth.orContinueWith": "Sign in or sign up with another account",
+        "auth.goSignup": "Create a CHEESE MAP account",
         "auth.goLogin": "Already have an account?",
         "mypage.title": "My page",
         "mypage.reviews": "My reviews",
@@ -402,7 +404,8 @@ const translations = {
         "auth.signupDescription":
             "お気に入りの東京スポットを保存しましょう。",
 
-        "auth.goSignup": "新規登録",
+        "auth.orContinueWith": "他のアカウントでログイン・新規登録",
+        "auth.goSignup": "チーズマップのアカウントを作成",
         "auth.goLogin": "すでにアカウントをお持ちですか",
 
         "mypage.title": "マイページ",

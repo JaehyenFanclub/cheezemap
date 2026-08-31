@@ -407,6 +407,61 @@ likedPlaces = migrateLegacyPlaceStateKeys(likedPlaces);
 writeStorage(STORAGE_KEYS.likes, likedPlaces);
 
 
+/* =====================================================
+   서버 PlaceLike / PlaceSaved 상태 동기화
+===================================================== */
+
+function placeStateKeysFromBackendRows(rows) {
+    return [...new Set(
+        (Array.isArray(rows) ? rows : [])
+            .map(place => Number(place?.placeId))
+            .filter(placeId => Number.isFinite(placeId) && placeId > 0)
+            .map(placeId => `place:${placeId}`)
+    )];
+}
+
+function cacheBackendPreferencePlaces(rows) {
+    (Array.isArray(rows) ? rows : []).forEach(place => {
+        try {
+            if (typeof registerFrontendPlaceFromBackend === "function") {
+                registerFrontendPlaceFromBackend(place);
+            }
+        } catch (error) {
+            console.debug("저장 장소 캐시 등록 실패:", error);
+        }
+    });
+}
+
+async function syncBackendPlacePreferences() {
+    if (!getAuthToken()) return;
+
+    const [likesResult, savedResult] = await Promise.allSettled([
+        apiRequest("/api/places/me/likes", { auth: true }),
+        apiRequest("/api/places/me/saved", { auth: true })
+    ]);
+
+    if (likesResult.status === "fulfilled") {
+        const rows = Array.isArray(likesResult.value) ? likesResult.value : [];
+        cacheBackendPreferencePlaces(rows);
+        likedPlaces = placeStateKeysFromBackendRows(rows);
+        writeStorage(STORAGE_KEYS.likes, likedPlaces);
+    } else {
+        console.warn("좋아요 목록 서버 동기화 실패:", likesResult.reason);
+    }
+
+    if (savedResult.status === "fulfilled") {
+        const rows = Array.isArray(savedResult.value) ? savedResult.value : [];
+        cacheBackendPreferencePlaces(rows);
+        favoritePlaces = placeStateKeysFromBackendRows(rows);
+        writeStorage(STORAGE_KEYS.favorites, favoritePlaces);
+    } else {
+        console.warn("즐겨찾기 목록 서버 동기화 실패:", savedResult.reason);
+    }
+
+    updateFavoriteButtons?.();
+}
+
+
 function getCurrentBackendStateKey() {
     return getPlaceStateKeys(
         selectedPlaceKey
@@ -442,76 +497,63 @@ async function togglePlaceLike(placeKey = selectedPlaceKey) {
     let stateKeys = [];
 
     try {
-        stateKeys =
-            await ensurePlaceStateKeys(
-                placeKey
-            );
-    } catch (error) {
-        console.error(
-            "좋아요 장소 연결 실패:",
-            error
-        );
+        stateKeys = await ensurePlaceStateKeys(placeKey);
 
-        showToast(
-            currentLanguage === "ko"
-                ? "장소 정보를 불러오지 못했습니다."
-                : currentLanguage === "ja"
-                    ? "場所情報を取得できませんでした。"
-                    : "Could not load place information."
-        );
-        return;
-    }
+        const placeStateKey = stateKeys.find(key => /^place:\d+$/.test(key));
+        const placeId = backendPlaceIdFromStateKey(placeStateKey);
 
-    if (!stateKeys.length) return;
+        if (!placeId) {
+            throw new Error("백엔드 장소 ID를 확인할 수 없습니다.");
+        }
 
-    const currentlyLiked =
-        isPlaceLiked(stateKeys);
+        const result = await apiRequest(`/api/places/${placeId}/like`, {
+            method: "POST",
+            auth: true
+        });
 
-    if (currentlyLiked) {
-        likedPlaces =
-            likedPlaces.filter(
-                key =>
-                    !stateKeys.includes(
-                        normalizePlaceStateKey(key)
-                    )
-            );
+        const canonicalKey = `place:${placeId}`;
+        const isLiked = Boolean(result?.isLiked);
 
-        showToast("toast.removed");
-    } else {
-        likedPlaces = [
-            ...new Set([
-                ...likedPlaces,
-                ...stateKeys
-            ])
-        ];
+        if (isLiked) {
+            likedPlaces = [
+                ...new Set([
+                    ...likedPlaces.filter(key => !stateKeys.includes(normalizePlaceStateKey(key))),
+                    canonicalKey
+                ])
+            ];
+            showToast("toast.saved");
 
-        showToast("toast.saved");
+            if (typeof recordPlacePreferenceAction === "function") {
+                recordPlacePreferenceAction("like", placeKey).catch?.(console.warn);
+            }
+        } else {
+            likedPlaces = likedPlaces.filter(key => {
+                const normalized = normalizePlaceStateKey(key);
+                return normalized !== canonicalKey && !stateKeys.includes(normalized);
+            });
+            showToast("toast.removed");
+        }
+
+        writeStorage(STORAGE_KEYS.likes, likedPlaces);
+        updateLikeButton();
 
         if (
-            typeof recordPlacePreferenceAction === "function"
+            mypageModal?.classList.contains("show") &&
+            currentMyPageTab === "likes"
         ) {
-            recordPlacePreferenceAction(
-                "like",
-                placeKey
-            ).catch?.(console.warn);
+            renderMyPage();
         }
-    }
-
-    writeStorage(
-        STORAGE_KEYS.likes,
-        likedPlaces
-    );
-
-    updateLikeButton();
-
-    if (
-        mypageModal?.classList.contains("show") &&
-        currentMyPageTab === "likes"
-    ) {
-        renderMyPage();
+    } catch (error) {
+        console.error("좋아요 서버 처리 실패:", error);
+        showToast(
+            currentLanguage === "ko"
+                ? "좋아요 처리에 실패했습니다."
+                : currentLanguage === "ja"
+                    ? "いいねの処理に失敗しました。"
+                    : "Could not update like."
+        );
     }
 }
-
 
 function updateLikeButton() {
     enablePlaceActionButtons();

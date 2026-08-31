@@ -392,10 +392,13 @@
     align-items: center;
     gap: 12px;
     width: 100%;
-    margin: 18px 0 14px;
-    color: #9a8450;
-    font-size: 12px;
+    margin: 20px 0 14px;
+    color: #8a7446;
+    font-size: 11px;
     font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .social-login-divider::before,
@@ -464,14 +467,14 @@
     width: 100% !important;
     min-height: 42px !important;
 
-    margin: 8px 0 0 !important;
+    margin: 14px 0 0 !important;
     padding: 0 16px !important;
 
     border: 1px solid #efbd38 !important;
     border-radius: 11px !important;
 
-    color: #a86d13 !important;
-    background: #fffdf7 !important;
+    color: #8a5a12 !important;
+    background: #fff8e8 !important;
 
     text-decoration: none !important;
 
@@ -735,6 +738,58 @@ body.dark .auth-modal .text-button {
 
     font-size: 13px;
     line-height: 1.55;
+}
+
+
+/* 마이페이지 장소 카드 공통 정보 - 리뷰/좋아요/즐겨찾기 동일 스타일 */
+.mypage-place-category {
+    margin-top: 5px !important;
+    color: var(--cheese-deep) !important;
+    font-size: 12px !important;
+    font-weight: 700;
+}
+
+.mypage-place-address {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    margin-top: 6px !important;
+    color: var(--gray-600) !important;
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+}
+
+.mypage-place-address i {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--cheese-deep);
+    font-size: 14px;
+}
+
+.mypage-review-place-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.mypage-review-place {
+    margin-top: 0;
+}
+
+.mypage-review-rating {
+    display: inline-block !important;
+    margin-top: 0 !important;
+    color: var(--cheese-deep) !important;
+    font-size: 13px !important;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.mypage-review-content {
+    padding-top: 8px;
+    border-top: 1px solid var(--gray-100);
 }
 
 .mypage-card-actions {

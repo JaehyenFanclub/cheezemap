@@ -114,13 +114,21 @@ async function resolveRouteDestination(endPoint) {
 
 function clearRenderedRoute() {
     routePolylines.forEach(polyline => {
-        polyline.setMap(null);
+        if (!polyline) return;
+
+        if (typeof polyline.setMap === "function") {
+            polyline.setMap(null);
+        } else if ("map" in polyline) {
+            polyline.map = null;
+        }
     });
 
     routeMarkers.forEach(marker => {
+        if (!marker) return;
+
         if (typeof marker.setMap === "function") {
             marker.setMap(null);
-        } else {
+        } else if ("map" in marker) {
             marker.map = null;
         }
     });
@@ -1398,7 +1406,9 @@ function drawTransitousRoute(it, fit = true) {
             clickable: false
         });
 
-        renderedMarkers.push(marker);
+        if (marker) {
+            renderedMarkers.push(marker);
+        }
     };
 
     if (first) {

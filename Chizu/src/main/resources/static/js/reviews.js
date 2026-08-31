@@ -987,17 +987,37 @@ async function renderMyReviews(
                         data-my-review-rating="${review.rating}"
                     >
                         <div data-my-review-view>
-                            <span>
-                                ${getReviewStars(review.rating)}
-                            </span>
-
                             <div class="mypage-review-place-row">
                                 <strong class="mypage-review-place">
                                     ${escapeGroupHtml(resolvedPlaceName || `장소 #${placeId}`)}
                                 </strong>
+                                <span class="mypage-review-rating">
+                                    ${getReviewStars(review.rating)}
+                                </span>
                             </div>
 
-                            <p>
+                            ${
+                                place?.placeCategory
+                                    ? `
+                                        <p class="mypage-place-category">
+                                            ${escapeGroupHtml(place.placeCategory)}
+                                        </p>
+                                    `
+                                    : ""
+                            }
+
+                            ${
+                                place?.placeAddress
+                                    ? `
+                                        <p class="mypage-place-address">
+                                            <i class="ti ti-map-pin"></i>
+                                            ${escapeGroupHtml(place.placeAddress)}
+                                        </p>
+                                    `
+                                    : ""
+                            }
+
+                            <p class="mypage-review-content">
                                 ${escapeGroupHtml(review.content)}
                             </p>
 

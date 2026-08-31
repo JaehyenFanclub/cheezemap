@@ -62,13 +62,16 @@ async function apiRequest(path, options = {}) {
     return data;
 }
 
-function mapMyPageUser(data) {
+function mapMyPageUser(data, fallbackUser = null) {
     if (!data) return null;
+
+    const fallback = fallbackUser || {};
 
     return {
         id:
             data.userId ??
             data.id ??
+            fallback.id ??
             null,
 
         name:
@@ -102,13 +105,25 @@ function mapMyPageUser(data) {
 
         photoUrl:
             data.photoUrl ||
+            fallback.photoUrl ||
             null
     };
 }
 
 async function fetchCurrentUser() {
     const data = await apiRequest("/user/mypage", { auth: true });
-    currentUser = mapMyPageUser(data);
+    const cachedUser =
+        currentUser ||
+        (typeof STORAGE_KEYS !== "undefined"
+            ? readStorage(STORAGE_KEYS.user, null)
+            : JSON.parse(localStorage.getItem("cheeseMapUser") || "null"));
+
+    currentUser = mapMyPageUser(data, cachedUser);
     writeStorage(STORAGE_KEYS.user, currentUser);
+
+    if (typeof syncBackendPlacePreferences === "function") {
+        await syncBackendPlacePreferences();
+    }
+
     return currentUser;
 }
