@@ -1173,36 +1173,16 @@
             </form>
 
 
-            <div class="social-login-divider">
+            <div class="social-login-divider" id="socialLoginDivider">
                 <span data-i18n="auth.orContinueWith">다른 계정으로 로그인 또는 회원가입</span>
             </div>
 
 
-            <div class="social-login-buttons">
-                <a
-                    href="/oauth2/authorization/google"
-                    class="social-login-button social-login-google"
-                    data-provider="google"
-                >
-                    Google
-                </a>
-
-                <a
-                    href="/oauth2/authorization/naver"
-                    class="social-login-button social-login-naver"
-                    data-provider="naver"
-                >
-                    Naver
-                </a>
-
-                <a
-                    href="/oauth2/authorization/line"
-                    class="social-login-button social-login-line"
-                    data-provider="line"
-                >
-                    LINE
-                </a>
-            </div>
+            <div
+                class="social-login-buttons"
+                id="socialLoginButtons"
+                aria-live="polite"
+            ></div>
 
 
             <p
@@ -1968,7 +1948,7 @@
                 >
                     <span>
                         <strong>저장 데이터 초기화</strong>
-                        <small>좋아요, 즐겨찾기, 그룹, 쪽지, 추천 설정을 초기화합니다.</small>
+                        <small>좋아요, 즐겨찾기와 추천 설정을 초기화합니다.</small>
                     </span>
                     <i class="ti ti-trash"></i>
                 </button>

@@ -31,4 +31,15 @@ public interface PlacePreferenceRepository extends JpaRepository<PlacePreference
             @Param("ageGroup") AgeGroup ageGroup,
             @Param("gender") GenderGroup gender
     );
+
+    @Query("""
+            select pp from PlacePreference pp
+            join fetch pp.place p
+            where p.placeId in :placeIds
+              and pp.gender = :gender
+            """)
+    List<PlacePreference> findByPlaceIdsAndGender(
+            @Param("placeIds") Collection<Long> placeIds,
+            @Param("gender") GenderGroup gender
+    );
 }

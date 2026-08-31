@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
+import org.example.common.enums.GenderGroup;
 import org.example.config.JwtAuthenticationFilter;
 import org.example.place.dto.PlaceCreateRequest;
 import org.example.place.dto.PlaceRecommendResponse;
@@ -48,6 +49,21 @@ public class PlaceController {
             @RequestParam(required = false) Integer limit
     ) {
         return placeRecommendService.recommend(token, lat, lng, radius, limit);
+    }
+
+    @Operation(
+            summary = "성별 기반 주변 장소 추천",
+            description = "현재 위치 반경 내 장소를 평점·리뷰 수·성별 선호도(hit_count 합산)로 정렬해 반환합니다. radius 단위는 미터입니다."
+    )
+    @GetMapping("/recommend/gender")
+    public List<PlaceRecommendResponse> recommendByGender(
+            @RequestParam("gender") GenderGroup gender,
+            @RequestParam("lat") double lat,
+            @RequestParam("lng") double lng,
+            @RequestParam("radius") double radius,
+            @RequestParam(value = "limit", required = false) Integer limit
+    ) {
+        return placeRecommendService.recommendByGender(gender, lat, lng, radius, limit);
     }
 
     @Operation(

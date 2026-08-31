@@ -52,14 +52,9 @@ public class PlaceRecommendService {
             double radiusMeters,
             Integer limit
     ) {
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-            throw new IllegalArgumentException("위도/경도 값이 올바르지 않습니다.");
-        }
-        if (radiusMeters <= 0) {
-            throw new IllegalArgumentException("반경은 0보다 커야 합니다.");
-        }
+        validateLocation(lat, lng, radiusMeters);
 
-        int topN = (limit == null || limit <= 0) ? DEFAULT_LIMIT : Math.min(limit, CANDIDATE_LIMIT);
+        int topN = resolveLimit(limit);
         User user = findUserByToken(token);
         AgeGroup ageGroup = AgeGroup.fromBirth(user.getBirth());
         GenderGroup gender = GenderGroup.fromSex(user.getSex());
@@ -70,6 +65,112 @@ public class PlaceRecommendService {
         }
 
         Map<Long, Integer> hitCountByPlaceId = loadHitCounts(candidates, ageGroup, gender);
+        return rankCandidates(candidates, lat, lng, hitCountByPlaceId, topN);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlaceRecommendResponse> recommendByGender(
+            GenderGroup gender,
+            double lat,
+            double lng,
+            double radiusMeters,
+            Integer limit
+    ) {
+        validateLocation(lat, lng, radiusMeters);
+        if (gender == null || gender == GenderGroup.UNKNOWN) {
+            throw new IllegalArgumentException("유효한 성별이 필요합니다.");
+        }
+
+        int topN = resolveLimit(limit);
+        List<Place> candidates = findNearbyPlaces(lat, lng, radiusMeters);
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Integer> hitCountByPlaceId = loadHitCountsByGender(candidates, gender);
+        List<Place> genderCandidates = candidates.stream()
+                .filter(place -> hitCountByPlaceId.getOrDefault(place.getPlaceId(), 0) > 0)
+                .toList();
+        if (genderCandidates.isEmpty()) {
+            return List.of();
+        }
+
+        return rankCandidates(genderCandidates, lat, lng, hitCountByPlaceId, topN);
+    }
+
+    private List<Place> findNearbyPlaces(double lat, double lng, double radiusMeters) {
+        double deltaLat = radiusMeters / METERS_PER_DEGREE;
+        double cosLat = Math.cos(Math.toRadians(lat));
+        double deltaLng = radiusMeters / (METERS_PER_DEGREE * Math.max(Math.abs(cosLat), 0.01));
+
+        return placeRepository.findWithinBounds(
+                        lat - deltaLat,
+                        lat + deltaLat,
+                        lng - deltaLng,
+                        lng + deltaLng
+                ).stream()
+                .filter(place -> haversineMeters(
+                        lat, lng, place.getPlaceLatitude(), place.getPlaceLongitude()) <= radiusMeters)
+                .sorted(Comparator.comparingDouble(place ->
+                        haversineMeters(lat, lng, place.getPlaceLatitude(), place.getPlaceLongitude())))
+                .limit(CANDIDATE_LIMIT)
+                .toList();
+    }
+
+    private Map<Long, Integer> loadHitCounts(
+            List<Place> candidates,
+            AgeGroup ageGroup,
+            GenderGroup gender
+    ) {
+        if (ageGroup == AgeGroup.UNKNOWN || gender == GenderGroup.UNKNOWN) {
+            return Map.of();
+        }
+
+        List<Long> placeIds = candidates.stream()
+                .map(Place::getPlaceId)
+                .toList();
+        if (placeIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return placePreferenceRepository
+                .findByPlaceIdsAndAgeGroupAndGender(placeIds, ageGroup, gender)
+                .stream()
+                .collect(Collectors.toMap(
+                        preference -> preference.getPlace().getPlaceId(),
+                        PlacePreference::getHitCount,
+                        (left, right) -> left
+                ));
+    }
+
+    private Map<Long, Integer> loadHitCountsByGender(
+            List<Place> candidates,
+            GenderGroup gender
+    ) {
+        List<Long> placeIds = candidates.stream()
+                .map(Place::getPlaceId)
+                .toList();
+        if (placeIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return placePreferenceRepository
+                .findByPlaceIdsAndGender(placeIds, gender)
+                .stream()
+                .collect(Collectors.toMap(
+                        preference -> preference.getPlace().getPlaceId(),
+                        PlacePreference::getHitCount,
+                        Integer::sum
+                ));
+    }
+
+    private List<PlaceRecommendResponse> rankCandidates(
+            List<Place> candidates,
+            double lat,
+            double lng,
+            Map<Long, Integer> hitCountByPlaceId,
+            int topN
+    ) {
         Map<Long, PlaceReviewStats> reviewStatsByPlaceId = loadReviewStats(candidates);
         double priorRating = candidates.stream()
                 .filter(place -> reviewCountOf(place, reviewStatsByPlaceId) > 0)
@@ -122,49 +223,17 @@ public class PlaceRecommendService {
                 .toList();
     }
 
-    private List<Place> findNearbyPlaces(double lat, double lng, double radiusMeters) {
-        double deltaLat = radiusMeters / METERS_PER_DEGREE;
-        double cosLat = Math.cos(Math.toRadians(lat));
-        double deltaLng = radiusMeters / (METERS_PER_DEGREE * Math.max(Math.abs(cosLat), 0.01));
-
-        return placeRepository.findWithinBounds(
-                        lat - deltaLat,
-                        lat + deltaLat,
-                        lng - deltaLng,
-                        lng + deltaLng
-                ).stream()
-                .filter(place -> haversineMeters(
-                        lat, lng, place.getPlaceLatitude(), place.getPlaceLongitude()) <= radiusMeters)
-                .sorted(Comparator.comparingDouble(place ->
-                        haversineMeters(lat, lng, place.getPlaceLatitude(), place.getPlaceLongitude())))
-                .limit(CANDIDATE_LIMIT)
-                .toList();
+    private static void validateLocation(double lat, double lng, double radiusMeters) {
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            throw new IllegalArgumentException("위도/경도 값이 올바르지 않습니다.");
+        }
+        if (radiusMeters <= 0) {
+            throw new IllegalArgumentException("반경은 0보다 커야 합니다.");
+        }
     }
 
-    private Map<Long, Integer> loadHitCounts(
-            List<Place> candidates,
-            AgeGroup ageGroup,
-            GenderGroup gender
-    ) {
-        if (ageGroup == AgeGroup.UNKNOWN || gender == GenderGroup.UNKNOWN) {
-            return Map.of();
-        }
-
-        List<Long> placeIds = candidates.stream()
-                .map(Place::getPlaceId)
-                .toList();
-        if (placeIds.isEmpty()) {
-            return Map.of();
-        }
-
-        return placePreferenceRepository
-                .findByPlaceIdsAndAgeGroupAndGender(placeIds, ageGroup, gender)
-                .stream()
-                .collect(Collectors.toMap(
-                        preference -> preference.getPlace().getPlaceId(),
-                        PlacePreference::getHitCount,
-                        (left, right) -> left
-                ));
+    private static int resolveLimit(Integer limit) {
+        return (limit == null || limit <= 0) ? DEFAULT_LIMIT : Math.min(limit, CANDIDATE_LIMIT);
     }
 
     private Map<Long, PlaceReviewStats> loadReviewStats(List<Place> candidates) {

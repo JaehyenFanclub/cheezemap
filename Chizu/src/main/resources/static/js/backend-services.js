@@ -11,10 +11,20 @@ window.CheeseApi = {
         logout: () => apiRequest("/user/auth/logout", { method: "POST", auth: true }),
         mypage: () => apiRequest("/user/mypage", { auth: true }),
         edit: formData => apiRequest("/user/mypage/edit", { method: "PUT", auth: true, body: formData }),
-        delete: () => apiRequest("/user/delete", { method: "DELETE", auth: true })
+        delete: () => apiRequest("/user/delete", { method: "DELETE", auth: true }),
+        oauthProviders: () => apiRequest("/user/auth/oauth2/providers")
     },
 
     place: {
+        recommend: ({ lat, lng, radius, limit = 5 }) => {
+            const query = new URLSearchParams({
+                lat: String(lat),
+                lng: String(lng),
+                radius: String(radius),
+                limit: String(limit)
+            });
+            return apiRequest(`/place/recommend?${query.toString()}`, { auth: true });
+        },
         resolve: body => apiRequest("/place", { method: "POST", auth: true, body }),
         create: body => apiRequest("/place", { method: "POST", auth: true, body }),
         get: placeId => apiRequest(`/place/${placeId}`),
@@ -36,7 +46,6 @@ window.CheeseApi = {
     },
 
     menu: {
-        list: placeId => apiRequest(`/place/${placeId}/menu`),
         create: (placeId, body) => apiRequest(`/place/${placeId}/menu`, { method: "POST", auth: true, body }),
         get: (placeId, menuId) => apiRequest(`/place/${placeId}/menu/${menuId}`),
         update: (placeId, menuId, body) => apiRequest(`/place/${placeId}/menu/${menuId}`, { method: "PUT", auth: true, body }),
@@ -80,7 +89,7 @@ window.CheeseApi = {
             const groups = await Promise.all(ids.map(async placeId => {
                 try {
                     const rows = await apiRequest(`/place/${placeId}/review`);
-                    return (Array.isArray(rows) ? rows : []).filter(review => Number(review.userId) === Number(currentUser?.id));
+                    return (Array.isArray(rows) ? rows : []).filter(review => Number(review.userId) === Number(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id));
                 } catch { return []; }
             }));
             return groups.flat();

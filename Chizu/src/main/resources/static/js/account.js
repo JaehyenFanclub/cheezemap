@@ -423,68 +423,8 @@ document.getElementById("logoutButton")?.addEventListener("click", async () => {
    마이페이지
 ===================================================== */
 
-const mockReviews = [
-    /* MR.EUM 수정부분: 마이페이지에 등록된 두 장소의 내 리뷰만 사용합니다. */
-    {
-        placeKey: "cafe",
-        userName: "엄용민",
-        isMine: true,
-        rating: 5,
-        content: {
-            ko: "매장이 조용하고 치즈 디저트가 맛있었어요.",
-            ja: "店内が静かで、チーズデザートがおいしかったです。"
-        },
-        date: "2026-07-20"
-    },
-    /* MR.EUM 수정부분: 마이페이지에 등록된 두 번째 내 리뷰 */
-    {
-        placeKey: "park",
-        userName: "엄용민",
-        isMine: true,
-        rating: 4,
-        content: {
-            ko: "도심에서 산책하기 좋은 공원이었습니다.",
-            ja: "都心で散歩するのに良い公園でした。"
-        },
-        date: "2026-07-18"
-    },
-     // [타인 리뷰 1] cafe 장소 - 다른 사람이 쓴 리뷰라 수정 버튼이 절대 나오면 안 됨
-    {
-        placeKey: "cafe",
-        userName: "김철수",
-        isMine: false,
-        rating: 3,
-        content: {
-            ko: "커피 맛은 보통인데 자리가 조금 좁네요.",
-            ja: "コーヒーの味は普通ですが、席이 조금 좁네요."
-        },
-        date: "2026-07-19"
-    },
-    // [내 리뷰 2] park 장소 - 수정 버튼 나와야 함
-    {
-        placeKey: "park",
-        userName: "엄용민",
-        isMine: true,
-        rating: 4,
-        content: {
-            ko: "도심에서 산책하기 좋은 공원이었습니다.",
-            ja: "都심에서 산책하기 좋은 공원이었습니다."
-        },
-        date: "2026-07-18"
-    },
-    // [타인 리뷰 2] park 장소 - 다른 사람이 쓴 리뷰라 수정 버튼이 절대 나오면 안 됨
-    {
-        placeKey: "park",
-        userName: "야마다",
-        isMine: false,
-        rating: 5,
-        content: {
-            ko: "녹지가 풍부하고 힐링되는 공간입니다.",
-            ja: "緑が豊かで、とても癒される空間です。"
-        },
-        date: "2026-07-17"
-    }
-];
+/* 과거 시연용 mockReviews 제거: 실제 리뷰는 reviews.js + 백엔드 Review API 사용 */
+
 
 
 let currentMyPageTab =
@@ -586,8 +526,8 @@ function renderMyPage() {
 
 
 // 마이페이지 - 기존 백엔드 구조를 그대로 사용해 내가 작성한 리뷰를 모아 표시합니다.
-async function renderMyReviews(container, renderRequestId = myPageRenderRequestId) {
-    if (!getAuthToken() || !currentUser?.id) {
+async function renderMyReviewsLegacy(container, renderRequestId = myPageRenderRequestId) {
+    if (!getAuthToken() || !(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id)) {
         container.innerHTML = `
             <div class="mypage-empty">
                 <i class="ti ti-message-circle"></i>
@@ -616,7 +556,7 @@ async function renderMyReviews(container, renderRequestId = myPageRenderRequestI
                 try {
                     const rows = await apiRequest(`/place/${placeId}/review`);
                     return (Array.isArray(rows) ? rows : []).filter(
-                        review => Number(review.userId) === Number(currentUser.id)
+                        review => Number(review.userId) === Number(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id)
                     );
                 } catch {
                     return [];
@@ -1171,6 +1111,66 @@ document.addEventListener(
 
 
 
+
+/* =====================================================
+   OAuth2 제공자 목록 - 백엔드 설정 기준
+===================================================== */
+
+async function loadOAuthProviders() {
+    const container = document.getElementById("socialLoginButtons");
+    const divider = document.getElementById("socialLoginDivider");
+    const errorNode = document.getElementById("socialLoginError");
+    if (!container) return;
+
+    try {
+        const providers = await apiRequest("/user/auth/oauth2/providers");
+        const rows = Array.isArray(providers) ? providers : [];
+
+        container.innerHTML = rows.map(provider => {
+            const id = String(provider?.id || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+            const name = String(provider?.name || provider?.id || "").trim();
+            const authorizationUrl = String(provider?.authorizationUrl || "").trim();
+
+            if (!id || !name || !authorizationUrl.startsWith("/")) {
+                return "";
+            }
+
+            return `
+                <a
+                    href="${escapeGroupHtml(authorizationUrl)}"
+                    class="social-login-button social-login-${id}"
+                    data-provider="${escapeGroupHtml(id)}"
+                >
+                    ${escapeGroupHtml(name)}
+                </a>
+            `;
+        }).join("");
+
+        if (!container.children.length) {
+            container.hidden = true;
+            if (divider) divider.hidden = true;
+        } else {
+            container.hidden = false;
+            if (divider) divider.hidden = false;
+        }
+
+        if (errorNode) errorNode.textContent = "";
+    } catch (error) {
+        console.error("OAuth 제공자 목록 조회 실패:", error);
+        container.hidden = true;
+        if (divider) divider.hidden = true;
+        if (errorNode) {
+            errorNode.textContent =
+                currentLanguage === "ja"
+                    ? "ソーシャルログインを読み込めませんでした。"
+                    : currentLanguage === "en"
+                        ? "Could not load social sign-in options."
+                        : "소셜 로그인 정보를 불러오지 못했습니다.";
+        }
+    }
+}
+
+loadOAuthProviders();
 
 /* =====================================================
    OAuth2 소셜 로그인 콜백 처리

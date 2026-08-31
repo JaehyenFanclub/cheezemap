@@ -16,6 +16,33 @@ function clearAuthToken() {
     localStorage.removeItem(CHEESE_TOKEN_KEY);
 }
 
+function decodeJwtPayload(token = getAuthToken()) {
+    const raw = String(token || "").trim();
+    const parts = raw.split(".");
+    if (parts.length < 2) return null;
+
+    try {
+        const base64 = parts[1]
+            .replace(/-/g, "+")
+            .replace(/_/g, "/");
+        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+        const json = decodeURIComponent(
+            Array.from(atob(padded))
+                .map(char => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
+                .join("")
+        );
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+}
+
+function getCurrentUserId() {
+    const payload = decodeJwtPayload();
+    const id = Number(payload?.sub);
+    return Number.isFinite(id) && id > 0 ? id : null;
+}
+
 async function apiRequest(path, options = {}) {
     const {
         method = "GET",
@@ -69,6 +96,7 @@ function mapMyPageUser(data, fallbackUser = null) {
 
     return {
         id:
+            getCurrentUserId() ??
             data.userId ??
             data.id ??
             fallback.id ??
