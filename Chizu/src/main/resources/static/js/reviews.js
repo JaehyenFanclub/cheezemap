@@ -810,8 +810,10 @@ function renderMyReviewCards(container, cards) {
     if (!cards?.length) {
         container.innerHTML =
             `<div class="mypage-empty">
-                <i class="ti ti-message-circle"></i>
-                <p>${translate("empty.reviews")}</p>
+                <div>
+                    <i class="ti ti-message-circle"></i>
+                    <p>${translate("empty.reviews")}</p>
+                </div>
             </div>`;
         return;
     }
@@ -830,7 +832,12 @@ async function renderMyReviews(
 ) {
     if (!getAuthToken()) {
         container.innerHTML =
-            `<div class="mypage-empty"><p>${translate("empty.reviews")}</p></div>`;
+            `<div class="mypage-empty">
+                <div>
+                    <i class="ti ti-message-circle"></i>
+                    <p>${translate("empty.reviews")}</p>
+                </div>
+            </div>`;
         return;
     }
 
@@ -862,7 +869,12 @@ async function renderMyReviews(
     }
 
     container.innerHTML =
-        `<div class="mypage-empty"><p>리뷰를 불러오는 중...</p></div>`;
+        `<div class="mypage-empty">
+            <div>
+                <i class="ti ti-loader-2"></i>
+                <p>리뷰를 불러오는 중...</p>
+            </div>
+        </div>`;
 
     try {
         const placeIds =
@@ -901,17 +913,22 @@ async function renderMyReviews(
         const groups =
             await Promise.all(
                 placeIds.map(async placeId => {
-                    const [
-                        place,
-                        placeReviews
-                    ] = await Promise.all([
-                        getBackendPlaceById(placeId)
-                            .catch(() => null),
+                    // 먼저 장소가 실제 DB에 존재하는지 확인합니다.
+                    // localStorage에 남은 오래된 placeId는 여기서 걸러내므로
+                    // 존재하지 않는 /place/{id}/review 요청이 400을 쏟아내지 않습니다.
+                    const place = await getBackendPlaceById(placeId)
+                        .catch(() => null);
 
-                        apiRequest(
-                            `/place/${placeId}/review`
-                        ).catch(() => [])
-                    ]);
+                    if (!place) {
+                        return null;
+                    }
+
+                    const placeReviews = await apiRequest(
+                        `/place/${placeId}/review`
+                    ).catch(error => {
+                        console.warn(`리뷰 조회 건너뜀 (placeId=${placeId})`, error);
+                        return [];
+                    });
 
                     return {
                         placeId,
@@ -922,7 +939,7 @@ async function renderMyReviews(
                                 : []
                     };
                 })
-            );
+            ).then(rows => rows.filter(Boolean));
 
         if (isStale()) return;
 

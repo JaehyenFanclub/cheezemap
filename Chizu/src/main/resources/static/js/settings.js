@@ -4,7 +4,7 @@
 ===================================================== */
 
 const SETTINGS_STORAGE_KEY = "cheeseMapSettings";
-const RECENT_SEARCH_STORAGE_KEY = "cheeseMapRecentSearches";
+const SETTINGS_RECENT_SEARCH_STORAGE_KEY = "cheeseMapRecentSearches";
 
 const DEFAULT_SETTINGS = {
     recommendVisible: true,
@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS = {
 const SETTINGS_TEXT = {
     ko: {
         title: "설정",
-        description: "언어와 추천 방식, 저장 데이터를 관리할 수 있어요.",
+        description: "추천 방식과 저장 데이터를 관리할 수 있어요.",
         languageSection: "언어",
         languageTitle: "언어 변경",
         languageDesc: "화면에 표시할 언어를 선택합니다.",
@@ -44,7 +44,7 @@ const SETTINGS_TEXT = {
     },
     ja: {
         title: "設定",
-        description: "言語・おすすめ方法・保存データを管理できます。",
+        description: "おすすめ方法と保存データを管理できます。",
         languageSection: "言語",
         languageTitle: "言語を変更",
         languageDesc: "画面に表示する言語を選択します。",
@@ -74,7 +74,7 @@ const SETTINGS_TEXT = {
     },
     en: {
         title: "Settings",
-        description: "Manage language, recommendations, and saved data.",
+        description: "Manage recommendations and saved data.",
         languageSection: "Language",
         languageTitle: "Change language",
         languageDesc: "Choose the language shown on screen.",
@@ -153,12 +153,6 @@ function applyCheeseSettings() {
                 input.value === settings.recommendBasis;
         });
 
-    const languageSelect =
-        document.getElementById("settingsLanguage");
-
-    if (languageSelect) {
-        languageSelect.value = currentLanguage;
-    }
 }
 
 function updateSettingsLanguageText() {
@@ -174,15 +168,8 @@ function updateSettingsLanguageText() {
     if (title) title.textContent = text.title;
     if (description) description.textContent = text.description;
 
-    if (sectionTitles[0]) sectionTitles[0].textContent = text.languageSection;
-    if (sectionTitles[1]) sectionTitles[1].textContent = text.recommendSection;
-    if (sectionTitles[2]) sectionTitles[2].textContent = text.dataSection;
-
-    const selectCopy = modal.querySelector(".settings-select-row > span");
-    if (selectCopy) {
-        selectCopy.querySelector("strong").textContent = text.languageTitle;
-        selectCopy.querySelector("small").textContent = text.languageDesc;
-    }
+    if (sectionTitles[0]) sectionTitles[0].textContent = text.recommendSection;
+    if (sectionTitles[1]) sectionTitles[1].textContent = text.dataSection;
 
     const toggleCopy = modal.querySelector(".settings-toggle-row > span");
     if (toggleCopy) {
@@ -243,16 +230,6 @@ document
         openModal(document.getElementById("settingsModal"));
     });
 
-/* 언어 */
-
-document
-    .getElementById("settingsLanguage")
-    ?.addEventListener("change", event => {
-        applyLanguage(event.target.value);
-        updateSettingsLanguageText();
-        applyCheeseSettings();
-    });
-
 /* 추천 장소 표시 */
 
 document
@@ -292,14 +269,14 @@ function saveRecentSearchTerm() {
     if (!term) return;
 
     const history =
-        readStorage(RECENT_SEARCH_STORAGE_KEY, []);
+        readStorage(SETTINGS_RECENT_SEARCH_STORAGE_KEY, []);
 
     const nextHistory = [
         term,
         ...history.filter(item => item !== term)
     ].slice(0, 10);
 
-    writeStorage(RECENT_SEARCH_STORAGE_KEY, nextHistory);
+    writeStorage(SETTINGS_RECENT_SEARCH_STORAGE_KEY, nextHistory);
 }
 
 document
@@ -321,14 +298,14 @@ document
     ?.addEventListener("click", () => {
         const text = getSettingsText();
         const history =
-            readStorage(RECENT_SEARCH_STORAGE_KEY, []);
+            readStorage(SETTINGS_RECENT_SEARCH_STORAGE_KEY, []);
 
         if (!history.length) {
             showSettingsStatus(text.noHistory);
             return;
         }
 
-        localStorage.removeItem(RECENT_SEARCH_STORAGE_KEY);
+        localStorage.removeItem(SETTINGS_RECENT_SEARCH_STORAGE_KEY);
         showSettingsStatus(text.cleared);
     });
 
@@ -374,7 +351,7 @@ document
                 STORAGE_KEYS.likes,
                 STORAGE_KEYS.favorites,
                 SETTINGS_STORAGE_KEY,
-                RECENT_SEARCH_STORAGE_KEY
+                SETTINGS_RECENT_SEARCH_STORAGE_KEY
             ].filter(Boolean).forEach(key => localStorage.removeItem(key));
 
             likedPlaces = [];
@@ -435,7 +412,7 @@ document
                 STORAGE_KEYS.favorites,
                 typeof GROUP_STORAGE_KEY !== "undefined" ? GROUP_STORAGE_KEY : null,
                 typeof MESSAGE_STORAGE_KEY !== "undefined" ? MESSAGE_STORAGE_KEY : null,
-                RECENT_SEARCH_STORAGE_KEY
+                SETTINGS_RECENT_SEARCH_STORAGE_KEY
             ].filter(Boolean).forEach(key => localStorage.removeItem(key));
 
             likedPlaces = [];

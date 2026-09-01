@@ -98,7 +98,7 @@
 
             <!-- 검색 -->
 
-            <div class="search-area">
+            <div class="search-area" id="searchArea">
 
                 <span class="search-icon">
                     <i class="ti ti-search"></i>
@@ -119,6 +119,14 @@
                 >
                     검색
                 </button>
+
+                <div class="recent-search-dropdown" id="recentSearchDropdown" hidden>
+                    <div class="recent-search-header">
+                        <strong id="recentSearchTitle">최근 검색어</strong>
+                        <button type="button" class="recent-search-clear" id="recentSearchClear">전체 삭제</button>
+                    </div>
+                    <div class="recent-search-list" id="recentSearchList"></div>
+                </div>
             </div>
 
 
@@ -181,6 +189,17 @@
                         aria-hidden="true"
                     ></i>
                 </button>
+
+                <div
+                    class="header-language-switcher"
+                    id="headerLanguageSwitcher"
+                    role="group"
+                    aria-label="Language"
+                >
+                    <button type="button" class="header-language-option" data-header-language="ko">한국어</button>
+                    <button type="button" class="header-language-option" data-header-language="ja">日本語</button>
+                    <button type="button" class="header-language-option" data-header-language="en">EN</button>
+                </div>
 
 
                 <button
@@ -1759,24 +1778,32 @@
                 </button>
             </header>
 
-            <div class="message-tabs" role="tablist" aria-label="쪽지 대화 목록">
-                <button type="button" class="active" data-message-tab="inbox">
-                    대화 목록
-                    <span id="messageInboxCount">0</span>
-                </button>
-                <span id="messageSentCount" hidden>0</span>
-            </div>
-
             <div class="message-layout">
                 <section class="message-list-panel">
+                    <div class="message-panel-title">
+                        <strong>대화 목록</strong>
+                        <span id="messageInboxCount">0</span>
+                    </div>
+
+                    <!-- 기존 messages.js의 탭 로직 호환용 -->
+                    <button
+                        type="button"
+                        class="message-tab-compat active"
+                        data-message-tab="inbox"
+                        hidden
+                    ></button>
+                    <span id="messageSentCount" hidden>0</span>
+
                     <div class="message-list" id="messageList"></div>
                 </section>
 
                 <section class="message-detail-panel" id="messageDetailPanel">
                     <div class="message-empty-state">
-                        <i class="ti ti-mail-opened"></i>
-                        <strong>쪽지를 선택해 주세요</strong>
-                        <p>내용을 확인하거나 답장을 보낼 수 있어요.</p>
+                        <div class="message-empty-icon">
+                            <i class="ti ti-mail-opened"></i>
+                        </div>
+                        <strong>대화를 선택해 주세요</strong>
+                        <p>주고받은 쪽지를 확인하고 답장을 보낼 수 있어요.</p>
                     </div>
                 </section>
             </div>
@@ -1879,27 +1906,7 @@
             <div class="settings-heading">
                 <span class="settings-eyebrow">CHEESE MAP</span>
                 <h2 id="settingsModalTitle">설정</h2>
-                <p>언어와 추천 표시, 저장 데이터를 관리할 수 있어요.</p>
-            </div>
-
-            <div class="settings-section">
-                <div class="settings-section-title">
-                    <i class="ti ti-language"></i>
-                    <span>언어</span>
-                </div>
-
-                <label class="settings-select-row" for="settingsLanguage">
-                    <span>
-                        <strong>언어 변경</strong>
-                        <small>화면에 표시할 언어를 선택합니다.</small>
-                    </span>
-
-                    <select id="settingsLanguage">
-                        <option value="ko">한국어</option>
-                        <option value="ja">日本語</option>
-                        <option value="en">English</option>
-                    </select>
-                </label>
+                <p>추천 표시와 저장 데이터를 관리할 수 있어요.</p>
             </div>
 
             <div class="settings-section">

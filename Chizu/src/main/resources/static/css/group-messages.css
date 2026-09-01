@@ -3088,3 +3088,344 @@ body.dark .group-place-option.selected {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+/* =====================================================
+   쪽지함 UI - 그룹 모달과 동일한 레이아웃/톤으로 통일
+===================================================== */
+
+.group-message-modal {
+    width: min(980px, calc(100vw - 36px)) !important;
+    max-height: min(760px, calc(100vh - 36px)) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 24px !important;
+    background: #ffffff !important;
+    box-shadow: 0 24px 60px rgba(54, 42, 24, 0.20) !important;
+}
+
+.group-message-header {
+    min-height: 0 !important;
+    padding: 28px 30px 22px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 24px !important;
+    border-bottom: 1px solid var(--line) !important;
+    background:
+        linear-gradient(
+            135deg,
+            #fffdf7 0%,
+            #fff6d8 100%
+        ) !important;
+}
+
+.group-message-header .group-eyebrow {
+    color: var(--cheese-deep) !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.16em !important;
+}
+
+.group-message-header h2 {
+    margin: 5px 0 4px !important;
+    color: var(--text) !important;
+    font-size: 25px !important;
+    letter-spacing: normal !important;
+}
+
+.group-message-header p {
+    margin: 0 !important;
+    color: var(--gray-500) !important;
+    font-size: 13px !important;
+}
+
+#openMessageComposeButton {
+    width: auto !important;
+    min-width: 118px !important;
+    min-height: 42px !important;
+    padding: 0 16px !important;
+    border: 1px solid #d49a17 !important;
+    border-radius: 13px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    color: #4b341d !important;
+    background: var(--yellow) !important;
+    box-shadow: none !important;
+    font-weight: 800 !important;
+}
+
+#openMessageComposeButton:hover {
+    border-color: #c98b19 !important;
+    background: #ffd75c !important;
+    transform: translateY(-1px);
+}
+
+/* 기존 상단 탭은 사이드바 제목으로 대체 */
+.message-tabs {
+    display: none !important;
+}
+
+.message-tab-compat {
+    display: none !important;
+}
+
+.message-layout {
+    display: grid !important;
+    grid-template-columns: 290px minmax(0, 1fr) !important;
+    min-height: 520px !important;
+    max-height: calc(100vh - 190px) !important;
+    background: #ffffff !important;
+}
+
+.message-list-panel {
+    min-width: 0 !important;
+    padding: 20px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-right: 1px solid var(--line) !important;
+    background: #fbfaf7 !important;
+}
+
+.message-panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px 12px;
+    color: var(--text);
+    font-size: 13px;
+}
+
+.message-panel-title strong {
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.message-panel-title > span {
+    display: grid;
+    min-width: 25px;
+    height: 25px;
+    place-items: center;
+    padding: 0 7px;
+    border-radius: 999px;
+    color: var(--cheese-brown);
+    background: var(--cheese-soft);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.message-list {
+    display: grid !important;
+    gap: 8px !important;
+    overflow-y: auto !important;
+}
+
+.message-list-item {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 38px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    border: 1px solid transparent !important;
+    border-radius: 15px !important;
+    color: var(--text) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-align: left !important;
+    transition:
+        border-color 0.16s ease,
+        background 0.16s ease,
+        transform 0.16s ease !important;
+}
+
+.message-list-item:hover {
+    border-color: var(--line) !important;
+    background: #ffffff !important;
+    transform: translateY(-1px) !important;
+}
+
+.message-list-item.active {
+    border-color: #edc252 !important;
+    background: #fff2ba !important;
+    box-shadow: none !important;
+}
+
+.message-avatar {
+    width: 38px !important;
+    height: 38px !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    color: var(--cheese-brown) !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+}
+
+.message-list-copy {
+    min-width: 0 !important;
+    display: grid !important;
+    gap: 4px !important;
+}
+
+.message-list-copy strong {
+    overflow: hidden !important;
+    color: var(--text) !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+}
+
+.message-list-copy b,
+.message-list-copy small {
+    overflow: hidden !important;
+    color: var(--gray-500) !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+}
+
+.message-detail-panel {
+    min-width: 0 !important;
+    overflow-y: auto !important;
+    padding: 26px 28px !important;
+    background: #ffffff !important;
+}
+
+.message-empty-state {
+    min-height: 430px !important;
+    display: grid !important;
+    place-content: center !important;
+    justify-items: center !important;
+    gap: 8px !important;
+    color: var(--gray-500) !important;
+    text-align: center !important;
+}
+
+.message-empty-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 5px;
+    border-radius: 18px;
+    color: var(--cheese-brown);
+    background: var(--cheese-soft);
+    font-size: 27px;
+}
+
+.message-empty-state > i {
+    display: none !important;
+}
+
+.message-empty-state strong {
+    color: var(--text) !important;
+    font-size: 17px !important;
+}
+
+.message-empty-state p {
+    margin: 0 !important;
+    color: var(--gray-500) !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+}
+
+.message-list-empty {
+    min-height: 180px !important;
+    display: grid !important;
+    place-content: center !important;
+    justify-items: center !important;
+    gap: 7px !important;
+    color: var(--gray-500) !important;
+    text-align: center !important;
+}
+
+.message-list-empty i {
+    color: #aaa59a !important;
+    font-size: 28px !important;
+}
+
+.message-list-empty p {
+    margin: 0 !important;
+    color: var(--gray-500) !important;
+    font-size: 11px !important;
+}
+
+body.dark .group-message-modal,
+body.dark .message-layout,
+body.dark .message-detail-panel {
+    background: #2b2924 !important;
+}
+
+body.dark .group-message-header {
+    border-color: rgba(255,255,255,.10) !important;
+    background:
+        linear-gradient(
+            135deg,
+            #302d26 0%,
+            #413821 100%
+        ) !important;
+}
+
+body.dark .message-list-panel {
+    border-color: rgba(255,255,255,.10) !important;
+    background: #24221e !important;
+}
+
+body.dark .message-list-item:hover {
+    border-color: #504a3f !important;
+    background: #302e29 !important;
+}
+
+body.dark .message-list-item.active {
+    border-color: #b88a27 !important;
+    background: #4a4029 !important;
+}
+
+body.dark .message-avatar {
+    color: #f1d278 !important;
+    background: #34312b !important;
+}
+
+body.dark .message-panel-title,
+body.dark .message-panel-title strong,
+body.dark .message-empty-state strong,
+body.dark .message-list-copy strong {
+    color: #f2eee4 !important;
+}
+
+body.dark .message-empty-icon {
+    color: #f1d278 !important;
+    background: rgba(246, 201, 69, .12) !important;
+}
+
+@media (max-width: 720px) {
+    .group-message-header {
+        padding: 22px 20px 18px !important;
+        align-items: flex-start !important;
+    }
+
+    .message-layout {
+        grid-template-columns: 1fr !important;
+        min-height: 0 !important;
+    }
+
+    .message-list-panel {
+        max-height: 260px !important;
+        border-right: 0 !important;
+        border-bottom: 1px solid var(--line) !important;
+    }
+
+    .message-detail-panel {
+        min-height: 330px !important;
+    }
+}
+

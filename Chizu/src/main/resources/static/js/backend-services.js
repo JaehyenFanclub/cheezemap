@@ -88,6 +88,14 @@ window.CheeseApi = {
             const ids = typeof getKnownBackendPlaceIds === "function" ? getKnownBackendPlaceIds() : [];
             const groups = await Promise.all(ids.map(async placeId => {
                 try {
+                    // 존재하지 않는 오래된 placeId에는 리뷰 요청을 보내지 않습니다.
+                    const place = await getBackendPlaceById(placeId)
+                        .catch(() => null);
+
+                    if (!place) {
+                        return [];
+                    }
+
                     const rows = await apiRequest(`/place/${placeId}/review`);
                     return (Array.isArray(rows) ? rows : []).filter(review => Number(review.userId) === Number(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id));
                 } catch { return []; }

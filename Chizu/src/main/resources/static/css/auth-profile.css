@@ -1618,3 +1618,17 @@ body:has(#routePanel.show) #placeRouteButton:hover {
     object-fit: cover;
     border-radius: 50%;
 }
+
+
+/* 마이페이지 리뷰 empty 상태 - 좋아요/즐겨찾기와 동일한 중앙 정렬 */
+.mypage-empty {
+    min-height: 180px;
+    display: grid;
+    place-items: center;
+    color: #8b7b5d;
+    text-align: center;
+}
+.mypage-empty > div { display: grid; justify-items: center; }
+.mypage-empty i { display: block; margin-bottom: 9px; color: var(--cheese-deep); font-size: 34px; }
+.mypage-empty p { margin: 0; font-size: 13px; line-height: 1.6; }
+body.dark .mypage-empty { color: #bcb5a8; }
