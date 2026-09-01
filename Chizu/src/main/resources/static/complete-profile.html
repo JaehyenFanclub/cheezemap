@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>추가 정보 입력 | CHEESE MAP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <link rel="stylesheet" href="css/complete-profile.css">
+</head>
+<body>
+    <main class="complete-profile-page">
+        <section class="complete-profile-card">
+            <div class="complete-profile-top">
+                <a href="index.html" class="brand">
+                    <img src="png/cheese-map-logo.png" alt="">
+                    <strong>CHEESE MAP</strong>
+                </a>
+
+                <div class="language-switcher">
+                    <button type="button" data-language="ko">한국어</button>
+                    <button type="button" data-language="ja">日本語</button>
+                    <button type="button" data-language="en">EN</button>
+                </div>
+            </div>
+
+            <div class="heading">
+                <span id="providerBadge">SOCIAL</span>
+                <h1 data-i18n="title">추가 정보 입력</h1>
+                <p data-i18n="description">맞춤 장소 추천을 위해 필요한 정보를 확인해주세요.</p>
+            </div>
+
+            <form id="completeProfileForm">
+                <div class="form-grid">
+                    <label>
+                        <span data-i18n="name">이름</span>
+                        <input type="text" id="socialName" name="userName" required>
+                    </label>
+
+                    <label>
+                        <span data-i18n="email">이메일</span>
+                        <input type="email" id="socialEmail" readonly>
+                    </label>
+
+                    <label>
+                        <span><span data-i18n="nickname">닉네임</span> <b>*</b></span>
+                        <input type="text" id="socialNickname" name="userNickname" maxlength="20" required>
+                    </label>
+
+                    <label>
+                        <span><span data-i18n="phone">전화번호</span> <b>*</b></span>
+                        <input type="tel" id="socialPhone" name="userPhone" maxlength="13" placeholder="010-0000-0000" required>
+                    </label>
+
+                    <label>
+                        <span><span data-i18n="birth">생년월일</span> <b>*</b></span>
+                        <input type="date" id="socialBirth" name="birth" required>
+                    </label>
+
+                    <fieldset>
+                        <legend><span data-i18n="gender">성별</span> <b>*</b></legend>
+                        <div class="gender-options">
+                            <label>
+                                <input type="radio" name="sex" value="true">
+                                <span><i class="ti ti-gender-male"></i><span data-i18n="male">남성</span></span>
+                            </label>
+                            <label>
+                                <input type="radio" name="sex" value="false">
+                                <span><i class="ti ti-gender-female"></i><span data-i18n="female">여성</span></span>
+                            </label>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <p class="notice" data-i18n="notice">
+                    이미 소셜 계정에서 받은 정보는 자동으로 입력됩니다. 비밀번호는 소셜 서비스에서 관리됩니다.
+                </p>
+
+                <p class="form-message" id="completeProfileMessage" aria-live="polite"></p>
+
+                <button type="submit" class="submit-button">
+                    <span data-i18n="submit">가입 완료</span>
+                    <i class="ti ti-arrow-right"></i>
+                </button>
+            </form>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/complete-profile.js"></script>
+</body>
+</html>

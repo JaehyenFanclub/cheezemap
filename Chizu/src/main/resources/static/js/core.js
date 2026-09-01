@@ -1321,6 +1321,23 @@ function applyLanguage(language) {
             currentLanguage === "ko" ? "한국어" : currentLanguage === "ja" ? "日本語" : "English";
     }
 
+    document
+        .querySelectorAll("[data-header-language]")
+        .forEach(button => {
+            const isActive =
+                button.dataset.headerLanguage === currentLanguage;
+
+            button.classList.toggle(
+                "active",
+                isActive
+            );
+
+            button.setAttribute(
+                "aria-pressed",
+                String(isActive)
+            );
+        });
+
     if (typeof renderCurrentAreaName === "function") {
         renderCurrentAreaName();
     }
@@ -1361,6 +1378,22 @@ function applyLanguage(language) {
     updateWeatherText();
 }
 
+
+
+
+/* 헤더 언어 전환 버튼 */
+document
+    .querySelectorAll("[data-header-language]")
+    .forEach(button => {
+        button.addEventListener(
+            "click",
+            () => {
+                applyLanguage(
+                    button.dataset.headerLanguage
+                );
+            }
+        );
+    });
 
 /* =====================================================
    도쿄 현재 시간 및 날씨
@@ -1757,3 +1790,8 @@ document.addEventListener(
 );
 
 
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    applyLanguage(currentLanguage);
+});

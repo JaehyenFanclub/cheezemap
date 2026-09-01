@@ -134,7 +134,14 @@ function mapMyPageUser(data, fallbackUser = null) {
         photoUrl:
             data.photoUrl ||
             fallback.photoUrl ||
-            null
+            null,
+
+        provider:
+            String(
+                data.provider ??
+                fallback.provider ??
+                "LOCAL"
+            ).toUpperCase()
     };
 }
 

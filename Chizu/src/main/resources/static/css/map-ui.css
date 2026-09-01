@@ -268,7 +268,7 @@
 
 .recommend-panel {
     left: 18px;
-    bottom: 18px;
+    bottom: 32px;
 
     width: 390px;
     max-width: calc(100% - 110px);
@@ -282,7 +282,7 @@
 
     box-shadow: 0 18px 38px rgba(62, 46, 22, 0.16);
 
-    overflow: hidden;
+    overflow: visible;
 
     backdrop-filter: blur(12px);
 }
@@ -1086,8 +1086,8 @@ body.dark .side-item:hover {
 }
 
 body.dark .side-item.active {
-    color: #3f3024;
-    background: #e9c95f;
+    color: var(--gray-50);
+    background: var(--yellow-dark);
 }
 
 @media (max-width: 600px) {
@@ -1152,7 +1152,7 @@ body.dark .side-item.active {
 
 .recommend-mode {
     position: relative;
-    z-index: 7;
+    z-index: 20;
 
     margin: -2px 0 11px;
 }
@@ -1163,6 +1163,7 @@ body.dark .side-item.active {
 
 .recommend-audience-selector {
     position: relative;
+    z-index: 25;
 }
 
 .recommend-audience-trigger {
@@ -1209,6 +1210,7 @@ body.dark .side-item.active {
 
 .recommend-audience-menu {
     position: absolute;
+    z-index: 30;
     top: calc(100% + 7px);
     left: 0;
 
@@ -1575,6 +1577,17 @@ body.dark #hideRecommendButton {
     color: #f6e8c9;
     background: #3c382f;
 }
+body.dark .side-item {
+    color: var(--gray-600);
+}
+
+body.dark .side-copy strong {
+    color: inherit;
+}
+
+body.dark .side-item:not(.active) .side-icon {
+    color: var(--gray-600) !important;
+}
 
 
 /* 모바일 */
@@ -1602,4 +1615,34 @@ body.dark #hideRecommendButton {
 .recommend-panel:not(.collapsed) #recommendRefreshButton { display: grid !important; }
 .recommend-title-area { min-width: 0; }
 
+
+
+/* =====================================================
+   다크모드 선택 상태 통일
+   - 사이드 메뉴와 카테고리의 선택 색상을 동일하게 사용
+   - 하드코딩 색상 없이 기존 테마 변수만 사용
+===================================================== */
+
+body.dark .sidebar .side-menu .side-item:not(.active),
+body.dark .sidebar .side-menu .side-item:not(.active) .side-copy strong,
+body.dark .sidebar .side-menu .side-item:not(.active) .side-icon {
+    color: var(--gray-600) !important;
+}
+
+body.dark .sidebar .side-menu .side-item.active,
+body.dark .category-item.active {
+    color: var(--gray-50) !important;
+    background: var(--yellow-dark) !important;
+}
+
+body.dark .sidebar .side-menu .side-item.active .side-copy strong,
+body.dark .sidebar .side-menu .side-item.active .side-icon,
+body.dark .category-item.active .category-icon {
+    color: var(--gray-50) !important;
+}
+
+body.dark .sidebar .side-menu .side-item.active .side-icon svg {
+    color: var(--gray-50) !important;
+    stroke: currentColor !important;
+}
 

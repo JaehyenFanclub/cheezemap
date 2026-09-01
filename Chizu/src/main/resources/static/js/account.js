@@ -377,6 +377,17 @@ document.getElementById("loginForm")?.addEventListener("submit", async event => 
         updateHeaderAuthState();
         if (typeof updateMessageBadge === "function") updateMessageBadge();
         if (typeof applyCheeseSettings === "function") applyCheeseSettings();
+
+        // 로그인 직후: 추천 카테고리 선택 UI를 표시하고 개인화 추천을 다시 불러온다.
+        if (typeof renderRecommendedPlaces === "function") {
+            await renderRecommendedPlaces(
+                typeof getActiveRecommendationMapCategory === "function"
+                    ? getActiveRecommendationMapCategory()
+                    : "all",
+                { force: true }
+            );
+        }
+
         showToast("toast.loginSuccess");
     } catch (error) {
         console.error("로그인 API 오류:", error);
@@ -414,6 +425,18 @@ document.getElementById("logoutButton")?.addEventListener("click", async () => {
         updateFavoriteButtons?.();
         closeModal(mypageModal);
         updateHeaderAuthState();
+
+        // 로그아웃 직후: 추천 카테고리 선택 UI를 숨기고
+        // 토큰이 필요 없는 Google 주변 추천 장소로 즉시 전환한다.
+        if (typeof renderRecommendedPlaces === "function") {
+            await renderRecommendedPlaces(
+                typeof getActiveRecommendationMapCategory === "function"
+                    ? getActiveRecommendationMapCategory()
+                    : "all",
+                { force: true }
+            );
+        }
+
         showToast("toast.logoutSuccess");
     }
 });
@@ -530,16 +553,20 @@ async function renderMyReviewsLegacy(container, renderRequestId = myPageRenderRe
     if (!getAuthToken() || !(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id)) {
         container.innerHTML = `
             <div class="mypage-empty">
-                <i class="ti ti-message-circle"></i>
-                <p>${translate("empty.reviews")}</p>
+                <div>
+                    <i class="ti ti-message-circle"></i>
+                    <p>${translate("empty.reviews")}</p>
+                </div>
             </div>`;
         return;
     }
 
     container.innerHTML = `
         <div class="mypage-empty">
-            <i class="ti ti-loader-2"></i>
-            <p>내 리뷰를 불러오는 중...</p>
+            <div>
+                <i class="ti ti-loader-2"></i>
+                <p>내 리뷰를 불러오는 중...</p>
+            </div>
         </div>`;
 
     const stale = () =>
@@ -554,6 +581,10 @@ async function renderMyReviewsLegacy(container, renderRequestId = myPageRenderRe
         const reviewGroups = await Promise.all(
             placeIds.map(async placeId => {
                 try {
+                    // 오래된 localStorage placeId는 실제 장소 존재 확인 후 리뷰 API 호출
+                    const place = await getBackendPlaceById(placeId).catch(() => null);
+                    if (!place) return [];
+
                     const rows = await apiRequest(`/place/${placeId}/review`);
                     return (Array.isArray(rows) ? rows : []).filter(
                         review => Number(review.userId) === Number(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id)
@@ -1203,7 +1234,23 @@ async function handleOAuthCallback() {
 
     try {
         setAuthToken(token);
-        await fetchCurrentUser();
+        const socialUser = await fetchCurrentUser();
+
+        const provider = String(socialUser?.provider || "LOCAL").toUpperCase();
+        const needsSocialProfile =
+            provider !== "LOCAL" &&
+            (
+                !String(socialUser?.nickname || "").trim() ||
+                !String(socialUser?.phone || "").trim() ||
+                !String(socialUser?.birth || "").trim() ||
+                socialUser?.sex == null
+            );
+
+        if (needsSocialProfile) {
+            window.location.replace("complete-profile.html");
+            return;
+        }
+
         updateHeaderAuthState();
         if (typeof updateMessageBadge === "function") updateMessageBadge();
         if (typeof applyCheeseSettings === "function") applyCheeseSettings();
@@ -1236,7 +1283,22 @@ async function handleOAuthCallback() {
         return;
     }
     try {
-        await fetchCurrentUser();
+        const restoredUser = await fetchCurrentUser();
+        const restoredProvider = String(restoredUser?.provider || "LOCAL").toUpperCase();
+        const needsSocialProfile =
+            restoredProvider !== "LOCAL" &&
+            (
+                !String(restoredUser?.nickname || "").trim() ||
+                !String(restoredUser?.phone || "").trim() ||
+                !String(restoredUser?.birth || "").trim() ||
+                restoredUser?.sex == null
+            );
+
+        if (needsSocialProfile && !window.location.pathname.endsWith("complete-profile.html")) {
+            window.location.replace("complete-profile.html");
+            return;
+        }
+
         updateHeaderAuthState();
         if (typeof applyCheeseSettings === "function") applyCheeseSettings();
     } catch (error) {
@@ -1247,3 +1309,65 @@ async function handleOAuthCallback() {
         updateHeaderAuthState();
     }
 })();
+
+
+/* =====================================================
+   회원가입 페이지 -> 로그인 모달 바로 열기
+   - signup.html의 index.html?login=1
+   - sessionStorage cheeseMapOpenLogin
+   두 방법을 모두 지원합니다.
+===================================================== */
+
+function openLoginModalFromSignup() {
+    const params = new URLSearchParams(window.location.search);
+    const requestedByQuery = params.get("login") === "1";
+    const requestedBySession =
+        sessionStorage.getItem("cheeseMapOpenLogin") === "1";
+
+    if (!requestedByQuery && !requestedBySession) {
+        return;
+    }
+
+    sessionStorage.removeItem("cheeseMapOpenLogin");
+
+    if (requestedByQuery) {
+        params.delete("login");
+
+        const nextQuery = params.toString();
+        const cleanUrl =
+            `${window.location.pathname}` +
+            `${nextQuery ? `?${nextQuery}` : ""}` +
+            `${window.location.hash}`;
+
+        window.history.replaceState(
+            {},
+            document.title,
+            cleanUrl
+        );
+    }
+
+    // 로그인된 사용자는 다시 로그인 모달을 띄우지 않습니다.
+    if (getAuthToken()) {
+        return;
+    }
+
+    const show = () => {
+        openModal(loginModal);
+
+        setTimeout(() => {
+            document
+                .getElementById("loginEmail")
+                ?.focus();
+        }, 50);
+    };
+
+    // account.js는 body 하단에서 로드되지만,
+    // 다른 초기화 코드와 겹치는 상황까지 대비해 한 틱 뒤에 실행합니다.
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", show, { once: true });
+    } else {
+        setTimeout(show, 0);
+    }
+}
+
+openLoginModalFromSignup();

@@ -186,8 +186,8 @@ public class SocialLoginService {
     private String resolvePhoneForExistingUser(User user, OAuth2Attributes attributes) {
         String oauthPhone = normalizePhone(attributes.phone());
         if (oauthPhone == null || oauthPhone.isBlank()) {
-            return null;
-        }
+        return user.getPhone();
+    }
         if (oauthPhone.equals(user.getPhone()) || !userRepository.existsByPhone(oauthPhone)) {
             return oauthPhone;
         }

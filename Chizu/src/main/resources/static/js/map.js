@@ -1700,6 +1700,17 @@ function renderRecommendationAudienceControl() {
     const mode = document.getElementById("recommendMode");
     if (!mode) return;
 
+    // 비로그인 상태에서는 개인/남성/여성 추천 카테고리 선택 UI를 노출하지 않는다.
+    // 로그인 여부는 백엔드 세션이 아니라 현재 프로젝트에서 사용하는 JWT 토큰으로 판단한다.
+    if (!getAuthToken()) {
+        mode.innerHTML = "";
+        mode.hidden = true;
+        mode.classList.remove("open");
+        return;
+    }
+
+    mode.hidden = false;
+
     const audience = getRecommendationAudience();
     const options = ["personal", "male", "female"];
 
@@ -1938,6 +1949,17 @@ function getActiveRecommendationMapCategory() {
 function renderRecommendationAudienceControl() {
     const mode = document.getElementById("recommendMode");
     if (!mode) return;
+
+    // 비로그인 상태에서는 개인/남성/여성 추천 카테고리 선택 UI를 노출하지 않는다.
+    // 로그인 여부는 백엔드 세션이 아니라 현재 프로젝트에서 사용하는 JWT 토큰으로 판단한다.
+    if (!getAuthToken()) {
+        mode.innerHTML = "";
+        mode.hidden = true;
+        mode.classList.remove("open");
+        return;
+    }
+
+    mode.hidden = false;
 
     const audience = getRecommendationAudience();
     const options = ["personal", "male", "female"];
@@ -2441,24 +2463,12 @@ function getRecommendationScore(
             point
         );
 
-    const rating =
-        Number(
-            place.rating
-        );
-
-    const reviewCount =
-        Number(
-            place.userRatingCount
-        );
-
     /*
-        기본 점수
-        - 거리      42점
-        - 평점      25점
-        - 리뷰 수   15점
-        - 성별 가중 18점
+        Google fallback 추천은 장소 탐색용으로만 사용합니다.
+        Google의 rating / userRatingCount는 치즈맵 추천 점수와 카드에 사용하지 않습니다.
 
-        총점 100점 안팎
+        우리 DB에서 온 추천(recommendationSource === "backend")만
+        서버가 계산한 avgRating / reviewCount / score를 사용합니다.
     */
     const distanceScore =
         Number.isFinite(
@@ -2466,7 +2476,7 @@ function getRecommendationScore(
         )
             ? Math.max(
                 0,
-                42 *
+                100 *
                 (
                     1 -
                     distance /
@@ -2475,50 +2485,10 @@ function getRecommendationScore(
             )
             : 0;
 
-    const ratingScore =
-        Number.isFinite(
-            rating
-        )
-            ? Math.max(
-                0,
-                Math.min(
-                    25,
-                    rating /
-                    5 *
-                    25
-                )
-            )
-            : 0;
-
-    const reviewScore =
-        Number.isFinite(
-            reviewCount
-        ) &&
-        reviewCount > 0
-            ? Math.min(
-                15,
-                Math.log10(
-                    reviewCount + 1
-                ) /
-                4 *
-                15
-            )
-            : 0;
-
-    const genderScore =
-        getRecommendationGenderWeight(
-            place,
-            gender,
-            useGender
-        );
+    const genderScore = 0;
 
     return {
-        score:
-            distanceScore +
-            ratingScore +
-            reviewScore +
-            genderScore,
-
+        score: distanceScore,
         distance,
         genderScore
     };
@@ -2530,10 +2500,10 @@ function getRecommendationModeText(
 ) {
     if (!useGender) {
         return currentLanguage === "ja"
-            ? "距離・評価・レビュー数でおすすめ"
+            ? "周辺の場所を距離順でおすすめ"
             : currentLanguage === "en"
-                ? "Ranked by distance, rating and reviews"
-                : "거리 · 평점 · 리뷰 수 기준";
+                ? "Nearby places ranked by distance"
+                : "주변 장소 · 거리 기준";
     }
 
     if (gender === "male") {
@@ -2553,10 +2523,10 @@ function getRecommendationModeText(
     }
 
     return currentLanguage === "ja"
-        ? "距離・評価・レビュー数でおすすめ"
+        ? "周辺の場所を距離順でおすすめ"
         : currentLanguage === "en"
-            ? "Ranked by distance, rating and reviews"
-            : "거리 · 평점 · 리뷰 수 기준";
+            ? "Nearby places ranked by distance"
+            : "주변 장소 · 거리 기준";
 }
 
 function getRecommendationCenterText() {
@@ -2660,8 +2630,6 @@ async function searchGoogleNearbyRecommendationPlaces() {
             "location",
             "primaryType",
             "primaryTypeDisplayName",
-            "rating",
-            "userRatingCount",
             "businessStatus",
             "photos"
         ],
@@ -2975,9 +2943,12 @@ async function renderRecommendedPlaces(
     const settings =
         getRecommendationSettings();
 
-    const audience =
-        options.audience ||
-        getRecommendationAudience();
+    // 비로그인 사용자는 저장된 추천 기준(personal/male/female)을 사용하지 않고
+    // 항상 Google 주변 인기 장소만 표시한다.
+    const loggedIn = Boolean(getAuthToken());
+    const audience = loggedIn
+        ? (options.audience || getRecommendationAudience())
+        : "personal";
 
     renderRecommendationAudienceControl();
 
@@ -3220,15 +3191,46 @@ async function renderRecommendedPlaces(
                                 place.primaryType
                             );
 
+                        const isBackendPlace =
+                            place?.recommendationSource === "backend";
+
+                        /*
+                            추천 카드의 평점/리뷰 수는 치즈맵 DB 값만 표시합니다.
+                            Google fallback 장소에는 Google rating/userRatingCount를 표시하지 않습니다.
+                        */
+                        /*
+                            추천 카드의 평점/리뷰 UI는 항상 보여줍니다.
+
+                            - backend 추천: 치즈맵 DB의 avgRating / reviewCount 사용
+                            - Google fallback: Google 평점/리뷰는 쓰지 않고
+                              치즈맵 DB에 아직 통계가 없다는 의미로 0.0 / 0 표시
+                        */
+                        const backendRating =
+                            isBackendPlace
+                                ? Number(place.rating)
+                                : 0;
+
+                        const backendReviews =
+                            isBackendPlace
+                                ? Number(place.userRatingCount)
+                                : 0;
+
                         const rating =
-                            Number(
-                                place.rating
-                            );
+                            Number.isFinite(backendRating)
+                                ? backendRating
+                                : 0;
 
                         const reviews =
-                            Number(
-                                place.userRatingCount
-                            );
+                            Number.isFinite(backendReviews)
+                                ? Math.max(0, backendReviews)
+                                : 0;
+
+                        const reviewLabel =
+                            currentLanguage === "ja"
+                                ? `レビュー ${reviews.toLocaleString()}件`
+                                : currentLanguage === "en"
+                                    ? `${reviews.toLocaleString()} reviews`
+                                    : `리뷰 ${reviews.toLocaleString()}개`;
 
                         const tailored =
                             useGender &&
@@ -3281,23 +3283,14 @@ async function renderRecommendedPlaces(
                                             ${Math.max(0, Math.round(distance))}m
                                         </span>
 
-                                        ${
-                                            Number.isFinite(rating)
-                                                ? `<span>
-                                                        <i class="ti ti-star-filled"></i>
-                                                        ${rating.toFixed(1)}
-                                                   </span>`
-                                                : ""
-                                        }
+                                        <span>
+                                            <i class="ti ti-star-filled"></i>
+                                            ${rating.toFixed(1)}
+                                        </span>
 
-                                        ${
-                                            Number.isFinite(reviews) &&
-                                            reviews > 0
-                                                ? `<span>
-                                                        리뷰 ${reviews.toLocaleString()}
-                                                   </span>`
-                                                : ""
-                                        }
+                                        <span>
+                                            ${reviewLabel}
+                                        </span>
                                     </small>
                                 </div>
 
@@ -5288,6 +5281,126 @@ function normalizeSearchText(value) {
 }
 
 
+const RECENT_SEARCH_STORAGE_KEY = "cheeseMapRecentSearches";
+const RECENT_SEARCH_LIMIT = 8;
+
+function getRecentSearches() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(RECENT_SEARCH_STORAGE_KEY) || "[]");
+        return Array.isArray(saved)
+            ? saved.filter(item => typeof item === "string" && item.trim()).slice(0, RECENT_SEARCH_LIMIT)
+            : [];
+    } catch (error) {
+        console.warn("최근 검색어 불러오기 실패:", error);
+        return [];
+    }
+}
+
+function saveRecentSearch(keyword) {
+    const value = String(keyword || "").trim();
+    if (!value) return;
+
+    const normalized = normalizeSearchText(value);
+    const next = [
+        value,
+        ...getRecentSearches().filter(item => normalizeSearchText(item) !== normalized)
+    ].slice(0, RECENT_SEARCH_LIMIT);
+
+    localStorage.setItem(RECENT_SEARCH_STORAGE_KEY, JSON.stringify(next));
+}
+
+function clearRecentSearches() {
+    localStorage.removeItem(RECENT_SEARCH_STORAGE_KEY);
+    hideRecentSearches();
+}
+
+function deleteRecentSearch(keyword) {
+    const value = String(keyword || "").trim();
+    if (!value) return;
+
+    const normalized = normalizeSearchText(value);
+    const next = getRecentSearches().filter(item => normalizeSearchText(item) !== normalized);
+
+    if (next.length) {
+        localStorage.setItem(RECENT_SEARCH_STORAGE_KEY, JSON.stringify(next));
+    } else {
+        localStorage.removeItem(RECENT_SEARCH_STORAGE_KEY);
+    }
+}
+
+function hideRecentSearches() {
+    const dropdown = document.getElementById("recentSearchDropdown");
+    if (dropdown) dropdown.hidden = true;
+}
+
+function renderRecentSearches() {
+    const dropdown = document.getElementById("recentSearchDropdown");
+    const list = document.getElementById("recentSearchList");
+    const title = document.getElementById("recentSearchTitle");
+    const clearButton = document.getElementById("recentSearchClear");
+    const input = document.getElementById("searchInput");
+
+    if (!dropdown || !list) return;
+
+    const searches = getRecentSearches();
+    if (!searches.length) {
+        dropdown.hidden = true;
+        return;
+    }
+
+    const isKo = currentLanguage === "ko";
+    if (title) title.textContent = isKo ? "최근 검색어" : "最近の検索";
+    if (clearButton) clearButton.textContent = isKo ? "전체 삭제" : "すべて削除";
+
+    list.innerHTML = "";
+
+    searches.forEach(keyword => {
+        const item = document.createElement("div");
+        item.className = "recent-search-item";
+
+        const keywordButton = document.createElement("button");
+        keywordButton.type = "button";
+        keywordButton.className = "recent-search-keyword";
+        keywordButton.innerHTML = `
+            <i class="ti ti-history"></i>
+            <span></span>
+        `;
+        keywordButton.querySelector("span").textContent = keyword;
+        keywordButton.addEventListener("mousedown", event => event.preventDefault());
+        keywordButton.addEventListener("click", () => {
+            if (input) input.value = keyword;
+            hideRecentSearches();
+            searchPlace();
+        });
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "recent-search-delete";
+        deleteButton.innerHTML = '<i class="ti ti-x"></i>';
+        deleteButton.title = currentLanguage === "ja"
+            ? "この検索語を削除"
+            : currentLanguage === "en"
+                ? "Delete this search"
+                : "이 검색어 삭제";
+        deleteButton.setAttribute("aria-label", deleteButton.title);
+        deleteButton.addEventListener("mousedown", event => event.preventDefault());
+        deleteButton.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteRecentSearch(keyword);
+            renderRecentSearches();
+            input?.focus();
+        });
+
+        item.appendChild(keywordButton);
+        item.appendChild(deleteButton);
+        list.appendChild(item);
+    });
+
+    dropdown.hidden = false;
+}
+
+
 async function searchPlace() {
     const input = document.getElementById("searchInput");
     const rawKeyword = String(input?.value || "").trim();
@@ -5411,6 +5524,8 @@ async function searchPlace() {
                     googleMap?.setZoom(16);
                 }
 
+                saveRecentSearch(rawKeyword);
+                hideRecentSearches();
                 showToast("toast.searchFound");
                 return;
             }
@@ -5447,6 +5562,8 @@ async function searchPlace() {
     filterCategory(place.type);
     googleMap?.panTo(place.position);
     googleMap?.setZoom(16);
+    saveRecentSearch(rawKeyword);
+    hideRecentSearches();
     showToast("toast.searchFound");
 }
 
@@ -5458,17 +5575,33 @@ document
     );
 
 
-document
-    .getElementById("searchInput")
-    ?.addEventListener(
-        "keydown",
-        event => {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                searchPlace();
-            }
-        }
-    );
+const searchInputElement = document.getElementById("searchInput");
+
+searchInputElement?.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        hideRecentSearches();
+        searchPlace();
+    } else if (event.key === "Escape") {
+        hideRecentSearches();
+    }
+});
+
+searchInputElement?.addEventListener("focus", renderRecentSearches);
+searchInputElement?.addEventListener("click", renderRecentSearches);
+
+document.getElementById("recentSearchClear")?.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    clearRecentSearches();
+});
+
+document.addEventListener("pointerdown", event => {
+    const searchArea = document.getElementById("searchArea");
+    if (searchArea && !searchArea.contains(event.target)) {
+        hideRecentSearches();
+    }
+});
 
 /* =====================================================
    추천 UI / 추천 검색 강제 초기화
