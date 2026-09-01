@@ -50,14 +50,26 @@ public class ReviewService {
     @Transactional(readOnly = true)
     public List<ReviewResponse> getReviews(long placeId) {
         findPlaceById(placeId);
+        return toReviewResponses(
+                reviewRepository.findByPlace_PlaceIdOrderByCreatedAtDesc(placeId)
+        );
+    }
 
-        List<Review> reviews = reviewRepository.findByPlace_PlaceIdOrderByCreatedAtDesc(placeId);
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> getMyReviews(String token) {
+        User user = findUserByToken(token);
+        return toReviewResponses(
+                reviewRepository.findByUser_IdOrderByCreatedAtDesc(user.getId())
+        );
+    }
+
+    private List<ReviewResponse> toReviewResponses(List<Review> reviews) {
         if (reviews.isEmpty()) {
             return List.of();
         }
 
         List<Long> reviewIds = reviews.stream().map(Review::getId).toList();
-        Map<Long, List<String>> photoUrlsByReviewId = reviewPhotoRepository.findByReviewIdIn(reviewIds).stream()
+        Map<Long, List<String>> photoUrlsByReviewId = reviewPhotoRepository.findByReview_IdIn(reviewIds).stream()
                 .collect(Collectors.groupingBy(
                         photo -> photo.getReview().getId(),
                         Collectors.mapping(ReviewPhoto::getPhotoUrl, Collectors.toList())
@@ -67,7 +79,7 @@ public class ReviewService {
                 .map(review -> review.getUser().getId())
                 .distinct()
                 .toList();
-        Map<Long, String> userPhotoUrlByUserId = userPhotoRepository.findByUserIdIn(userIds).stream()
+        Map<Long, String> userPhotoUrlByUserId = userPhotoRepository.findByUser_IdIn(userIds).stream()
                 .collect(Collectors.toMap(
                         photo -> photo.getUser().getId(),
                         UserPhoto::getPhotoUrl,
@@ -139,11 +151,11 @@ public class ReviewService {
         User user = findUserByToken(token);
         Review review = findOwnedReview(placeId, reviewId, user);
 
-        List<ReviewPhoto> photos = reviewPhotoRepository.findByReviewId(review.getId());
+        List<ReviewPhoto> photos = reviewPhotoRepository.findByReview_Id(review.getId());
         for (ReviewPhoto photo : photos) {
             imageStorageService.deleteByStoredPath(photo.getPhotoUrl());
         }
-        reviewPhotoRepository.deleteByReviewId(review.getId());
+        reviewPhotoRepository.deleteByReview_Id(review.getId());
         reviewLikeRepository.deleteByReviewId(review.getId());
         Place place = review.getPlace();
         applyReviewPreference(user, place, -PlacePreferenceService.reviewWeightFromRating(review.getRating()));

@@ -808,11 +808,14 @@ async function resolveStoredReviewPlaceName(placeId, place) {
 
 function renderMyReviewCards(container, cards) {
     if (!cards?.length) {
-        container.innerHTML =
-            `<div class="mypage-empty">
-                <i class="ti ti-message-circle"></i>
-                <p>${translate("empty.reviews")}</p>
-            </div>`;
+        container.innerHTML = `
+            <div class="empty-state">
+                <div>
+                    <i class="ti ti-message-circle"></i>
+                    <p>${translate("empty.reviews")}</p>
+                </div>
+            </div>
+        `;
         return;
     }
 
@@ -829,8 +832,14 @@ async function renderMyReviews(
             : 0
 ) {
     if (!getAuthToken()) {
-        container.innerHTML =
-            `<div class="mypage-empty"><p>${translate("empty.reviews")}</p></div>`;
+        container.innerHTML = `
+            <div class="empty-state">
+                <div>
+                    <i class="ti ti-message-circle"></i>
+                    <p>${translate("empty.reviews")}</p>
+                </div>
+            </div>
+        `;
         return;
     }
 
@@ -861,18 +870,35 @@ async function renderMyReviews(
         return;
     }
 
-    container.innerHTML =
-        `<div class="mypage-empty"><p>리뷰를 불러오는 중...</p></div>`;
+    container.innerHTML = `
+        <div class="empty-state">
+            <div>
+                <i class="ti ti-loader-2"></i>
+                <p>
+                    ${
+                        currentLanguage === "ko"
+                            ? "리뷰를 불러오는 중..."
+                            : currentLanguage === "ja"
+                                ? "レビューを読み込み中..."
+                                : "Loading reviews..."
+                    }
+                </p>
+            </div>
+        </div>
+    `;
 
     try {
-        const placeIds =
-            typeof getKnownBackendPlaceIds === "function"
-                ? getKnownBackendPlaceIds()
-                : [];
+        const reviewList = await apiRequest("/user/me/reviews", {
+            auth: true
+        });
 
-        if (!placeIds.length) {
-            if (isStale()) return;
+        const myReviews = Array.isArray(reviewList)
+            ? reviewList
+            : [];
 
+        if (isStale()) return;
+
+        if (!myReviews.length) {
             myReviewsPageCache = {
                 userKey: getMyReviewsUserCacheKey(),
                 loadedAt: Date.now(),
@@ -883,96 +909,53 @@ async function renderMyReviews(
             return;
         }
 
-        const myUserId =
-            Number(
-                typeof getCurrentUserId === "function"
-                    ? getCurrentUserId()
-                    : currentUser?.id
-            );
+        const uniquePlaceIds = [
+            ...new Set(
+                myReviews
+                    .map(review => Number(review.placeId))
+                    .filter(placeId => Number.isFinite(placeId) && placeId > 0)
+            )
+        ];
 
-        const myNickname =
-            String(currentUser?.nickname || "").trim();
-
-        /*
-            기존에는 placeId 하나씩 순차 await 해서 느렸습니다.
-            이제 모든 장소의 Place + Review 요청을 병렬 실행합니다.
-            getBackendPlaceById 자체도 메모리 캐시를 우선 사용합니다.
-        */
-        const groups =
+        const placeById = new Map(
             await Promise.all(
-                placeIds.map(async placeId => {
-                    const [
-                        place,
-                        placeReviews
-                    ] = await Promise.all([
-                        getBackendPlaceById(placeId)
-                            .catch(() => null),
+                uniquePlaceIds.map(async placeId => {
+                    const place = await getBackendPlaceById(placeId)
+                        .catch(() => null);
 
-                        apiRequest(
-                            `/place/${placeId}/review`
-                        ).catch(() => [])
-                    ]);
-
-                    return {
-                        placeId,
-                        place,
-                        placeReviews:
-                            Array.isArray(placeReviews)
-                                ? placeReviews
-                                : []
-                    };
+                    return [placeId, place];
                 })
-            );
+            )
+        );
 
         if (isStale()) return;
 
-        const groupsWithNames =
-            await Promise.all(
-                groups.map(async group => ({
-                    ...group,
+        const reviewsWithMeta = await Promise.all(
+            myReviews.map(async review => {
+                const placeId = Number(review.placeId);
+                const place = placeById.get(placeId) || null;
+
+                return {
+                    review,
+                    placeId,
+                    place,
                     resolvedPlaceName:
                         await resolveStoredReviewPlaceName(
-                            group.placeId,
-                            group.place
+                            placeId,
+                            place
                         )
-                }))
-            );
+                };
+            })
+        );
 
         if (isStale()) return;
 
-        const cards = [];
-
-        groupsWithNames.forEach(({
+        const cards = reviewsWithMeta.map(({
+            review,
             placeId,
             place,
-            placeReviews,
             resolvedPlaceName
-        }) => {
-            const mine =
-                placeReviews
-                    .filter(review => {
-                        const reviewUserId =
-                            Number(review.userId);
-
-                        if (
-                            Number.isFinite(myUserId) &&
-                            myUserId > 0 &&
-                            Number.isFinite(reviewUserId) &&
-                            reviewUserId > 0
-                        ) {
-                            return reviewUserId === myUserId;
-                        }
-
-                        return Boolean(
-                            myNickname &&
-                            String(
-                                review.userNickname || ""
-                            ).trim() === myNickname
-                        );
-                    });
-
-            mine.forEach(review => {
-                cards.push(`
+        }) => `
                     <article
                         class="mypage-card"
                         data-my-review-id="${review.reviewId}"
@@ -1084,8 +1067,6 @@ async function renderMyReviews(
                         </div>
                     </article>
                 `);
-            });
-        });
 
         if (isStale()) return;
 
@@ -1107,10 +1088,14 @@ async function renderMyReviews(
             error
         );
 
-        container.innerHTML =
-            `<div class="mypage-empty">
-                <p>${escapeGroupHtml(error.message)}</p>
-            </div>`;
+        container.innerHTML = `
+            <div class="empty-state">
+                <div>
+                    <i class="ti ti-alert-circle"></i>
+                    <p>${escapeGroupHtml(error.message)}</p>
+                </div>
+            </div>
+        `;
     }
 }
 
