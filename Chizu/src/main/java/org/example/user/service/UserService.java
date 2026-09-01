@@ -94,7 +94,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public MyPageResponse mypage(String token) {
         User user = findUserByToken(token);
-        String photoUrl = userPhotoRepository.findByUserId(user.getId())
+        String photoUrl = userPhotoRepository.findByUser_Id(user.getId())
                 .map(UserPhoto::getPhotoUrl)
                 .orElse(null);
         return new MyPageResponse(
@@ -179,7 +179,7 @@ public class UserService {
     private void updateProfilePhoto(User user, MultipartFile photo) {
         String storedPath = imageStorageService.store(photo, ImageFolder.USER);
 
-        userPhotoRepository.findByUserId(user.getId())
+        userPhotoRepository.findByUser_Id(user.getId())
                 .ifPresentOrElse(
                         userPhoto -> {
                             imageStorageService.deleteByStoredPath(userPhoto.getPhotoUrl());
@@ -200,7 +200,7 @@ public class UserService {
     @Transactional
     public void deleteUser(String token) {
         User user = findUserByToken(token);
-        userPhotoRepository.findByUserId(user.getId()).ifPresent(userPhoto -> {
+        userPhotoRepository.findByUser_Id(user.getId()).ifPresent(userPhoto -> {
             imageStorageService.deleteByStoredPath(userPhoto.getPhotoUrl());
             userPhotoRepository.delete(userPhoto);
         });

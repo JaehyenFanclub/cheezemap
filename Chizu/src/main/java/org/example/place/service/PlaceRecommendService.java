@@ -134,7 +134,7 @@ public class PlaceRecommendService {
         }
 
         return placePreferenceRepository
-                .findByPlaceIdsAndAgeGroupAndGender(placeIds, ageGroup, gender)
+                .findByPlace_PlaceIdInAndAgeGroupAndGender(placeIds, ageGroup, gender)
                 .stream()
                 .collect(Collectors.toMap(
                         preference -> preference.getPlace().getPlaceId(),
@@ -155,7 +155,7 @@ public class PlaceRecommendService {
         }
 
         return placePreferenceRepository
-                .findByPlaceIdsAndGender(placeIds, gender)
+                .findByPlace_PlaceIdInAndGender(placeIds, gender)
                 .stream()
                 .collect(Collectors.toMap(
                         preference -> preference.getPlace().getPlaceId(),

@@ -10,6 +10,7 @@ window.CheeseApi = {
         login: body => apiRequest("/user/auth/login", { method: "POST", body }),
         logout: () => apiRequest("/user/auth/logout", { method: "POST", auth: true }),
         mypage: () => apiRequest("/user/mypage", { auth: true }),
+        myReviews: () => apiRequest("/user/me/reviews", { auth: true }),
         edit: formData => apiRequest("/user/mypage/edit", { method: "PUT", auth: true, body: formData }),
         delete: () => apiRequest("/user/delete", { method: "DELETE", auth: true }),
         oauthProviders: () => apiRequest("/user/auth/oauth2/providers")
@@ -84,24 +85,7 @@ window.CheeseApi = {
         ),
         delete: (placeId, reviewId) => apiRequest(`/place/${placeId}/review/${reviewId}/delete`, { method: "DELETE", auth: true }),
         like: (placeId, reviewId) => apiRequest(`/place/${placeId}/review/${reviewId}/like`, { method: "POST", auth: true }),
-        my: async () => {
-            const ids = typeof getKnownBackendPlaceIds === "function" ? getKnownBackendPlaceIds() : [];
-            const groups = await Promise.all(ids.map(async placeId => {
-                try {
-                    // 존재하지 않는 오래된 placeId에는 리뷰 요청을 보내지 않습니다.
-                    const place = await getBackendPlaceById(placeId)
-                        .catch(() => null);
-
-                    if (!place) {
-                        return [];
-                    }
-
-                    const rows = await apiRequest(`/place/${placeId}/review`);
-                    return (Array.isArray(rows) ? rows : []).filter(review => Number(review.userId) === Number(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id));
-                } catch { return []; }
-            }));
-            return groups.flat();
-        }
+        my: () => apiRequest("/user/me/reviews", { auth: true })
     },
 
     group: {
