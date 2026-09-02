@@ -2150,21 +2150,12 @@ async function findRoute() {
             origin: normalizeGoogleRouteLocation(origin),
             destination: normalizeGoogleRouteLocation(destination),
             travelMode,
+            // mr.eum수정부분
             fields: [
                 "path",
                 "viewport",
-                "routeLabels",
                 "legs",
-                "legs.steps",
-                "legs.steps.distanceMeters",
-                "legs.steps.staticDurationMillis",
-                "legs.steps.startLocation",
-                "legs.steps.endLocation",
-                "legs.steps.instructions",
-                "legs.steps.maneuver",
-                "legs.steps.localizedValues",
-                "legs.steps.travelMode",
-                "travelAdvisory",
+                "routeLabels",
                 "localizedValues"
             ]
         };
@@ -2191,12 +2182,17 @@ async function findRoute() {
             return;
         }
 
+        // mr.eum수정부분
+        // 이동수단에 따라 대안 경로 옵션을 적용합니다.
         const request = {
             ...baseRequest,
-            computeAlternativeRoutes: true
+            ...(travelMode === "DRIVING"
+                ? { computeAlternativeRoutes: true }
+                : {})
         };
-        const { routes = [] } = await RouteClass.computeRoutes(request);
 
+        const { routes = [] } =
+            await RouteClass.computeRoutes(request);
         if (!routes.length) {
             throw new Error("ZERO_RESULTS");
         }
@@ -2228,6 +2224,9 @@ async function findRoute() {
             error?.code ||
             error?.message ||
             "UNKNOWN_ERROR";
+            // mr.eum수정부분
+            console.error("도보/자동차 Routes API 오류:", error);
+            console.error("Routes API 오류 상세:", error?.message, error?.code);
 
         const status =
             String(rawStatus).length > 120

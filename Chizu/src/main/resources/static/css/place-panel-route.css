@@ -992,11 +992,18 @@ body.dark .place-side-panel.route-focus .place-image {
 .place-review-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .place-review-user { color: var(--gray-800); font-size: 12px; font-weight: 800; }
 .place-review-rating { color: #e5a900; font-size: 11px; letter-spacing: 1px; }
-.place-review-content { margin: 7px 0 5px; color: var(--gray-700); font-size: 12px; line-height: 1.55; }
+.place-review-content { margin: 7px 0 5px; color: var(--gray-700); font-size: 12px; line-height: 1.55; white-space: normal; overflow: visible; 
+    text-overflow: clip; word-break: break-word; overflow-wrap: anywhere;}
 .place-review-date { color: var(--gray-400); font-size: 10px; }
 .place-empty-text { margin: 6px 0; color: var(--gray-500); font-size: 12px; }
 body.dark .place-detail-sections, body.dark .place-detail-section, body.dark .place-review-item { border-color: var(--gray-200); }
 body.dark .place-review-summary { background: #fffaf0; }
+/* .place-review-content-full {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+} */
 
 /* MR.EUM 수정부분: Google Maps 스타일 리뷰 작성 UI */
 .review-compose-modal { width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow-y: auto; }
@@ -1006,7 +1013,7 @@ body.dark .place-review-summary { background: #fffaf0; }
 .review-star-picker { display: flex; gap: 4px; }
 .review-star-picker button {
     width: 40px;
-    height: 40px;
+    height: 40px; 
     padding: 0;
     border: 0;
     background: transparent;
@@ -2387,9 +2394,17 @@ body.dark .place-side-panel .driving-route-option .simple-route-time > i {
    z-index: 999999
    -> 장소 상세 패널이나 다른 모달보다 위에 표시
 */
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 사진 전체보기 화면
+   사진 크기가 달라도 항상 화면 정중앙
+===================================================== */
+
 .review-photo-viewer {
+
     position: fixed;
     inset: 0;
+
     z-index: 999999;
 
     display: flex;
@@ -2399,220 +2414,526 @@ body.dark .place-side-panel .driving-route-option .simple-route-time > i {
     width: 100%;
     height: 100%;
 
-    background: rgba(0, 0, 0, 0.92);
+    background: rgba(0,0,0,0.92);
+
 }
 
-/*
-   JS에서 hidden=true가 되면
-   사진 전체보기 화면을 숨깁니다.
-*/
 .review-photo-viewer[hidden] {
+
     display: none;
+
 }
 
 
-/* =====================================================
-   배경
-===================================================== */
+/* 배경 */
 
 .review-photo-viewer-backdrop {
+
     position: absolute;
     inset: 0;
 
     width: 100%;
     height: 100%;
 
-    background: transparent;
 }
 
 
 /* =====================================================
-   사진 + 버튼을 담는 영역
+   중앙 정렬 영역
+
+   모든 사진은 이 영역 중앙에 들어간다.
 ===================================================== */
 
 .review-photo-viewer-content {
+
     position: relative;
+
     z-index: 2;
+
+    width: 100%;
+    height: 100%;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    width: min(90vw, 1000px);
-    height: min(82vh, 800px);
+    padding: 70px 90px;
+
+    box-sizing: border-box;
+
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   사진 + 작성자 + 리뷰를 하나의 중앙 영역으로 묶습니다.
+===================================================== */
+
+.review-photo-viewer-main {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    width: min(80vw, 900px);
+    max-width: 900px;
+
+    max-height: calc(100vh - 120px);
+
 }
 
 
 /* =====================================================
-   확대된 사진
-
-   ★ 핵심 수정부분
-
-   큰 원본 사진이 화면을 지나치게 차지하지 않도록
-   최대 크기를 제한합니다.
-
-   작은 사진은 억지로 확대하지 않습니다.
+   MR.EUM 수정부분
+   사진 아래 작성자 / 리뷰 영역
 ===================================================== */
 
-.review-photo-viewer-image {
+.review-photo-viewer-info {
+
+    display: flex;
+
+    align-items: center;
+
+    width: 100%;
+
+    margin-top: 16px;
+
+    gap: 12px;
+
+    box-sizing: border-box;
+
+}
+
+
+/* 작성자 프로필 + 닉네임 */
+
+.review-photo-viewer-profile {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    flex-shrink: 0;
+
+}
+
+
+/* 프로필 */
+
+.review-photo-viewer-avatar {
+
+    width: 36px;
+    height: 36px;
+
+    flex-shrink: 0;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    border-radius: 50%;
+
+    background: rgba(255,255,255,0.15);
+
+    color: #ffffff;
+
+}
+
+
+/* 실제 프로필 사진 */
+
+.review-photo-viewer-avatar img {
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
     display: block;
+
+}
+
+
+/* 닉네임 */
+
+.review-photo-viewer-nickname {
+
+    max-width: 140px;
+
+    overflow: hidden;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+
+    color: #ffffff;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 내용은 한 줄만 표시하고
+   길면 ... 처리합니다.
+===================================================== */
+
+.review-photo-viewer-text {
+
+    flex: 1;
+
+    min-width: 0;
+
+    margin: 0;
+
+    overflow: hidden;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+
+    color: rgba(255,255,255,0.9);
+
+    font-size: 14px;
+
+    line-height: 36px;
+
+}
+
+
+/* 사진 중앙 기준 박스 */
+
+/* =====================================================
+   MR.EUM 수정부분
+   사진 영역
+
+   사진 자체 크기가 작으면 자연스럽게 작게 나오고
+   큰 사진은 최대 영역까지만 커집니다.
+===================================================== */
+
+.review-photo-viewer-image-wrap {
+
+    width: min(80vw, 900px);
+
+    height: min(70vh, 700px);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    box-sizing: border-box;
+
+}
+
+
+/* 실제 사진 */
+
+.review-photo-viewer-image {
+
+    display: block;
+
+    max-width: 100%;
+    max-height: 100%;
 
     width: auto;
     height: auto;
 
-    max-width: min(78vw, 900px);
-    max-height: 70vh;
-
     object-fit: contain;
 
-    margin: 0 auto;
+    margin: auto;
 
     border: none;
+
     outline: none;
 
     user-select: none;
+
 }
 
 
-/* =====================================================
-   닫기 버튼
-===================================================== */
+/* 닫기 */
 
 .review-photo-viewer-close {
+
     position: absolute;
 
-    top: 10px;
-    right: 10px;
+    top: 20px;
+    right: 24px;
 
     z-index: 5;
 
     width: 44px;
     height: 44px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 0;
-
     border: none;
+
     background: transparent;
 
-    color: #fff;
+    color: white;
 
     font-size: 36px;
-    line-height: 1;
 
     cursor: pointer;
+
 }
 
 
-/* =====================================================
-   이전 / 다음 버튼
-===================================================== */
+/* 이전 다음 */
 
 .review-photo-viewer-prev,
 .review-photo-viewer-next {
+
     position: absolute;
 
     top: 50%;
-    z-index: 5;
 
     transform: translateY(-50%);
 
-    width: 44px;
-    height: 44px;
+    z-index: 5;
+
+    width: 46px;
+    height: 46px;
 
     display: flex;
     align-items: center;
     justify-content: center;
-
-    padding: 0;
 
     border: none;
     border-radius: 50%;
 
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0,0,0,.45);
 
-    color: #fff;
+    color: white;
 
     font-size: 38px;
-    line-height: 1;
 
     cursor: pointer;
+
 }
 
 .review-photo-viewer-prev {
-    left: 12px;
+
+    left: 18px;
+
 }
 
 .review-photo-viewer-next {
-    right: 12px;
+
+    right: 18px;
+
 }
 
 
-/* =====================================================
-   마우스를 올렸을 때
-===================================================== */
+/* Hover */
 
-.review-photo-viewer-close:hover,
 .review-photo-viewer-prev:hover,
 .review-photo-viewer-next:hover {
-    background: rgba(0, 0, 0, 0.7);
+
+    background: rgba(0,0,0,.7);
+
+}
+
+
+/* 스크롤 방지 */
+
+body.review-photo-viewer-open {
+
+    overflow: hidden;
+
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 더보기 버튼
+===================================================== */
+.place-review-more-button {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* 마우스를 올렸을 때 */
+.place-review-more-button:hover {
+    text-decoration: underline;
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 본문 더보기 기능
+===================================================== */
+
+/*
+   리뷰 내용과 더보기 버튼을 하나의 영역으로 묶습니다.
+*/
+.place-review-content-wrap {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 
 /* =====================================================
-   사진 보는 동안 뒤쪽 페이지 스크롤 방지
+   MR.EUM 수정부분
+   리뷰 본문 한 줄 / 전체 보기
 ===================================================== */
 
-body.review-photo-viewer-open {
+/*
+   처음에는 한 줄만 표시합니다.
+   review-content-collapsed 클래스가 있을 때만
+   한 줄로 제한됩니다.
+*/
+.place-review-content.review-content-collapsed {
+    display: -webkit-box;
+
+    width: 100%;
+    margin: 0;
+
+    /* 한 줄만 표시 */
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+
+    /* 한 줄을 넘어가면 숨김 */
     overflow: hidden;
+
+    /* 긴 글은 ... 표시 */
+    text-overflow: ellipsis;
+
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
+
+/*
+   더보기 후 전체 리뷰 내용
+*/
+.place-review-content:not(.review-content-collapsed) {
+    display: block;
+
+    width: 100%;
+    margin: 0;
+
+    overflow: visible;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+
+
+/*
+   MR.EUM 핵심 수정
+
+   더보기 버튼이 반드시 보이도록 합니다.
+*/
+.place-review-more-button {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+
+/*
+   마우스를 올렸을 때
+*/
+.place-review-more-button:hover {
+    opacity: 0.7;
+}
 
 /* =====================================================
    모바일
 ===================================================== */
 
-@media (max-width: 768px) {
+@media(max-width:768px){
 
-    .review-photo-viewer-content {
-        width: 100vw;
-        height: 80vh;
+    .review-photo-viewer-content{
+
+        padding:60px 55px;
+
     }
 
-    .review-photo-viewer-image {
-        max-width: 88vw;
-        max-height: 65vh;
+    .review-photo-viewer-image-wrap{
+
+        width:88vw;
+        height:68vh;
+
     }
 
-    .review-photo-viewer-prev,
-    .review-photo-viewer-next {
-        width: 40px;
-        height: 40px;
+    .review-photo-viewer-prev{
 
-        font-size: 32px;
+        left:8px;
+
     }
 
-    .review-photo-viewer-prev {
-        left: 8px;
+    .review-photo-viewer-next{
+
+        right:8px;
+
     }
 
-    .review-photo-viewer-next {
-        right: 8px;
+    .review-photo-viewer-close{
+
+        top:12px;
+        right:12px;
+
     }
 
-    .review-photo-viewer-close {
-        top: 8px;
-        right: 8px;
-
-        font-size: 32px;
-    }
 }
 
-.review-photo-viewer-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+
+
+/* mr.eum수정부분
+   장소 상세 리뷰 수정 사진 UI
+*/
+.place-review-edit-photo-section { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--gray-100); }
+.place-review-edit-photo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.place-review-edit-photo-header strong { color: var(--gray-700); font-size: 11px; }
+.place-review-edit-photo-header span { color: var(--gray-500); font-size: 10px; }
+.place-review-edit-photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; min-height: 64px; }
+.place-review-edit-photo { position: relative; aspect-ratio: 1; overflow: hidden; border: 1px solid var(--cheese-border); border-radius: 9px; background: var(--cheese-cream); }
+.place-review-edit-photo img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.place-review-edit-photo-delete { position: absolute; top: 4px; right: 4px; width: 21px; height: 21px; border: 0; border-radius: 50%; background: rgba(30,27,20,.72); color: #fff; font-size: 14px; line-height: 1; cursor: pointer; }
+.place-review-edit-photo-empty { display: grid; place-items: center; grid-column: 1 / -1; min-height: 62px; border: 1px dashed var(--cheese-border); border-radius: 9px; color: var(--gray-500); font-size: 10px; }
+.place-review-edit-add-photo { margin-top: 7px; padding: 6px 9px; border: 1px solid var(--cheese-border); border-radius: 8px; background: var(--cheese-cream); color: var(--brown-dark); font-size: 10px; font-weight: 800; cursor: pointer; }
+body.dark .place-review-edit-photo-section { border-color: #3d3932; }
+body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
+
+/* mr.eum수정부분
+   기존 리뷰 사진 표시 배지
+*/
+.place-review-edit-photo-badge {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    padding: 2px 5px;
+    border-radius: 5px;
+    background: rgba(30,27,20,.72);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 800;
 }

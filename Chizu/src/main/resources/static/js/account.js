@@ -664,16 +664,6 @@ async function renderMyReviewsLegacy(container, renderRequestId = myPageRenderRe
                         <button type="button" class="mypage-place-view-button" data-open-review-place="${review.placeId}">${currentLanguage === "ko" ? "장소 보기" : "場所を見る"}</button>
                         <button type="button" data-my-review-edit-toggle aria-expanded="false">${currentLanguage === "ko" ? "수정" : "編集"}</button>
                     </div>
-                    <div class="place-review-edit mypage-review-edit" data-my-review-edit hidden>
-                        <div class="place-review-edit-stars">
-                            ${[1,2,3,4,5].map(rating => `<button type="button" data-my-review-rating="${rating}" class="${rating <= Number(review.rating) ? "selected" : ""}">${rating <= Number(review.rating) ? "★" : "☆"}</button>`).join("")}
-                        </div>
-                        <textarea data-my-review-content maxlength="500">${escapeGroupHtml(review.content || "")}</textarea>
-                        <div class="place-review-edit-actions">
-                            <button type="button" class="place-review-edit-cancel" data-my-review-cancel>${currentLanguage === "ko" ? "취소" : "キャンセル"}</button>
-                            <button type="button" class="place-review-edit-save" data-my-review-save>${currentLanguage === "ko" ? "수정 완료" : "編集完了"}</button>
-                        </div>
-                    </div>
                 </article>`;
         }));
 
@@ -1022,70 +1012,8 @@ async function renderMyLikes(
 
 
 
-// 마이페이지 리뷰 수정 - 실제 review API 사용
-document.getElementById("mypageContent")?.addEventListener("click", async event => {
-    const card = event.target.closest("[data-my-review-id]");
-    if (!card) return;
-
-    const reviewId = Number(card.dataset.myReviewId);
-    const placeId = Number(card.dataset.myReviewPlaceId);
-    const editArea = card.querySelector("[data-my-review-edit]");
-    const toggleButton = card.querySelector("[data-my-review-edit-toggle]");
-
-    if (event.target.closest("[data-my-review-edit-toggle]")) {
-        const opening = !!editArea?.hidden;
-        if (editArea) editArea.hidden = !opening;
-        if (toggleButton) toggleButton.setAttribute("aria-expanded", String(opening));
-        return;
-    }
-
-    const ratingButton = event.target.closest("[data-my-review-rating]");
-    if (ratingButton) {
-        const rating = Number(ratingButton.dataset.myReviewRating);
-        card.dataset.editRating = String(rating);
-        card.querySelectorAll("[data-my-review-rating]").forEach(button => {
-            const value = Number(button.dataset.myReviewRating);
-            button.textContent = value <= rating ? "★" : "☆";
-            button.classList.toggle("selected", value <= rating);
-        });
-        return;
-    }
-
-    if (event.target.closest("[data-my-review-cancel]")) {
-        if (editArea) editArea.hidden = true;
-        if (toggleButton) toggleButton.setAttribute("aria-expanded", "false");
-        return;
-    }
-
-    if (event.target.closest("[data-my-review-save]")) {
-        const textarea = card.querySelector("[data-my-review-content]");
-        const value = textarea?.value.trim() || "";
-        if (!value) {
-            showToast(currentLanguage === "ko" ? "리뷰 내용을 입력해주세요." : "レビュー内容を入力してください。");
-            return;
-        }
-
-        const form = new FormData();
-        form.append("rating", card.dataset.editRating || "5");
-        form.append("content", value);
-
-        try {
-            await apiRequest(`/place/${placeId}/review/${reviewId}/edit`, {
-                method: "PUT",
-                auth: true,
-                body: form
-            });
-            reviewCacheByPlace?.delete?.(String(placeId));
-            await renderMyReviews(document.getElementById("mypageContent"));
-            if (selectedPlaceKey && activeReviewBackendPlace?.placeId === placeId) {
-                await renderPlaceReviews(selectedPlaceKey);
-            }
-            showToast(currentLanguage === "ko" ? "리뷰가 수정되었습니다." : "レビューを編集しました。");
-        } catch (error) {
-            showToast(error.message);
-        }
-    }
-});
+// mr.eum수정부분
+// 마이페이지 리뷰 수정은 reviews.js의 프로젝트 전용 수정 모달에서 처리합니다.
 
 document
     .querySelectorAll(

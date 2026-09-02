@@ -10,6 +10,17 @@ document
 
 const reviewCacheByPlace = new Map();
 let activeReviewBackendPlace = null;
+/* =====================================================
+   MR.EUM 수정부분
+   마이페이지에서 수정할 리뷰 원본 데이터를 보관합니다.
+
+   기존에는 카드 HTML 안에서만 리뷰 데이터를 가지고 있어서
+   수정 버튼을 눌렀을 때 별도의 수정 모달로 전달하기 어려웠습니다.
+
+   reviewId를 기준으로 실제 리뷰 객체를 보관합니다.
+===================================================== */
+
+const myPageReviewStore = new Map();
 
 function getReviewStars(rating) {
     const score = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
@@ -150,7 +161,32 @@ let reviewPhotoViewerUrls = [];
 // =====================================================
 let reviewPhotoViewerReview = null;
 
+/* =====================================================
+   MR.EUM 최종 수정부분
+   리뷰 사진 전체보기 모달
+
+   기존 문제
+   1. 사진 영역이 중복되어 있었음
+   2. 작성자 정보 영역이 중복되어 있었음
+   3. data-review-photo-viewer-avatar가 2개 존재
+   4. querySelector()가 잘못된 avatar 요소를 가져올 수 있었음
+   5. 사진 크기에 따라 전체보기 위치가 달라질 수 있었음
+
+   수정
+   - 사진 영역 1개
+   - 작성자 정보 1개
+   - 프로필 1개
+   - 닉네임 1개
+   - 리뷰 내용 1개
+   - 사진 중앙 정렬용 image-wrap 유지
+===================================================== */
+
 function ensureReviewPhotoViewer() {
+
+    /*
+        이미 사진 전체보기 모달이 만들어져 있다면
+        다시 만들지 않습니다.
+    */
     if (document.getElementById("reviewPhotoViewer")) {
         return;
     }
@@ -162,12 +198,18 @@ function ensureReviewPhotoViewer() {
     viewer.hidden = true;
 
     viewer.innerHTML = `
+
+        <!-- 어두운 배경 -->
         <div
             class="review-photo-viewer-backdrop"
             data-review-photo-viewer-close
         ></div>
 
+
+        <!-- 전체 사진보기 영역 -->
         <div class="review-photo-viewer-content">
+
+            <!-- 닫기 버튼 -->
             <button
                 type="button"
                 class="review-photo-viewer-close"
@@ -177,6 +219,8 @@ function ensureReviewPhotoViewer() {
                 ×
             </button>
 
+
+            <!-- 이전 사진 -->
             <button
                 type="button"
                 class="review-photo-viewer-prev"
@@ -186,12 +230,77 @@ function ensureReviewPhotoViewer() {
                 ‹
             </button>
 
-            <img
-                class="review-photo-viewer-image"
-                data-review-photo-viewer-image
-                alt="리뷰 사진"
-            >
 
+            <!-- =================================================
+                MR.EUM 수정부분
+
+                사진 + 작성자 정보를 하나의 영역으로 묶습니다.
+
+                이렇게 해야 사진 크기가 달라도
+                전체 영역의 기준점이 변하지 않습니다.
+            ================================================= -->
+            <div class="review-photo-viewer-main">
+
+
+                <!-- 사진 중앙 영역 -->
+                <div class="review-photo-viewer-image-wrap">
+
+                    <img
+                        class="review-photo-viewer-image"
+                        data-review-photo-viewer-image
+                        alt="리뷰 사진"
+                    >
+
+                </div>
+
+
+                <!-- =================================================
+                    MR.EUM 수정부분
+
+                    사진 바로 아래
+
+                    [프로필] [작성자]
+                    리뷰 내용 한 줄
+
+                    이렇게 표시합니다.
+                ================================================= -->
+                <div class="review-photo-viewer-info">
+
+
+                    <!-- 작성자 -->
+                    <div class="review-photo-viewer-profile">
+
+                        <span
+                            class="review-photo-viewer-avatar"
+                            data-review-photo-viewer-avatar
+                        >
+                            <i class="ti ti-user"></i>
+                        </span>
+
+
+                        <span
+                            class="review-photo-viewer-nickname"
+                            data-review-photo-viewer-nickname
+                        >
+                            CHEESE USER
+                        </span>
+
+                    </div>
+
+
+                    <!-- 리뷰 내용 -->
+                    <p
+                        class="review-photo-viewer-text"
+                        data-review-photo-viewer-text
+                    ></p>
+
+
+                </div>
+
+            </div>
+
+
+            <!-- 다음 사진 -->
             <button
                 type="button"
                 class="review-photo-viewer-next"
@@ -201,69 +310,54 @@ function ensureReviewPhotoViewer() {
                 ›
             </button>
 
-
-            <!-- =================================================
-                MR.EUM 수정부분
-
-                사진 아래에 작성자 + 리뷰 내용을 표시한다.
-
-                기존에는 사진만 있었기 때문에
-                사진을 크게 봤을 때 어떤 사용자가 작성한 리뷰인지
-                확인할 수 없었다.
-
-                프로필 / 닉네임 / 리뷰 내용을
-                사진 아래에 표시하도록 추가한다.
-            ================================================= -->
-            <div class="review-photo-viewer-info">
-
-                <div class="review-photo-viewer-user">
-
-                    <span
-                        class="review-photo-viewer-avatar"
-                        data-review-photo-viewer-avatar
-                    >
-                        <i class="ti ti-user"></i>
-                    </span>
-
-                    <span
-                        class="review-photo-viewer-nickname"
-                        data-review-photo-viewer-nickname
-                    >
-                        CHEESE USER
-                    </span>
-
-                </div>
-
-                <p
-                    class="review-photo-viewer-text"
-                    data-review-photo-viewer-text
-                ></p>
-
-            </div>
-
-            // <div
-            //     class="review-photo-viewer-count"
-            //     data-review-photo-viewer-count
-            // ></div>
         </div>
     `;
 
     document.body.appendChild(viewer);
 
+
+    /*
+        모달 내부 버튼 이벤트
+
+        배경 / X
+        → 모달 닫기
+
+        ←
+        → 이전 사진
+
+        →
+        → 다음 사진
+    */
     viewer.addEventListener("click", event => {
-        if (event.target.closest("[data-review-photo-viewer-close]")) {
+
+        if (
+            event.target.closest(
+                "[data-review-photo-viewer-close]"
+            )
+        ) {
             closeReviewPhotoViewer();
             return;
         }
 
-        if (event.target.closest("[data-review-photo-viewer-prev]")) {
+
+        if (
+            event.target.closest(
+                "[data-review-photo-viewer-prev]"
+            )
+        ) {
             moveReviewPhotoViewer(-1);
             return;
         }
 
-        if (event.target.closest("[data-review-photo-viewer-next]")) {
+
+        if (
+            event.target.closest(
+                "[data-review-photo-viewer-next]"
+            )
+        ) {
             moveReviewPhotoViewer(1);
         }
+
     });
 }
 
@@ -505,86 +599,179 @@ document.addEventListener("keydown", event => {
    사진 자체를 클릭해도 전체 사진을 볼 수 있도록 합니다.
 ===================================================== */
 
-document
-    .getElementById("placeReviewList")
-    ?.addEventListener("click", event => {
-        const photoItem =
-            event.target.closest(
-                "[data-review-photo-index]"
-            );
+document.addEventListener("click", event => {
 
-        if (!photoItem) {
-            return;
-        }
+    /*
+        클릭한 요소에서
+        data-review-photo-index를 가진 버튼을 찾습니다.
 
-        const photoContainer =
-            photoItem.closest("[data-review-photos]");
+        사진 <img> 자체를 눌러도
+        closest()가 부모 버튼을 찾아줍니다.
+    */
+    const photoItem =
+        event.target.closest(
+            "[data-review-photo-index]"
+        );
 
-        // =====================================================
-        // MR.EUM 수정부분
-        // 사진이 들어있는 리뷰 article을 찾는다.
-        //
-        // 이 article 안에
-        // - 작성자
-        // - 프로필
-        // - 리뷰 내용
-        // 이 모두 들어있다.
-        // =====================================================
-        const reviewItem =
+    /*
+        리뷰 사진 버튼이 아니면
+        이 이벤트에서는 아무것도 하지 않습니다.
+    */
+    if (!photoItem) {
+        return;
+    }
 
-    photoItem.closest(".place-review-item");
 
-        if (!photoContainer) {
-            return;
-        }
+    /*
+        클릭한 사진이 들어있는
+        리뷰 사진 전체 영역을 찾습니다.
+    */
+    const photoContainer =
+        photoItem.closest(
+            "[data-review-photos]"
+        );
 
-        let photoUrls = [];
+    /*
+        사진이 들어있는 리뷰 article을 찾습니다.
 
-        try {
-            photoUrls = JSON.parse(
+        이 안에
+        - 작성자
+        - 프로필
+        - 리뷰 내용
+        이 들어있습니다.
+    */
+    const reviewItem =
+        photoItem.closest(
+            ".place-review-item"
+        );
+
+
+    /*
+        사진 목록을 JSON으로 다시 변환합니다.
+
+        renderReviewPhotos()에서
+
+        data-photo-urls="[...]"
+
+        형태로 저장해둔 값을 가져옵니다.
+    */
+    if (!photoContainer) {
+        console.error(
+            "MR.EUM: 리뷰 사진 컨테이너를 찾을 수 없습니다."
+        );
+
+        return;
+    }
+
+
+    let photoUrls = [];
+
+    try {
+
+        photoUrls =
+            JSON.parse(
                 photoContainer.dataset.photoUrls || "[]"
             );
-        } catch (error) {
-            console.error(
-                "리뷰 사진 목록 변환 실패:",
-                error
-            );
-        }
 
-        const index =
-            Number(
-                photoItem.dataset.reviewPhotoIndex
-            ) || 0;
+    } catch (error) {
 
-        // =====================================================
-        // MR.EUM 수정부분
-        // 클릭한 사진의 리뷰 정보까지 같이 전달
-        // =====================================================
-        openReviewPhotoViewer(
-            photoUrls,
-            index,
-            reviewItem
-                ? {
-                    userNickname:
-                        reviewItem.querySelector(
-                            ".place-review-user"
-                        )?.textContent?.trim(),
-
-                    content:
-                        reviewItem.querySelector(
-                            ".place-review-content"
-                        )?.textContent?.trim(),
-
-                    userPhotoUrl:
-                        reviewItem
-                            .querySelector(
-                                ".place-review-avatar img"
-                            )?.src || ""
-                }
-                : null
+        console.error(
+            "MR.EUM: 리뷰 사진 목록 변환 실패:",
+            error
         );
-    });
 
+        return;
+    }
+
+
+    /*
+        사진이 실제로 존재하는지 확인합니다.
+    */
+    if (
+        !Array.isArray(photoUrls) ||
+        photoUrls.length === 0
+    ) {
+
+        console.error(
+            "MR.EUM: 리뷰 사진 URL이 없습니다.",
+            photoUrls
+        );
+
+        return;
+    }
+
+
+    /*
+        몇 번째 사진을 클릭했는지 가져옵니다.
+
+        예:
+        첫 번째 사진 -> 0
+        두 번째 사진 -> 1
+        세 번째 사진 -> 2
+        네 번째 사진 -> 3
+    */
+    const index =
+        Number(
+            photoItem.dataset.reviewPhotoIndex
+        ) || 0;
+
+
+    /*
+        =================================================
+        MR.EUM 수정부분
+
+        리뷰 작성자 / 내용 / 프로필 정보를
+        사진 전체보기 모달에 전달합니다.
+        =================================================
+    */
+    const review =
+        reviewItem
+            ? {
+
+                userNickname:
+                    reviewItem
+                        .querySelector(
+                            ".place-review-user"
+                        )
+                        ?.textContent
+                        ?.trim() ||
+                    "CHEESE USER",
+
+
+                content:
+                    reviewItem
+                        .querySelector(
+                            ".place-review-content"
+                        )
+                        ?.textContent
+                        ?.trim() ||
+                    "",
+
+
+                userPhotoUrl:
+                    reviewItem
+                        .querySelector(
+                            ".place-review-avatar img"
+                        )
+                        ?.src ||
+                    ""
+
+            }
+            : null;
+
+
+    /*
+        =================================================
+        실제 사진 전체보기 실행
+        =================================================
+    */
+    openReviewPhotoViewer(
+        photoUrls,
+        index,
+        review
+    );
+
+});
 /* =====================================================
    리뷰 작성 / 프로필 관련
 ===================================================== */
@@ -693,6 +880,132 @@ async function loadReviewsForActivePlace(
     );
 
     return reviews || [];
+}
+
+
+// =====================================================
+// MR.EUM 수정부분
+// 리뷰 내용은 처음에 한 줄만 표시하고
+// "더보기"를 누르면 전체 내용을 표시
+// =====================================================
+
+function renderReviewContent(content) {
+
+    const fullContent = String(content || "");
+
+    // 한 줄로 표시했을 때 넘치는지 판단하기 위한
+    // 전체 내용은 data 속성에 보관합니다.
+    return `
+        <div
+            class="place-review-content-wrap"
+            data-review-content-wrap
+        >
+
+            <!--
+                실제 리뷰 내용
+                처음에는 CSS로 한 줄만 표시합니다.
+                더보기를 누르면 같은 요소가 전체 내용으로 펼쳐집니다.
+            -->
+            <p
+                class="place-review-content review-content-collapsed"
+                data-review-content
+            >
+                ${escapeGroupHtml(fullContent)}
+            </p>
+
+            <!--
+                리뷰 전체 내용의 길이를
+                JS에서 확인하기 위한 숨겨진 데이터
+            -->
+            <span
+                class="place-review-content-data"
+                data-review-content-data
+                hidden
+            >${escapeGroupHtml(fullContent)}</span>
+
+            <!--
+                긴 리뷰일 때만 JS에서 표시합니다.
+            -->
+            <button
+                type="button"
+                class="place-review-more-button"
+                data-review-more-button
+                hidden
+            >
+                더보기
+            </button>
+
+        </div>
+    `;
+}
+
+// =====================================================
+// MR.EUM 수정부분
+// 리뷰가 실제로 한 줄을 넘는지 확인
+// 긴 리뷰에만 "더보기" 버튼을 보여줍니다.
+// =====================================================
+
+function updateReviewMoreButtons() {
+
+    const reviewContents =
+        document.querySelectorAll(
+            "[data-review-content-wrap]"
+        );
+
+    reviewContents.forEach(wrap => {
+
+        const content =
+            wrap.querySelector("[data-review-content]");
+
+        const moreButton =
+            wrap.querySelector("[data-review-more-button]");
+
+        if (!content || !moreButton) {
+            return;
+        }
+
+        /*
+         * 실제 내용의 높이가 한 줄 높이보다 크면
+         * 여러 줄짜리 리뷰라고 판단합니다.
+         */
+        const isLongReview =
+            content.scrollHeight > content.clientHeight + 1;
+
+        moreButton.hidden = !isLongReview;
+    });
+}
+
+updateReviewMoreButtons();
+
+// mr.eum수정부분
+function renderPlaceReviewEditPhotos(item) {
+    // mr.eum수정부분
+    // 서버에서 받은 기존 사진은 그대로 보여주고, 새로 선택한 사진만 삭제할 수 있게 합니다.
+    const container = item.querySelector('[data-place-review-edit-photos]');
+    const count = item.querySelector('[data-place-review-edit-photo-count]');
+    if (!container) return;
+
+    let existingUrls = [];
+    try {
+        existingUrls = JSON.parse(item.dataset.reviewPhotoUrls || '[]').filter(Boolean);
+    } catch {}
+
+    const newUrls = placeReviewEditNewPhotos.map(file => URL.createObjectURL(file));
+    const total = existingUrls.length + newUrls.length;
+    if (count) count.textContent = `${total}장`;
+
+    container.innerHTML = total
+        ? existingUrls.map((url, index) => `
+            <div class="place-review-edit-photo">
+                <img src="${escapeGroupHtml(url)}" alt="기존 리뷰 사진">
+                <span class="place-review-edit-photo-badge">기존</span>
+            </div>`).join('') +
+          newUrls.map((url, index) => `
+            <div class="place-review-edit-photo">
+                <img src="${escapeGroupHtml(url)}" alt="새 리뷰 사진">
+                <button type="button" class="place-review-edit-photo-delete" data-place-review-edit-photo-delete="${index}" aria-label="사진 삭제">×</button>
+            </div>`).join('')
+        : '<span class="place-review-edit-photo-empty">사진을 추가해보세요.</span>';
 }
 
 async function renderPlaceReviews(placeKey) {
@@ -821,6 +1134,7 @@ async function renderPlaceReviews(placeKey) {
                     class="place-review-item"
                     data-review-id="${review.reviewId}"
                     data-review-rating="${review.rating}"
+                    data-review-photo-urls="${escapeGroupHtml(JSON.stringify(Array.isArray(review.photoUrls) ? review.photoUrls : []))}"
                 >
                     <div class="place-review-top">
                         <div class="place-review-user-wrap">
@@ -878,9 +1192,12 @@ async function renderPlaceReviews(placeKey) {
                         class="place-review-view"
                         data-review-view
                     >
-                        <p class="place-review-content">
-                            ${escapeGroupHtml(review.content)}
-                        </p>
+                        <!-- MR.EUM 수정부분 -->
+                        <!--
+                            리뷰 내용이 100글자를 넘으면
+                            일부만 보여주고 "..." + "더보기"를 표시합니다.
+                        -->
+                        ${renderReviewContent(review.content)}
 
                         ${renderReviewPhotos(review.photoUrls)}
 
@@ -888,7 +1205,6 @@ async function renderPlaceReviews(placeKey) {
                             ${formatReviewDate(review.createdAt)}
                         </span>
                     </div>
-
                     ${
                         mine
                             ? `
@@ -913,6 +1229,19 @@ async function renderPlaceReviews(placeKey) {
                                         data-review-edit-content
                                         maxlength="500"
                                     >${escapeGroupHtml(review.content)}</textarea>
+
+                                    <!-- mr.eum수정부분 -->
+                                    <div class="place-review-edit-photo-section">
+                                        <div class="place-review-edit-photo-header">
+                                            <strong>사진</strong>
+                                            <span data-place-review-edit-photo-count>0장</span>
+                                        </div>
+                                        <div class="place-review-edit-photos" data-place-review-edit-photos></div>
+                                        <input type="file" accept="image/*" multiple hidden data-place-review-edit-photo-input>
+                                        <button type="button" class="place-review-edit-add-photo" data-place-review-edit-add-photo>
+                                            <i class="ti ti-camera-plus"></i> 사진 추가
+                                        </button>
+                                    </div>
 
                                     <div class="place-review-edit-actions">
                                         <button
@@ -1441,11 +1770,128 @@ document
     ?.addEventListener(
         "click",
         async event => {
+
             /*
                 사진 클릭은 위에서 처리합니다.
                 리뷰 수정/삭제/좋아요 로직은
                 아래에서 계속 처리합니다.
             */
+
+
+            /* =====================================================
+               MR.EUM 수정부분
+               리뷰 더보기 / 접기
+
+               리뷰 본문 하나만 사용합니다.
+
+               처음 상태
+               → 한 줄만 표시
+
+               "더보기" 클릭
+               → 같은 리뷰 본문이 그대로 전체 내용으로 펼쳐짐
+
+               "접기" 클릭
+               → 다시 한 줄로 접힘
+
+               ※ 별도의 전체 리뷰 영역을 사용하지 않습니다.
+            ===================================================== */
+
+            const moreButton =
+                event.target.closest(
+                    "[data-review-more-button]"
+                );
+
+            if (moreButton) {
+
+                /*
+                    현재 클릭한 더보기 버튼이 속한
+                    리뷰 내용 영역을 찾습니다.
+                */
+                const contentWrap =
+                    moreButton.closest(
+                        "[data-review-content-wrap]"
+                    );
+
+                if (!contentWrap) {
+                    return;
+                }
+
+                /*
+                    실제 리뷰 본문입니다.
+
+                    더보기 전과 후에
+                    똑같은 이 요소를 사용합니다.
+                */
+                const content =
+                    contentWrap.querySelector(
+                        "[data-review-content]"
+                    );
+
+                if (!content) {
+                    return;
+                }
+
+                /*
+                    현재 리뷰가 접혀 있는지 확인합니다.
+                */
+                const isCollapsed =
+                    content.classList.contains(
+                        "review-content-collapsed"
+                    );
+
+
+                /* =================================================
+                   더보기
+                ================================================= */
+
+                if (isCollapsed) {
+
+                    /*
+                        한 줄 제한을 제거합니다.
+
+                        따라서 같은 리뷰 내용이
+                        원래 있던 자리에서 그대로
+                        여러 줄로 펼쳐집니다.
+                    */
+                    content.classList.remove(
+                        "review-content-collapsed"
+                    );
+
+                    /*
+                        버튼 글자를 접기로 변경
+                    */
+                    moreButton.textContent = "접기";
+
+                }
+
+
+                /* =================================================
+                   접기
+                ================================================= */
+
+                else {
+
+                    /*
+                        다시 한 줄로 제한합니다.
+                    */
+                    content.classList.add(
+                        "review-content-collapsed"
+                    );
+
+                    /*
+                        버튼 글자를 더보기로 변경
+                    */
+                    moreButton.textContent = "더보기";
+                }
+
+                return;
+            }
+
+
+            /* =====================================================
+               여기부터 기존 리뷰 수정 / 삭제 / 좋아요 기능
+               기존 기능은 건드리지 않습니다.
+            ===================================================== */
 
             const item =
                 event.target.closest(
@@ -1464,11 +1910,17 @@ document
                     item.dataset.reviewId
                 );
 
+
+            /* =====================================================
+               리뷰 수정 버튼
+            ===================================================== */
+
             if (
                 event.target.closest(
                     "[data-review-edit-toggle]"
                 )
             ) {
+
                 const edit =
                     item.querySelector(
                         "[data-review-edit]"
@@ -1491,7 +1943,43 @@ document
                     view.hidden =
                         opening;
                 }
+                // mr.eum수정부분
+                // 장소 리뷰 수정창을 열 때 기존 사진을 즉시 표시합니다.
+                if (opening && edit) {
+                    placeReviewEditNewPhotos = [];
+                    renderPlaceReviewEditPhotos(item);
+                }
 
+                return;
+            }
+
+            // mr.eum수정부분
+            // 장소 상세 리뷰 수정 사진 추가/삭제
+            if (event.target.closest('[data-place-review-edit-add-photo]')) {
+                item.querySelector('[data-place-review-edit-photo-input]')?.click();
+                return;
+            }
+
+            if (event.target.closest('[data-place-review-edit-photo-delete]')) {
+                const index = Number(event.target.closest('[data-place-review-edit-photo-delete]').dataset.placeReviewEditPhotoDelete);
+                if (Number.isInteger(index)) {
+                    placeReviewEditNewPhotos.splice(index, 1);
+                    renderPlaceReviewEditPhotos(item);
+                }
+                return;
+            }
+
+
+            /* =====================================================
+               별점 수정
+            ===================================================== */
+
+            // mr.eum수정부분
+            if (event.target.matches('[data-place-review-edit-photo-input]')) {
+                const files = Array.from(event.target.files || []);
+                placeReviewEditNewPhotos.push(...files);
+                event.target.value = '';
+                renderPlaceReviewEditPhotos(item);
                 return;
             }
 
@@ -1501,6 +1989,7 @@ document
                 );
 
             if (ratingButton) {
+
                 const rating =
                     Number(
                         ratingButton.dataset
@@ -1515,6 +2004,7 @@ document
                         "[data-edit-rating]"
                     )
                     .forEach(button => {
+
                         const n =
                             Number(
                                 button.dataset
@@ -1535,11 +2025,17 @@ document
                 return;
             }
 
+
+            /* =====================================================
+               리뷰 수정 취소
+            ===================================================== */
+
             if (
                 event.target.closest(
                     "[data-review-edit-cancel]"
                 )
             ) {
+
                 const edit =
                     item.querySelector(
                         "[data-review-edit]"
@@ -1561,11 +2057,17 @@ document
                 return;
             }
 
+
+            /* =====================================================
+               리뷰 수정 저장
+            ===================================================== */
+
             if (
                 event.target.closest(
                     "[data-review-edit-save]"
                 )
             ) {
+
                 const content =
                     item.querySelector(
                         "[data-review-edit-content]"
@@ -1592,7 +2094,13 @@ document
                     content
                 );
 
+                // mr.eum수정부분
+                placeReviewEditNewPhotos.forEach(file => {
+                    form.append("images", file);
+                });
+
                 try {
+
                     await apiRequest(
                         `/place/${activeReviewBackendPlace.placeId}/review/${reviewId}/edit`,
                         {
@@ -1608,6 +2116,8 @@ document
                         )
                     );
 
+                    // mr.eum수정부분
+                    placeReviewEditNewPhotos = [];
                     invalidateMyReviewsPageCache();
 
                     await renderPlaceReviews(
@@ -1617,7 +2127,9 @@ document
                     showToast(
                         "리뷰가 수정되었습니다."
                     );
+
                 } catch (error) {
+
                     showToast(
                         error.message
                     );
@@ -1626,11 +2138,17 @@ document
                 return;
             }
 
+
+            /* =====================================================
+               리뷰 삭제
+            ===================================================== */
+
             if (
                 event.target.closest(
                     "[data-review-delete]"
                 )
             ) {
+
                 if (
                     !window.confirm(
                         "이 리뷰를 삭제할까요?"
@@ -1640,6 +2158,7 @@ document
                 }
 
                 try {
+
                     await apiRequest(
                         `/place/${activeReviewBackendPlace.placeId}/review/${reviewId}/delete`,
                         {
@@ -1665,7 +2184,9 @@ document
                     showToast(
                         "리뷰가 삭제되었습니다."
                     );
+
                 } catch (error) {
+
                     showToast(
                         error.message
                     );
@@ -1674,17 +2195,24 @@ document
                 return;
             }
 
+
+            /* =====================================================
+               리뷰 좋아요
+            ===================================================== */
+
             if (
                 event.target.closest(
                     "[data-review-like]"
                 )
             ) {
+
                 if (!getAuthToken()) {
                     openModal(loginModal);
                     return;
                 }
 
                 try {
+
                     const result =
                         await apiRequest(
                             `/place/${activeReviewBackendPlace.placeId}/review/${reviewId}/like`,
@@ -1710,7 +2238,9 @@ document
                         result?.msg ||
                         "처리되었습니다."
                     );
+
                 } catch (error) {
+
                     showToast(
                         error.message
                     );
@@ -2213,12 +2743,29 @@ async function renderMyReviews(
         }
 
         const cards =
-            reviewsWithMeta.map(({
+    reviewsWithMeta.map(({
+        review,
+        placeId,
+        place,
+        resolvedPlaceName
+    }) => {
+
+        // =====================================================
+        // MR.EUM 수정부분
+        // 마이페이지에서 수정 버튼을 눌렀을 때
+        // 해당 리뷰 데이터를 다시 찾을 수 있도록 저장
+        // =====================================================
+        myPageReviewStore.set(
+            String(review.reviewId),
+            {
                 review,
                 placeId,
                 place,
                 resolvedPlaceName
-            }) => `
+            }
+        );
+
+        return `
                 <article
                     class="mypage-card"
                     data-my-review-id="${review.reviewId}"
@@ -2355,7 +2902,8 @@ async function renderMyReviews(
                         </div>
                     </div>
                 </article>
-            `);
+            `;
+        });
 
         if (isStale()) {
             return;
@@ -2401,6 +2949,831 @@ async function renderMyReviews(
 /* =====================================================
    마이페이지 - 서버 리뷰 수정 / 삭제
 ===================================================== */
+
+/* =====================================================
+   MR.EUM 수정부분
+   마이페이지 리뷰 수정 모달
+
+   기존 카드 내부 수정창을 사용하지 않고
+   화면 중앙에 독립적인 수정 모달을 생성합니다.
+
+   특징
+   ─────────────────────────
+   1. 별점 수정
+   2. 리뷰 내용 수정
+   3. 기존 사진 표시
+   4. 기존 사진 삭제 버튼
+   5. 새 사진 추가
+   6. 취소 / 수정 완료
+===================================================== */
+
+let myPageReviewEditRating = 5;
+
+let myPageReviewEditNewPhotos = [];
+
+let myPageReviewEditDeletePhotoIds = [];
+
+let myPageReviewEditExistingPhotos = [];
+
+// mr.eum수정부분
+let myPageReviewEditTarget = null;
+
+// mr.eum수정부분
+// 장소 상세 리뷰 수정에서 새로 선택한 사진을 보관합니다.
+let placeReviewEditNewPhotos = [];
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   마이페이지 리뷰 수정 모달 HTML 생성
+===================================================== */
+
+function ensureMyPageReviewEditModal() {
+
+    if (
+        document.getElementById(
+            "myPageReviewEditModal"
+        )
+    ) {
+        return;
+    }
+
+    const modal =
+        document.createElement("div");
+
+    modal.id =
+        "myPageReviewEditModal";
+
+    modal.className =
+        "mypage-review-edit-modal";
+
+    modal.hidden = true;
+
+    modal.innerHTML = `
+
+        <div
+            class="mypage-review-edit-backdrop"
+            data-mypage-review-edit-close
+        ></div>
+
+        <section
+            class="mypage-review-edit-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="myPageReviewEditTitle"
+        >
+
+            <!-- 헤더 -->
+            <div class="mypage-review-edit-header">
+
+                <div>
+                    <span
+                        class="mypage-review-edit-label"
+                    >
+                        CHEESE REVIEW
+                    </span>
+
+                    <h2
+                        id="myPageReviewEditTitle"
+                    >
+                        리뷰 수정
+                    </h2>
+
+                    <p
+                        id="myPageReviewEditPlace"
+                        class="mypage-review-edit-place"
+                    ></p>
+                </div>
+
+                <button
+                    type="button"
+                    class="mypage-review-edit-close"
+                    data-mypage-review-edit-close
+                    aria-label="닫기"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <!-- 별점 -->
+            <div class="mypage-review-edit-section">
+
+                <div
+                    class="mypage-review-edit-section-title"
+                >
+                    별점
+                </div>
+
+                <div
+                    id="myPageReviewEditStars"
+                    class="mypage-review-edit-stars"
+                >
+                    ${[1,2,3,4,5].map(
+                        rating => `
+                            <button
+                                type="button"
+                                data-mypage-edit-rating="${rating}"
+                            >
+                                ☆
+                            </button>
+                        `
+                    ).join("")}
+                </div>
+
+            </div>
+
+
+            <!-- 리뷰 내용 -->
+            <div class="mypage-review-edit-section">
+
+                <div
+                    class="mypage-review-edit-section-title"
+                >
+                    리뷰 내용
+                </div>
+
+                <textarea
+                    id="myPageReviewEditContent"
+                    class="mypage-review-edit-textarea"
+                    maxlength="500"
+                    placeholder="리뷰 내용을 입력해주세요."
+                ></textarea>
+
+                <div
+                    id="myPageReviewEditCharacterCount"
+                    class="mypage-review-edit-character-count"
+                >
+                    0 / 500
+                </div>
+
+            </div>
+
+
+            <!-- 사진 -->
+            <div class="mypage-review-edit-section">
+
+                <div
+                    class="mypage-review-edit-photo-header"
+                >
+
+                    <div
+                        class="mypage-review-edit-section-title"
+                    >
+                        사진
+                    </div>
+
+                    <span
+                        id="myPageReviewEditPhotoCount"
+                    >
+                        0장
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="myPageReviewEditPhotos"
+                    class="mypage-review-edit-photos"
+                ></div>
+
+
+                <input
+                    type="file"
+                    id="myPageReviewEditPhotoInput"
+                    accept="image/*"
+                    multiple
+                    hidden
+                >
+
+
+                <button
+                    type="button"
+                    class="mypage-review-edit-add-photo"
+                    id="myPageReviewEditAddPhoto"
+                >
+                    <i class="ti ti-camera-plus"></i>
+                    사진 추가
+                </button>
+
+            </div>
+
+
+            <!-- 하단 버튼 -->
+            <div
+                class="mypage-review-edit-footer"
+            >
+
+                <button
+                    type="button"
+                    class="mypage-review-edit-cancel"
+                    data-mypage-review-edit-close
+                >
+                    취소
+                </button>
+
+                <button
+                    type="button"
+                    class="mypage-review-edit-save"
+                    id="myPageReviewEditSave"
+                >
+                    수정 완료
+                </button>
+
+            </div>
+
+        </section>
+    `;
+
+    document.body.appendChild(modal);
+
+
+    /* =================================================
+       닫기 버튼
+    ================================================= */
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target.closest(
+                    "[data-mypage-review-edit-close]"
+                )
+            ) {
+                closeMyPageReviewEditModal();
+            }
+
+        }
+    );
+
+
+    /* =================================================
+       별점
+    ================================================= */
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    "[data-mypage-edit-rating]"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            myPageReviewEditRating =
+                Number(
+                    button.dataset
+                        .mypageEditRating
+                );
+
+            renderMyPageReviewEditStars();
+        }
+    );
+
+
+    /* =================================================
+       사진 추가 버튼
+    ================================================= */
+
+    document
+        .getElementById(
+            "myPageReviewEditAddPhoto"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                document
+                    .getElementById(
+                        "myPageReviewEditPhotoInput"
+                    )
+                    ?.click();
+
+            }
+        );
+
+
+    /* =================================================
+       사진 파일 선택
+    ================================================= */
+
+    document
+        .getElementById(
+            "myPageReviewEditPhotoInput"
+        )
+        ?.addEventListener(
+            "change",
+            event => {
+
+                const files =
+                    Array.from(
+                        event.target.files || []
+                    );
+
+                if (!files.length) {
+                    return;
+                }
+
+                myPageReviewEditNewPhotos.push(
+                    ...files
+                );
+
+                event.target.value = "";
+
+                renderMyPageReviewEditPhotos();
+
+            }
+        );
+
+
+    /* =================================================
+       사진 삭제
+    ================================================= */
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            const deleteButton =
+                event.target.closest(
+                    "[data-mypage-delete-photo]"
+                );
+
+            if (!deleteButton) {
+                return;
+            }
+
+            const type =
+                deleteButton.dataset
+                    .mypageDeletePhoto;
+
+            const index =
+                Number(
+                    deleteButton.dataset
+                        .photoIndex
+                );
+
+            if (
+                type === "existing"
+            ) {
+
+                const photoId =
+                    Number(
+                        deleteButton.dataset
+                            .photoId
+                    );
+
+                if (Number.isFinite(photoId)) {
+                    myPageReviewEditDeletePhotoIds.push(photoId);
+                    myPageReviewEditExistingPhotos.splice(index, 1);
+                } else {
+                    // mr.eum수정부분
+                    // 현재 ReviewResponse에는 사진 ID가 없어서 기존 사진 삭제를 서버에 전달할 수 없습니다.
+                    showToast("기존 사진 삭제는 현재 지원할 수 없습니다.");
+                }
+
+            } else if (
+                type === "new"
+            ) {
+
+                myPageReviewEditNewPhotos
+                    .splice(index, 1);
+
+            }
+
+            renderMyPageReviewEditPhotos();
+
+        }
+    );
+
+
+    /* =================================================
+       리뷰 내용 글자 수
+    ================================================= */
+
+    document
+        .getElementById(
+            "myPageReviewEditContent"
+        )
+        ?.addEventListener(
+            "input",
+            event => {
+
+                const counter =
+                    document.getElementById(
+                        "myPageReviewEditCharacterCount"
+                    );
+
+                if (counter) {
+
+                    counter.textContent =
+                        `${event.target.value.length} / 500`;
+
+                }
+
+            }
+        );
+
+
+    /* =================================================
+       수정 완료
+    ================================================= */
+
+    document
+        .getElementById(
+            "myPageReviewEditSave"
+        )
+        ?.addEventListener(
+            "click",
+            saveMyPageReviewEdit
+        );
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   수정 모달 열기
+===================================================== */
+
+function openMyPageReviewEditModal(
+    reviewData
+) {
+
+    ensureMyPageReviewEditModal();
+
+    const modal =
+        document.getElementById(
+            "myPageReviewEditModal"
+        );
+
+    if (!modal) {
+        return;
+    }
+
+
+    const review =
+        reviewData.review;
+
+    // mr.eum수정부분
+    myPageReviewEditTarget = reviewData;
+
+    myPageReviewEditRating =
+        Number(review.rating) || 5;
+
+
+    myPageReviewEditNewPhotos =
+        [];
+
+
+    myPageReviewEditDeletePhotoIds =
+        [];
+
+
+    /*
+       서버에서 내려오는 기존 사진 목록
+
+       현재 프로젝트의 리뷰 데이터에서
+       photoUrls를 사용하고 있으므로 우선
+       그것을 기존 사진으로 사용합니다.
+    */
+
+    myPageReviewEditExistingPhotos =
+        Array.isArray(review.photoUrls)
+            ? review.photoUrls
+                .filter(Boolean)
+                .map(url => ({
+                    url,
+                    id: null
+                }))
+            : [];
+
+
+    const placeName =
+        document.getElementById(
+            "myPageReviewEditPlace"
+        );
+
+    if (placeName) {
+
+        placeName.textContent =
+            reviewData.resolvedPlaceName ||
+            `장소 #${reviewData.placeId}`;
+
+    }
+
+
+    const textarea =
+        document.getElementById(
+            "myPageReviewEditContent"
+        );
+
+    if (textarea) {
+
+        textarea.value =
+            review.content || "";
+
+    }
+
+
+    renderMyPageReviewEditStars();
+
+    renderMyPageReviewEditPhotos();
+
+
+    modal.hidden = false;
+
+    document.body.classList.add(
+        "mypage-review-edit-open"
+    );
+
+
+    requestAnimationFrame(
+        () => {
+
+            textarea?.focus();
+
+        }
+    );
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   별점 화면 표시
+===================================================== */
+
+function renderMyPageReviewEditStars() {
+
+    const container =
+        document.getElementById(
+            "myPageReviewEditStars"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container
+        .querySelectorAll(
+            "[data-mypage-edit-rating]"
+        )
+        .forEach(button => {
+
+            const rating =
+                Number(
+                    button.dataset
+                        .mypageEditRating
+                );
+
+            button.textContent =
+                rating <=
+                myPageReviewEditRating
+                    ? "★"
+                    : "☆";
+
+            button.classList.toggle(
+                "selected",
+                rating <=
+                myPageReviewEditRating
+            );
+
+        });
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   수정 모달 사진 표시
+===================================================== */
+
+function renderMyPageReviewEditPhotos() {
+
+    const container =
+        document.getElementById(
+            "myPageReviewEditPhotos"
+        );
+
+    const count =
+        document.getElementById(
+            "myPageReviewEditPhotoCount"
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    const existingCount =
+        myPageReviewEditExistingPhotos.length;
+
+
+    const newCount =
+        myPageReviewEditNewPhotos.length;
+
+
+    const totalCount =
+        existingCount +
+        newCount;
+
+
+    if (count) {
+
+        count.textContent =
+            `${totalCount}장`;
+
+    }
+
+
+    if (!totalCount) {
+
+        container.innerHTML = `
+            <div
+                class="mypage-review-edit-photo-empty"
+            >
+                <i class="ti ti-photo"></i>
+                <span>
+                    사진을 추가해보세요.
+                </span>
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML = `
+
+        ${
+            myPageReviewEditExistingPhotos
+                .map(
+                    (photo, index) => `
+                        <div
+                            class="mypage-review-edit-photo"
+                        >
+
+                            <img
+                                src="${escapeGroupHtml(photo.url)}"
+                                alt="기존 리뷰 사진"
+                            >
+
+                            <button
+                                type="button"
+                                class="mypage-review-edit-photo-delete"
+                                data-mypage-delete-photo="existing"
+                                data-photo-index="${index}"
+                                ${
+                                    photo.id
+                                        ? `data-photo-id="${photo.id}"`
+                                        : ""
+                                }
+                                aria-label="사진 삭제"
+                            >
+                                ×
+                            </button>
+
+                        </div>
+                    `
+                )
+                .join("")
+        }
+
+        ${
+            myPageReviewEditNewPhotos
+                .map(
+                    (file, index) => {
+
+                        const url =
+                            URL.createObjectURL(
+                                file
+                            );
+
+                        return `
+                            <div
+                                class="mypage-review-edit-photo"
+                            >
+
+                                <img
+                                    src="${url}"
+                                    alt="새 리뷰 사진"
+                                >
+
+                                <button
+                                    type="button"
+                                    class="mypage-review-edit-photo-delete"
+                                    data-mypage-delete-photo="new"
+                                    data-photo-index="${index}"
+                                    aria-label="사진 삭제"
+                                >
+                                    ×
+                                </button>
+
+                            </div>
+                        `;
+
+                    }
+                )
+                .join("")
+        }
+
+    `;
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   수정 모달 닫기
+===================================================== */
+
+function closeMyPageReviewEditModal() {
+
+    const modal =
+        document.getElementById(
+            "myPageReviewEditModal"
+        );
+
+    if (!modal) {
+        return;
+    }
+
+    modal.hidden = true;
+
+    document.body.classList.remove(
+        "mypage-review-edit-open"
+    );
+
+    myPageReviewEditNewPhotos = [];
+
+    myPageReviewEditDeletePhotoIds = [];
+
+    myPageReviewEditExistingPhotos = [];
+
+    myPageReviewEditRating = 5;
+
+    // mr.eum수정부분
+    myPageReviewEditTarget = null;
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   실제 리뷰 수정 요청
+===================================================== */
+
+async function saveMyPageReviewEdit() {
+    // mr.eum수정부분
+    // 마이페이지 리뷰 수정 모달의 실제 저장 처리
+    const target = myPageReviewEditTarget;
+    const contentElement = document.getElementById("myPageReviewEditContent");
+
+    if (!target || !contentElement) {
+        showToast("리뷰 정보를 불러오지 못했습니다.");
+        return;
+    }
+
+    const content = contentElement.value.trim();
+    if (!content) {
+        showToast("리뷰 내용을 입력해주세요.");
+        return;
+    }
+
+    const form = new FormData();
+    form.append("rating", String(myPageReviewEditRating));
+    form.append("content", content);
+
+    // mr.eum수정부분
+    myPageReviewEditNewPhotos.forEach(file => {
+        form.append("images", file);
+    });
+
+    try {
+        await apiRequest(
+            `/place/${target.placeId}/review/${target.review.reviewId}/edit`,
+            { method: "PUT", auth: true, body: form }
+        );
+
+        reviewCacheByPlace.delete(String(target.placeId));
+        invalidateMyReviewsPageCache();
+        closeMyPageReviewEditModal();
+
+        const container = document.getElementById("mypageContent");
+        if (container) await renderMyReviews(container);
+
+        if (activeReviewBackendPlace && Number(activeReviewBackendPlace.placeId) === Number(target.placeId)) {
+            await renderPlaceReviews(selectedPlaceKey);
+        }
+
+        showToast("리뷰가 수정되었습니다.");
+    } catch (error) {
+        console.error("마이페이지 리뷰 수정 실패:", error);
+        showToast(error.message || "리뷰 수정에 실패했습니다.");
+    }
+}
 
 document
     .getElementById("mypageContent")
@@ -2467,26 +3840,47 @@ document
                     "[data-my-server-review-edit-area]"
                 );
 
+            /* =====================================================
+            MR.EUM 수정부분
+            마이페이지 리뷰 수정 버튼
+
+            기존 방식
+            ─────────────────────────
+            수정 버튼
+                ↓
+            카드 내부 수정 영역 표시
+
+            변경 방식
+            ─────────────────────────
+            수정 버튼
+                ↓
+            별도의 리뷰 수정 모달 표시
+            ===================================================== */
+
             if (
                 event.target.closest(
                     "[data-my-server-review-edit]"
                 )
             ) {
-                if (view) {
-                    view.hidden = true;
+                const reviewData =
+                    myPageReviewStore.get(
+                        String(reviewId)
+                    );
+
+                if (!reviewData) {
+                    showToast(
+                        "리뷰 정보를 불러오지 못했습니다."
+                    );
+
+                    return;
                 }
 
-                if (editArea) {
-                    editArea.hidden = false;
-                }
-
-                card.dataset.editRating =
-                    card.dataset.myReviewRating ||
-                    "5";
+                openMyPageReviewEditModal(
+                    reviewData
+                );
 
                 return;
             }
-
             const ratingButton =
                 event.target.closest(
                     "[data-my-server-review-rating]"
