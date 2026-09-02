@@ -1524,20 +1524,521 @@ function ensureNearbyRecommendationUi() {
    주변 추천 장소
    - 실제 브라우저 현재 위치 기준 반경 800m
    - 위치 권한 거부/실패 시 도쿄역 기준
-   - Google Places API (New) Nearby Search 사용
-   - 거리 + 평점 + 리뷰 수 + 성별 카테고리 가중치
-   - "성별 구분 없이" 설정 시 성별 가중치 제거
+   - 로그인 사용자: 백엔드 GET /place/recommend 개인화 추천 우선
+   - 개인화 결과 부족/오류: Google Places 주변 인기 장소로 보충
+   - 비로그인 사용자: Google Places Nearby Search로 기본 추천
 ===================================================== */
 
 const RECOMMEND_RADIUS_METERS = 800;
+const RECOMMEND_AUDIENCE_STORAGE_KEY = "cheeseMapRecommendAudienceV1";
 
 const nearbyRecommendationState = {
-    center: null,
-    centerSource: "loading",
     places: [],
+    center: null,
+    centerSource: null,
+    lastLoadedAt: 0,
     loadingPromise: null,
-    lastLoadedAt: 0
+    recommendationSource: "none"
 };
+function getRecommendationAudience() {
+    const saved = String(
+        localStorage.getItem(RECOMMEND_AUDIENCE_STORAGE_KEY) || "personal"
+    ).toLowerCase();
+
+    return ["personal", "male", "female"].includes(saved)
+        ? saved
+        : "personal";
+}
+
+function setRecommendationAudience(audience) {
+    const normalized = ["personal", "male", "female"].includes(audience)
+        ? audience
+        : "personal";
+
+    localStorage.setItem(RECOMMEND_AUDIENCE_STORAGE_KEY, normalized);
+    return normalized;
+}
+
+function getRecommendationNickname() {
+    const nickname = String(
+        currentUser?.nickname ||
+        currentUser?.userNickname ||
+        ""
+    ).trim();
+
+    if (nickname) return nickname;
+
+    return currentLanguage === "ja"
+        ? "自分"
+        : currentLanguage === "en"
+            ? "My"
+            : "내";
+}
+
+function getRecommendationAudienceLabel(audience) {
+    if (audience === "male") {
+        return currentLanguage === "ja"
+            ? "男性カテゴリ"
+            : currentLanguage === "en"
+                ? "Men's categories"
+                : "남성 카테고리";
+    }
+
+    if (audience === "female") {
+        return currentLanguage === "ja"
+            ? "女性カテゴリ"
+            : currentLanguage === "en"
+                ? "Women's categories"
+                : "여성 카테고리";
+    }
+
+    const nickname = getRecommendationNickname();
+
+    if (currentLanguage === "ja") {
+        return nickname === "自分"
+            ? "自分向けカテゴリ"
+            : `${nickname}さんのカテゴリ`;
+    }
+
+    if (currentLanguage === "en") {
+        return nickname === "My"
+            ? "My categories"
+            : `${nickname}'s categories`;
+    }
+
+    return nickname === "내"
+        ? "내 맞춤 카테고리"
+        : `${nickname}님의 카테고리`;
+}
+
+function getRecommendationAudienceDescription(audience) {
+    if (audience === "male") {
+        return currentLanguage === "ja"
+            ? "男性ユーザー全体の利用データを反映"
+            : currentLanguage === "en"
+                ? "Based on activity from male users"
+                : "남성 사용자 전체의 이용 데이터 반영";
+    }
+
+    if (audience === "female") {
+        return currentLanguage === "ja"
+            ? "女性ユーザー全体の利用データを反映"
+            : currentLanguage === "en"
+                ? "Based on activity from female users"
+                : "여성 사용자 전체의 이용 데이터 반영";
+    }
+
+    return currentLanguage === "ja"
+        ? "レビュー · いいね · お気に入りなどを反映"
+        : currentLanguage === "en"
+            ? "Based on reviews, likes, favorites and more"
+            : "리뷰 · 좋아요 · 즐겨찾기 등 내 활동 반영";
+}
+
+function getRecommendationAudienceBadge(audience) {
+    if (audience === "male") {
+        return currentLanguage === "ja"
+            ? "男性全体"
+            : currentLanguage === "en"
+                ? "All men"
+                : "남성 전체";
+    }
+
+    if (audience === "female") {
+        return currentLanguage === "ja"
+            ? "女性全体"
+            : currentLanguage === "en"
+                ? "All women"
+                : "여성 전체";
+    }
+
+    return currentLanguage === "ja"
+        ? "個人向け"
+        : currentLanguage === "en"
+            ? "Personal"
+            : "개인 맞춤";
+}
+
+function getRecommendationAudienceIcon(audience) {
+    if (audience === "male") {
+        return "ti-user";
+    }
+
+    if (audience === "female") {
+        return "ti-user-heart";
+    }
+
+    return "ti-sparkles";
+}
+
+function getRecommendationAudienceMenuTitle() {
+    return currentLanguage === "ja"
+        ? "おすすめ 기준 선택"
+        : currentLanguage === "en"
+            ? "Choose recommendation type"
+            : "추천 기준 선택";
+}
+
+function getRecommendationAudienceMenuSubtitle() {
+    return currentLanguage === "ja"
+        ? "見たい 추천 방식을 선택하면 주변 추천 장소가 다시 정렬됩니다."
+        : currentLanguage === "en"
+            ? "Choose how nearby picks should be tailored."
+            : "보고 싶은 추천 방식을 고르면 주변 추천 장소가 다시 정렬됩니다.";
+}
+
+function getActiveRecommendationMapCategory() {
+    return (
+        document.querySelector(
+            ".category-item.active, .filter-chip.active"
+        )?.dataset.category ||
+        "all"
+    );
+}
+
+function renderRecommendationAudienceControl() {
+    const mode = document.getElementById("recommendMode");
+    if (!mode) return;
+
+    // 비로그인 상태에서는 개인/남성/여성 추천 카테고리 선택 UI를 노출하지 않는다.
+    // 로그인 여부는 백엔드 세션이 아니라 현재 프로젝트에서 사용하는 JWT 토큰으로 판단한다.
+    if (!getAuthToken()) {
+        mode.innerHTML = "";
+        mode.hidden = true;
+        mode.classList.remove("open");
+        return;
+    }
+
+    mode.hidden = false;
+
+    const audience = getRecommendationAudience();
+    const options = ["personal", "male", "female"];
+
+    mode.innerHTML = `
+        <div class="recommend-audience-selector">
+            <button
+                type="button"
+                class="recommend-audience-trigger"
+                id="recommendAudienceTrigger"
+                aria-expanded="false"
+                aria-controls="recommendAudienceMenu"
+            >
+                <i class="ti ${getRecommendationAudienceIcon(audience)}"></i>
+                <span>${escapeGroupHtml(getRecommendationAudienceLabel(audience))}</span>
+                <i class="ti ti-chevron-down recommend-audience-chevron"></i>
+            </button>
+
+            <div
+                class="recommend-audience-menu"
+                id="recommendAudienceMenu"
+                hidden
+            >
+                ${options.map(option => `
+                    <button
+                        type="button"
+                        class="recommend-audience-option ${option === audience ? "active" : ""}"
+                        data-audience="${option}"
+                        data-recommend-audience="${option}"
+                    >
+                        <span class="recommend-audience-option-icon">
+                            <i class="ti ${getRecommendationAudienceIcon(option)}"></i>
+                        </span>
+                        <span class="recommend-audience-option-label">
+                            ${escapeGroupHtml(getRecommendationAudienceLabel(option))}
+                        </span>
+                        <span class="recommend-audience-option-check">
+                            <i class="ti ${option === audience ? "ti-check" : "ti-chevron-right"}"></i>
+                        </span>
+                    </button>
+                `).join("")}
+            </div>
+        </div>
+    `;
+
+    const trigger = mode.querySelector("#recommendAudienceTrigger");
+    const menu = mode.querySelector("#recommendAudienceMenu");
+
+    trigger?.addEventListener("click", event => {
+        event.stopPropagation();
+        const willOpen = Boolean(menu?.hidden);
+        if (menu) menu.hidden = !willOpen;
+        trigger.setAttribute("aria-expanded", String(willOpen));
+        mode.classList.toggle("open", willOpen);
+    });
+
+    mode.querySelectorAll("[data-recommend-audience]").forEach(button => {
+        button.addEventListener("click", async () => {
+            const nextAudience = setRecommendationAudience(
+                button.dataset.recommendAudience
+            );
+
+            if (menu) menu.hidden = true;
+            trigger?.setAttribute("aria-expanded", "false");
+            mode.classList.remove("open");
+
+            nearbyRecommendationState.recommendationSource = "none";
+            nearbyRecommendationState.places = [];
+            nearbyRecommendationState.lastLoadedAt = 0;
+
+            renderRecommendationAudienceControl();
+
+            await renderRecommendedPlaces(
+                getActiveRecommendationMapCategory(),
+                { force: true, audience: nextAudience }
+            );
+        });
+    });
+}
+
+function getRecommendationAudience() {
+    const saved = String(
+        localStorage.getItem(RECOMMEND_AUDIENCE_STORAGE_KEY) || "personal"
+    ).toLowerCase();
+
+    return ["personal", "male", "female"].includes(saved)
+        ? saved
+        : "personal";
+}
+
+function setRecommendationAudience(audience) {
+    const normalized = ["personal", "male", "female"].includes(audience)
+        ? audience
+        : "personal";
+
+    localStorage.setItem(RECOMMEND_AUDIENCE_STORAGE_KEY, normalized);
+    return normalized;
+}
+
+function getRecommendationNickname() {
+    const nickname = String(
+        currentUser?.nickname ||
+        currentUser?.userNickname ||
+        ""
+    ).trim();
+
+    if (nickname) return nickname;
+
+    return currentLanguage === "ja"
+        ? "自分"
+        : currentLanguage === "en"
+            ? "My"
+            : "내";
+}
+
+function getRecommendationAudienceLabel(audience) {
+    if (audience === "male") {
+        return currentLanguage === "ja"
+            ? "男性カテゴリ"
+            : currentLanguage === "en"
+                ? "Men's categories"
+                : "남성 카테고리";
+    }
+
+    if (audience === "female") {
+        return currentLanguage === "ja"
+            ? "女性カテゴリ"
+            : currentLanguage === "en"
+                ? "Women's categories"
+                : "여성 카테고리";
+    }
+
+    const nickname = getRecommendationNickname();
+
+    if (currentLanguage === "ja") {
+        return nickname === "自分"
+            ? "自分向けカテゴリ"
+            : `${nickname}さんのカテゴリ`;
+    }
+
+    if (currentLanguage === "en") {
+        return nickname === "My"
+            ? "My categories"
+            : `${nickname}'s categories`;
+    }
+
+    return nickname === "내"
+        ? "내 맞춤 카테고리"
+        : `${nickname}님의 카테고리`;
+}
+
+function getRecommendationAudienceDescription(audience) {
+    if (audience === "male") {
+        return currentLanguage === "ja"
+            ? "男性ユーザー全体の利用データを反映"
+            : currentLanguage === "en"
+                ? "Based on activity from male users"
+                : "남성 사용자 전체의 이용 데이터 반영";
+    }
+
+    if (audience === "female") {
+        return currentLanguage === "ja"
+            ? "女性ユーザー全体の利用データを反映"
+            : currentLanguage === "en"
+                ? "Based on activity from female users"
+                : "여성 사용자 전체의 이용 데이터 반영";
+    }
+
+    return currentLanguage === "ja"
+        ? "レビュー · いいね · お気に入りなどを反映"
+        : currentLanguage === "en"
+            ? "Based on reviews, likes, favorites and more"
+            : "리뷰 · 좋아요 · 즐겨찾기 등 내 활동 반영";
+}
+
+function getRecommendationAudienceBadge(audience) {
+    if (audience === "male") {
+        return currentLanguage === "ja"
+            ? "男性全体"
+            : currentLanguage === "en"
+                ? "All men"
+                : "남성 전체";
+    }
+
+    if (audience === "female") {
+        return currentLanguage === "ja"
+            ? "女性全体"
+            : currentLanguage === "en"
+                ? "All women"
+                : "여성 전체";
+    }
+
+    return currentLanguage === "ja"
+        ? "個人向け"
+        : currentLanguage === "en"
+            ? "Personal"
+            : "개인 맞춤";
+}
+
+function getRecommendationAudienceIcon(audience) {
+    if (audience === "male") {
+        return "ti-user";
+    }
+
+    if (audience === "female") {
+        return "ti-user-heart";
+    }
+
+    return "ti-sparkles";
+}
+
+function getRecommendationAudienceMenuTitle() {
+    return currentLanguage === "ja"
+        ? "おすすめ 기준 선택"
+        : currentLanguage === "en"
+            ? "Choose recommendation type"
+            : "추천 기준 선택";
+}
+
+function getRecommendationAudienceMenuSubtitle() {
+    return currentLanguage === "ja"
+        ? "見たい 추천 방식을 선택하면 주변 추천 장소가 다시 정렬됩니다."
+        : currentLanguage === "en"
+            ? "Choose how nearby picks should be tailored."
+            : "보고 싶은 추천 방식을 고르면 주변 추천 장소가 다시 정렬됩니다.";
+}
+
+function getActiveRecommendationMapCategory() {
+    return (
+        document.querySelector(
+            ".category-item.active, .filter-chip.active"
+        )?.dataset.category ||
+        "all"
+    );
+}
+
+function renderRecommendationAudienceControl() {
+    const mode = document.getElementById("recommendMode");
+    if (!mode) return;
+
+    // 비로그인 상태에서는 개인/남성/여성 추천 카테고리 선택 UI를 노출하지 않는다.
+    // 로그인 여부는 백엔드 세션이 아니라 현재 프로젝트에서 사용하는 JWT 토큰으로 판단한다.
+    if (!getAuthToken()) {
+        mode.innerHTML = "";
+        mode.hidden = true;
+        mode.classList.remove("open");
+        return;
+    }
+
+    mode.hidden = false;
+
+    const audience = getRecommendationAudience();
+    const options = ["personal", "male", "female"];
+
+    mode.innerHTML = `
+        <div class="recommend-audience-selector">
+            <button
+                type="button"
+                class="recommend-audience-trigger"
+                id="recommendAudienceTrigger"
+                aria-expanded="false"
+                aria-controls="recommendAudienceMenu"
+            >
+                <i class="ti ${getRecommendationAudienceIcon(audience)}"></i>
+                <span>${escapeGroupHtml(getRecommendationAudienceLabel(audience))}</span>
+                <i class="ti ti-chevron-down recommend-audience-chevron"></i>
+            </button>
+
+            <div
+                class="recommend-audience-menu"
+                id="recommendAudienceMenu"
+                hidden
+            >
+                ${options.map(option => `
+                    <button
+                        type="button"
+                        class="recommend-audience-option ${option === audience ? "active" : ""}"
+                        data-audience="${option}"
+                        data-recommend-audience="${option}"
+                    >
+                        <span class="recommend-audience-option-icon">
+                            <i class="ti ${getRecommendationAudienceIcon(option)}"></i>
+                        </span>
+                        <span class="recommend-audience-option-label">
+                            ${escapeGroupHtml(getRecommendationAudienceLabel(option))}
+                        </span>
+                        <span class="recommend-audience-option-check">
+                            <i class="ti ${option === audience ? "ti-check" : "ti-chevron-right"}"></i>
+                        </span>
+                    </button>
+                `).join("")}
+            </div>
+        </div>
+    `;
+
+    const trigger = mode.querySelector("#recommendAudienceTrigger");
+    const menu = mode.querySelector("#recommendAudienceMenu");
+
+    trigger?.addEventListener("click", event => {
+        event.stopPropagation();
+        const willOpen = Boolean(menu?.hidden);
+        if (menu) menu.hidden = !willOpen;
+        trigger.setAttribute("aria-expanded", String(willOpen));
+        mode.classList.toggle("open", willOpen);
+    });
+
+    mode.querySelectorAll("[data-recommend-audience]").forEach(button => {
+        button.addEventListener("click", async () => {
+            const nextAudience = setRecommendationAudience(
+                button.dataset.recommendAudience
+            );
+
+            if (menu) menu.hidden = true;
+            trigger?.setAttribute("aria-expanded", "false");
+            mode.classList.remove("open");
+
+            nearbyRecommendationState.recommendationSource = "none";
+            nearbyRecommendationState.places = [];
+            nearbyRecommendationState.lastLoadedAt = 0;
+
+            renderRecommendationAudienceControl();
+
+            await renderRecommendedPlaces(
+                getActiveRecommendationMapCategory(),
+                { force: true, audience: nextAudience }
+            );
+        });
+    });
+}
 
 function getRecommendationSettings() {
     if (typeof readCheeseSettings === "function") {
@@ -1928,57 +2429,13 @@ function getRecommendationGenderWeight(
     gender,
     useGender
 ) {
-    if (
-        !useGender ||
-        gender === "neutral"
-    ) {
-        return 0;
-    }
-
-    const category =
-        getRecommendationCategory(
-            place
-        );
-
     /*
-        성별은 완전 필터가 아니라 '가산점'으로만 사용합니다.
-        따라서 반대 성별 목록의 카테고리도
-        거리/평점/리뷰가 좋으면 충분히 추천될 수 있습니다.
+        성별 추천은 프론트 하드코딩으로 계산하지 않습니다.
+        남성/여성 선택 시 백엔드 PlacePreference 집계 결과의
+        serverScore / hitCount를 그대로 사용합니다.
+        Google fallback에서는 성별에 대한 추측 가중치를 넣지 않습니다.
     */
-    const maleWeights = {
-        ramen: 18,
-        izakaya: 18,
-        yakiniku: 16,
-        karaoke: 15,
-        nightlife: 13,
-        amusement: 12,
-        restaurant: 8,
-        cafe: 3,
-        culture: 3,
-        shopping: 2,
-        park: 3,
-        dessert: 2
-    };
-
-    const femaleWeights = {
-        cafe: 18,
-        dessert: 17,
-        shopping: 15,
-        karaoke: 14,
-        culture: 13,
-        park: 9,
-        restaurant: 8,
-        ramen: 4,
-        izakaya: 3,
-        nightlife: 2,
-        amusement: 5
-    };
-
-    return (
-        gender === "male"
-            ? maleWeights[category]
-            : femaleWeights[category]
-    ) || 0;
+    return 0;
 }
 
 function getRecommendationScore(
@@ -1987,6 +2444,14 @@ function getRecommendationScore(
     useGender,
     gender
 ) {
+    if (place?.recommendationSource === "backend") {
+        return {
+            score: Number(place.serverScore) || 0,
+            distance: Number(place.serverDistanceMeters) || 0,
+            genderScore: 0
+        };
+    }
+
     const point =
         locationToPlainObject(
             place.location
@@ -1998,24 +2463,12 @@ function getRecommendationScore(
             point
         );
 
-    const rating =
-        Number(
-            place.rating
-        );
-
-    const reviewCount =
-        Number(
-            place.userRatingCount
-        );
-
     /*
-        기본 점수
-        - 거리      42점
-        - 평점      25점
-        - 리뷰 수   15점
-        - 성별 가중 18점
+        Google fallback 추천은 장소 탐색용으로만 사용합니다.
+        Google의 rating / userRatingCount는 치즈맵 추천 점수와 카드에 사용하지 않습니다.
 
-        총점 100점 안팎
+        우리 DB에서 온 추천(recommendationSource === "backend")만
+        서버가 계산한 avgRating / reviewCount / score를 사용합니다.
     */
     const distanceScore =
         Number.isFinite(
@@ -2023,7 +2476,7 @@ function getRecommendationScore(
         )
             ? Math.max(
                 0,
-                42 *
+                100 *
                 (
                     1 -
                     distance /
@@ -2032,50 +2485,10 @@ function getRecommendationScore(
             )
             : 0;
 
-    const ratingScore =
-        Number.isFinite(
-            rating
-        )
-            ? Math.max(
-                0,
-                Math.min(
-                    25,
-                    rating /
-                    5 *
-                    25
-                )
-            )
-            : 0;
-
-    const reviewScore =
-        Number.isFinite(
-            reviewCount
-        ) &&
-        reviewCount > 0
-            ? Math.min(
-                15,
-                Math.log10(
-                    reviewCount + 1
-                ) /
-                4 *
-                15
-            )
-            : 0;
-
-    const genderScore =
-        getRecommendationGenderWeight(
-            place,
-            gender,
-            useGender
-        );
+    const genderScore = 0;
 
     return {
-        score:
-            distanceScore +
-            ratingScore +
-            reviewScore +
-            genderScore,
-
+        score: distanceScore,
         distance,
         genderScore
     };
@@ -2087,33 +2500,33 @@ function getRecommendationModeText(
 ) {
     if (!useGender) {
         return currentLanguage === "ja"
-            ? "距離・評価・レビュー数でおすすめ"
+            ? "周辺の場所を距離順でおすすめ"
             : currentLanguage === "en"
-                ? "Ranked by distance, rating and reviews"
-                : "거리 · 평점 · 리뷰 수 기준";
+                ? "Nearby places ranked by distance"
+                : "주변 장소 · 거리 기준";
     }
 
     if (gender === "male") {
         return currentLanguage === "ja"
-            ? "男性向けカテゴリに加点"
+            ? "男性ユーザーの利用データを反映"
             : currentLanguage === "en"
-                ? "Male preference weighting applied"
-                : "남성 선호 카테고리 가중치 적용";
+                ? "Based on male user activity"
+                : "남성 사용자 이용 데이터 기반";
     }
 
     if (gender === "female") {
         return currentLanguage === "ja"
-            ? "女性向けカテゴリに加点"
+            ? "女性ユーザーの利用データを反映"
             : currentLanguage === "en"
-                ? "Female preference weighting applied"
-                : "여성 선호 카테고리 가중치 적용";
+                ? "Based on female user activity"
+                : "여성 사용자 이용 데이터 기반";
     }
 
     return currentLanguage === "ja"
-        ? "距離・評価・レビュー数でおすすめ"
+        ? "周辺の場所を距離順でおすすめ"
         : currentLanguage === "en"
-            ? "Ranked by distance, rating and reviews"
-            : "거리 · 평점 · 리뷰 수 기준";
+            ? "Nearby places ranked by distance"
+            : "주변 장소 · 거리 기준";
 }
 
 function getRecommendationCenterText() {
@@ -2203,131 +2616,175 @@ function getCurrentPositionForRecommendations() {
     });
 }
 
+async function searchGoogleNearbyRecommendationPlaces() {
+    const {
+        Place,
+        SearchNearbyRankPreference
+    } = await google.maps.importLibrary("places");
+
+    const result = await Place.searchNearby({
+        fields: [
+            "id",
+            "displayName",
+            "formattedAddress",
+            "location",
+            "primaryType",
+            "primaryTypeDisplayName",
+            "businessStatus",
+            "photos"
+        ],
+        locationRestriction: {
+            center: nearbyRecommendationState.center,
+            radius: RECOMMEND_RADIUS_METERS
+        },
+        maxResultCount: 20,
+        rankPreference: SearchNearbyRankPreference.POPULARITY,
+        language:
+            currentLanguage === "ja"
+                ? "ja"
+                : currentLanguage === "en"
+                    ? "en"
+                    : "ko"
+    });
+
+    return (result.places || []).filter(place => {
+        const point = locationToPlainObject(place.location);
+        const distance = calculateDistanceMeters(
+            nearbyRecommendationState.center,
+            point
+        );
+
+        return Boolean(
+            place?.id &&
+            point &&
+            distance <= RECOMMEND_RADIUS_METERS
+        );
+    });
+}
+
 async function loadNearbyRecommendationPlaces(
-    force = false
+    force = false,
+    audience = getRecommendationAudience()
 ) {
-    const now =
-        Date.now();
+    const now = Date.now();
+    const loggedIn = Boolean(getAuthToken());
+    const wantsPersonalBackend = loggedIn && audience === "personal";
+    const wantsGenderBackend = loggedIn && (audience === "male" || audience === "female");
+    const wantsBackend = wantsPersonalBackend || wantsGenderBackend;
+    const expectedRecommendationSource = wantsBackend
+        ? (wantsGenderBackend ? `backend-${audience}` : "backend-personal")
+        : "google";
 
     if (
         !force &&
+        nearbyRecommendationState.recommendationSource === expectedRecommendationSource &&
         nearbyRecommendationState.places.length &&
-        now -
-        nearbyRecommendationState.lastLoadedAt <
-        120000
+        now - nearbyRecommendationState.lastLoadedAt < 120000
     ) {
         return nearbyRecommendationState.places;
     }
 
-    if (
-        !force &&
-        nearbyRecommendationState.loadingPromise
-    ) {
+    if (!force && nearbyRecommendationState.loadingPromise) {
         return nearbyRecommendationState.loadingPromise;
     }
 
-    nearbyRecommendationState.loadingPromise =
-        (async () => {
-            if (
-                !googleMap ||
-                !window.google?.maps
-            ) {
-                return [];
-            }
+    nearbyRecommendationState.loadingPromise = (async () => {
+        if (!googleMap || !window.google?.maps) {
+            return [];
+        }
 
-            const locationResult =
-                await getCurrentPositionForRecommendations();
+        const locationResult = await getCurrentPositionForRecommendations();
+        nearbyRecommendationState.center = locationResult.center;
+        nearbyRecommendationState.centerSource = locationResult.source;
 
-            nearbyRecommendationState.center =
-                locationResult.center;
+        /*
+            추천 기준별 백엔드 API
+            - personal: 현재 로그인 사용자의 개인화 추천
+            - male/female: 전체 남성/여성 사용자의 PlacePreference 집계 추천
 
-            nearbyRecommendationState.centerSource =
-                locationResult.source;
-
-            const {
-                Place,
-                SearchNearbyRankPreference
-            } =
-                await google.maps.importLibrary(
-                    "places"
-                );
-
-            const result =
-                await Place.searchNearby({
-                    fields: [
-                        "id",
-                        "displayName",
-                        "formattedAddress",
-                        "location",
-                        "primaryType",
-                        "primaryTypeDisplayName",
-                        "rating",
-                        "userRatingCount",
-                        "businessStatus",
-                        "photos"
-                    ],
-
-                    locationRestriction: {
-                        center:
-                            nearbyRecommendationState.center,
-
-                        radius:
-                            RECOMMEND_RADIUS_METERS
-                    },
-
-                    maxResultCount:
-                        20,
-
-                    rankPreference:
-                        SearchNearbyRankPreference.POPULARITY,
-
-                    language:
-                        currentLanguage === "ja"
-                            ? "ja"
-                            : currentLanguage === "en"
-                                ? "en"
-                                : "ko"
+            성별 API가 아직 배포되지 않았거나 API가 실패하면
+            프론트에서 임의의 남/여 취향을 하드코딩하지 않고
+            Google 주변 인기 장소만 fallback으로 보여줍니다.
+        */
+        if (wantsBackend) {
+            try {
+                const query = new URLSearchParams({
+                    lat: String(nearbyRecommendationState.center.lat),
+                    lng: String(nearbyRecommendationState.center.lng),
+                    radius: String(RECOMMEND_RADIUS_METERS),
+                    limit: "20"
                 });
 
-            nearbyRecommendationState.places =
-                (result.places || [])
+                let endpoint = `/place/recommend?${query.toString()}`;
+
+                if (wantsGenderBackend) {
+                    query.set(
+                        "gender",
+                        audience === "male" ? "MALE" : "FEMALE"
+                    );
+                    endpoint = `/place/recommend/gender?${query.toString()}`;
+                }
+
+                const rows = await apiRequest(endpoint, {
+                    auth: true
+                });
+
+                nearbyRecommendationState.recommendationSource = expectedRecommendationSource;
+                nearbyRecommendationState.places = (Array.isArray(rows) ? rows : [])
+                    .map(row => ({
+                        id: `backend_${row.placeId}`,
+                        backendPlaceId: Number(row.placeId),
+                        googlePlaceId: row.googlePlaceId || "",
+                        displayName: row.placeName || `장소 #${row.placeId}`,
+                        formattedAddress: row.placeAddress || "",
+                        location: {
+                            lat: Number(row.placeLatitude),
+                            lng: Number(row.placeLongitude)
+                        },
+                        primaryType: row.placeCategory || "other",
+                        primaryTypeDisplayName: row.placeCategory || "",
+                        rating: Number(row.avgRating),
+                        userRatingCount: Number(row.reviewCount),
+                        hitCount: Number(row.hitCount),
+                        serverDistanceMeters: Number(row.distanceMeters),
+                        serverScore: Number(row.score),
+                        recommendationSource: "backend",
+                        recommendationAudience: audience
+                    }))
                     .filter(place => {
-                        const point =
-                            locationToPlainObject(
-                                place.location
-                            );
-
-                        const distance =
-                            calculateDistanceMeters(
-                                nearbyRecommendationState.center,
-                                point
-                            );
-
+                        const point = locationToPlainObject(place.location);
                         return (
-                            place?.id &&
-                            point &&
-                            distance <=
-                            RECOMMEND_RADIUS_METERS
+                            Number.isFinite(place.backendPlaceId) &&
+                            place.backendPlaceId > 0 &&
+                            point
                         );
                     });
 
-            nearbyRecommendationState.lastLoadedAt =
-                Date.now();
-
-            return nearbyRecommendationState.places;
-        })()
-            .catch(error => {
-                console.error(
-                    "주변 추천 장소 검색 실패:",
+                nearbyRecommendationState.lastLoadedAt = Date.now();
+                return nearbyRecommendationState.places;
+            } catch (error) {
+                console.warn(
+                    audience === "personal"
+                        ? "개인화 추천 API 실패 - Google 주변추천으로 전환:"
+                        : `${audience === "male" ? "남성" : "여성"} 사용자 추천 API 실패 - Google 주변추천으로 전환:`,
                     error
                 );
+            }
+        }
 
-                throw error;
-            })
-            .finally(() => {
-                nearbyRecommendationState.loadingPromise =
-                    null;
-            });
+        nearbyRecommendationState.recommendationSource = "google";
+        nearbyRecommendationState.places = await searchGoogleNearbyRecommendationPlaces();
+        nearbyRecommendationState.lastLoadedAt = Date.now();
+
+        return nearbyRecommendationState.places;
+    })()
+        .catch(error => {
+            console.error("주변 추천 장소 검색 실패:", error);
+            throw error;
+        })
+        .finally(() => {
+            nearbyRecommendationState.loadingPromise = null;
+        });
 
     return nearbyRecommendationState.loadingPromise;
 }
@@ -2486,6 +2943,15 @@ async function renderRecommendedPlaces(
     const settings =
         getRecommendationSettings();
 
+    // 비로그인 사용자는 저장된 추천 기준(personal/male/female)을 사용하지 않고
+    // 항상 Google 주변 인기 장소만 표시한다.
+    const loggedIn = Boolean(getAuthToken());
+    const audience = loggedIn
+        ? (options.audience || getRecommendationAudience())
+        : "personal";
+
+    renderRecommendationAudienceControl();
+
     if (
         settings.recommendVisible ===
         false
@@ -2508,8 +2974,13 @@ async function renderRecommendedPlaces(
             await loadNearbyRecommendationPlaces(
                 Boolean(
                     options.force
-                )
+                ),
+                audience
             );
+
+        const usingBackendRecommendation =
+            String(nearbyRecommendationState.recommendationSource || "")
+                .startsWith("backend-");
 
         const basis =
             settings.recommendBasis ||
@@ -2517,14 +2988,21 @@ async function renderRecommendedPlaces(
                 .dataset.recommendBasis ||
             "gender";
 
-        const gender =
+        const profileGender =
             getRecommendationGender();
 
-        const useGender =
-            basis !== "all" &&
-            gender !== "neutral";
+        const selectedGender =
+            audience === "male" || audience === "female"
+                ? audience
+                : profileGender;
 
-        const ranked =
+        /*
+            남/여 추천은 서버 집계 점수로만 처리합니다.
+            Google fallback에는 성별 하드코딩 가중치를 적용하지 않습니다.
+        */
+        const useGender = false;
+
+        let ranked =
             sourcePlaces
                 .filter(place =>
                     doesRecommendationMatchMapCategory(
@@ -2538,7 +3016,7 @@ async function renderRecommendedPlaces(
                         place,
                         nearbyRecommendationState.center,
                         useGender,
-                        gender
+                        selectedGender
                     )
                 }))
                 .sort(
@@ -2551,19 +3029,136 @@ async function renderRecommendedPlaces(
                     5
                 );
 
+        /*
+            개인화 추천이 5개보다 적으면 부족한 자리만 Google 주변 장소로 채웁니다.
+            DB 추천 순서는 그대로 유지하고 Google 결과는 뒤에만 추가합니다.
+            따라서 기존 사용자에게는 개인화가 우선되고,
+            데이터가 적은 신규 사용자는 빈 추천창을 보지 않게 됩니다.
+        */
+        let usedGoogleFallback = false;
+
+        if (usingBackendRecommendation && ranked.length < 5) {
+            try {
+                const googlePlaces = await searchGoogleNearbyRecommendationPlaces();
+
+                const existingBackendIds = new Set(
+                    ranked
+                        .map(item => String(item.place?.googlePlaceId || "").trim())
+                        .filter(Boolean)
+                );
+
+                const existingSignatures = new Set(
+                    ranked.map(item => {
+                        const name = String(item.place?.displayName || "")
+                            .trim()
+                            .toLowerCase();
+                        const address = String(item.place?.formattedAddress || "")
+                            .trim()
+                            .toLowerCase();
+                        return `${name}|${address}`;
+                    })
+                );
+
+                const googleRanked = googlePlaces
+                    .filter(place =>
+                        doesRecommendationMatchMapCategory(
+                            place,
+                            category
+                        )
+                    )
+                    .filter(place => {
+                        const googleId = String(place?.id || "").trim();
+                        if (googleId && existingBackendIds.has(googleId)) {
+                            return false;
+                        }
+
+                        const signature = `${String(place?.displayName || "").trim().toLowerCase()}|${String(place?.formattedAddress || "").trim().toLowerCase()}`;
+                        return !existingSignatures.has(signature);
+                    })
+                    .map(place => ({
+                        place,
+                        ...getRecommendationScore(
+                            place,
+                            nearbyRecommendationState.center,
+                            false,
+                            "neutral"
+                        )
+                    }))
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 5 - ranked.length);
+
+                if (googleRanked.length) {
+                    ranked = [...ranked, ...googleRanked];
+                    usedGoogleFallback = true;
+                }
+            } catch (fallbackError) {
+                console.warn(
+                    "추천 부족분 Google 보충 실패:",
+                    fallbackError
+                );
+            }
+        }
+
         if (context) {
             context.textContent =
                 getRecommendationCenterText();
         }
 
         if (mode) {
-            mode.innerHTML = `
-                <i class="ti ti-sparkles"></i>
+            let recommendationStatus = "";
 
-                <span>
-                    ${getRecommendationModeText(useGender, gender)}
-                </span>
-            `;
+            if (audience === "personal") {
+                if (usingBackendRecommendation) {
+                    recommendationStatus = usedGoogleFallback
+                        ? (
+                            currentLanguage === "ja"
+                                ? "パーソナライズ推薦 + 周辺人気スポットで補完"
+                                : currentLanguage === "en"
+                                    ? "Personalized picks + nearby popular places"
+                                    : "개인화 추천 + 주변 인기 장소 보충"
+                        )
+                        : (
+                            currentLanguage === "ja"
+                                ? "自分の利用データを反映したおすすめ"
+                                : currentLanguage === "en"
+                                    ? "Recommendations based on your activity"
+                                    : "내 활동 데이터를 반영한 맞춤 추천"
+                        );
+                } else {
+                    recommendationStatus = currentLanguage === "ja"
+                        ? "個人データが不足しているため周辺人気スポットを表示"
+                        : currentLanguage === "en"
+                            ? "Showing nearby popular places while personalization is unavailable"
+                            : "개인화 데이터가 부족해 주변 인기 장소로 보충 중";
+                }
+            } else {
+                if (usingBackendRecommendation) {
+                    recommendationStatus = getRecommendationModeText(
+                        true,
+                        selectedGender
+                    );
+                } else {
+                    recommendationStatus = audience === "male"
+                        ? (
+                            currentLanguage === "ja"
+                                ? "男性ユーザーデータを取得できないため周辺人気スポットを表示"
+                                : currentLanguage === "en"
+                                    ? "Showing nearby popular places until male user data is available"
+                                    : "남성 사용자 데이터를 불러오지 못해 주변 인기 장소 표시 중"
+                        )
+                        : (
+                            currentLanguage === "ja"
+                                ? "女性ユーザーデータを取得できないため周辺人気スポットを表示"
+                                : currentLanguage === "en"
+                                    ? "Showing nearby popular places until female user data is available"
+                                    : "여성 사용자 데이터를 불러오지 못해 주변 인기 장소 표시 중"
+                        );
+                }
+            }
+
+            renderRecommendationAudienceControl(
+                recommendationStatus
+            );
         }
 
         if (!ranked.length) {
@@ -2596,15 +3191,46 @@ async function renderRecommendedPlaces(
                                 place.primaryType
                             );
 
+                        const isBackendPlace =
+                            place?.recommendationSource === "backend";
+
+                        /*
+                            추천 카드의 평점/리뷰 수는 치즈맵 DB 값만 표시합니다.
+                            Google fallback 장소에는 Google rating/userRatingCount를 표시하지 않습니다.
+                        */
+                        /*
+                            추천 카드의 평점/리뷰 UI는 항상 보여줍니다.
+
+                            - backend 추천: 치즈맵 DB의 avgRating / reviewCount 사용
+                            - Google fallback: Google 평점/리뷰는 쓰지 않고
+                              치즈맵 DB에 아직 통계가 없다는 의미로 0.0 / 0 표시
+                        */
+                        const backendRating =
+                            isBackendPlace
+                                ? Number(place.rating)
+                                : 0;
+
+                        const backendReviews =
+                            isBackendPlace
+                                ? Number(place.userRatingCount)
+                                : 0;
+
                         const rating =
-                            Number(
-                                place.rating
-                            );
+                            Number.isFinite(backendRating)
+                                ? backendRating
+                                : 0;
 
                         const reviews =
-                            Number(
-                                place.userRatingCount
-                            );
+                            Number.isFinite(backendReviews)
+                                ? Math.max(0, backendReviews)
+                                : 0;
+
+                        const reviewLabel =
+                            currentLanguage === "ja"
+                                ? `レビュー ${reviews.toLocaleString()}件`
+                                : currentLanguage === "en"
+                                    ? `${reviews.toLocaleString()} reviews`
+                                    : `리뷰 ${reviews.toLocaleString()}개`;
 
                         const tailored =
                             useGender &&
@@ -2613,7 +3239,7 @@ async function renderRecommendedPlaces(
                         return `
                             <article
                                 class="mini-place"
-                                data-google-place-id="${place.id}"
+                                ${place.backendPlaceId ? `data-backend-place-id="${place.backendPlaceId}"` : `data-google-place-id="${place.id}"`}
                                 data-lat="${point?.lat ?? ""}"
                                 data-lng="${point?.lng ?? ""}"
                                 tabindex="0"
@@ -2657,23 +3283,14 @@ async function renderRecommendedPlaces(
                                             ${Math.max(0, Math.round(distance))}m
                                         </span>
 
-                                        ${
-                                            Number.isFinite(rating)
-                                                ? `<span>
-                                                        <i class="ti ti-star-filled"></i>
-                                                        ${rating.toFixed(1)}
-                                                   </span>`
-                                                : ""
-                                        }
+                                        <span>
+                                            <i class="ti ti-star-filled"></i>
+                                            ${rating.toFixed(1)}
+                                        </span>
 
-                                        ${
-                                            Number.isFinite(reviews) &&
-                                            reviews > 0
-                                                ? `<span>
-                                                        리뷰 ${reviews.toLocaleString()}
-                                                   </span>`
-                                                : ""
-                                        }
+                                        <span>
+                                            ${reviewLabel}
+                                        </span>
                                     </small>
                                 </div>
 
@@ -2694,9 +3311,11 @@ async function renderRecommendedPlaces(
             .forEach(card => {
                 const openCard =
                     async () => {
-                        const placeId =
-                            card.dataset
-                                .googlePlaceId;
+                        const backendPlaceId =
+                            Number(card.dataset.backendPlaceId);
+
+                        const googlePlaceId =
+                            card.dataset.googlePlaceId || "";
 
                         const lat =
                             Number(
@@ -2708,14 +3327,22 @@ async function renderRecommendedPlaces(
                                 card.dataset.lng
                             );
 
-                        await openGooglePoi(
-                            placeId,
-                            {
-                                lat,
-                                lng
-                            },
-                            card.getAttribute("aria-label") || ""
-                        );
+                        if (
+                            Number.isFinite(backendPlaceId) &&
+                            backendPlaceId > 0 &&
+                            typeof openBackendPlaceById === "function"
+                        ) {
+                            await openBackendPlaceById(backendPlaceId);
+                        } else if (googlePlaceId) {
+                            await openGooglePoi(
+                                googlePlaceId,
+                                {
+                                    lat,
+                                    lng
+                                },
+                                card.getAttribute("aria-label") || ""
+                            );
+                        }
 
                         if (
                             Number.isFinite(lat) &&
@@ -2766,240 +3393,24 @@ async function renderRecommendedPlaces(
 
 
 /* =====================================================
-   MR.EUM 수정부분
    장소 상세 - 메뉴 / 리뷰
-
-   현재는 화면 구현용 Mock 데이터입니다.
-   실제 API 연결 시 이 데이터 부분만 API 응답으로 교체합니다.
+   실제 데이터 렌더링은 reviews.js에서 백엔드 API 기준으로 처리합니다.
 ===================================================== */
 
-// MR.EUM 수정부분: 음식점(type: food)용 메뉴 시연 데이터
-const placeMenuDemoData = {
-    ramen: [
-        {
-            menuName: { ko: "치즈 라멘", ja: "チーズラーメン" },
-            menuValue: "980",
-            menuInfo: {
-                ko: "치즈와 라멘을 함께 즐기는 대표 메뉴",
-                ja: "チーズとラーメンを一緒に楽しめる人気メニュー"
-            },
-            photoUrl: ""
-        },
-        {
-            menuName: { ko: "매운 치즈 라멘", ja: "辛チーズラーメン" },
-            menuValue: "1,080",
-            menuInfo: {
-                ko: "매콤한 육수에 치즈를 더한 메뉴",
-                ja: "ピリ辛スープにチーズを加えたメニュー"
-            },
-            photoUrl: ""
-        },
-        { menuName: { ko: "교자", ja: "餃子" }, menuValue: "450", menuInfo: { ko: "바삭하게 구운 일본식 만두", ja: "香ばしく焼き上げた餃子" }, photoUrl: "" }
-    ],
-    ichiranShibuya: [
-        {
-            menuName: { ko: "천연 돈골 라멘", ja: "天然とんこつラーメン" },
-            menuValue: "980",
-            menuInfo: {
-                ko: "이치란 대표 돈코츠 라멘",
-                ja: "一蘭の代表的な天然とんこつラーメン"
-            },
-            photoUrl: ""
-        },
-        {
-            menuName: { ko: "추가 차슈", ja: "追加チャーシュー" },
-            menuValue: "250",
-            menuInfo: {
-                ko: "라멘에 추가할 수 있는 차슈",
-                ja: "ラーメンに追加できるチャーシュー"
-            },
-            photoUrl: ""
-        }
-    ],
-    tsukijiOuterMarket: [
-        {
-            menuName: { ko: "참치 초밥", ja: "まぐろ寿司" },
-            menuValue: "1,200",
-            menuInfo: {
-                ko: "쓰키지에서 즐기는 대표 해산물 메뉴",
-                ja: "築地で楽しめる人気の海鮮メニュー"
-            },
-            photoUrl: ""
-        },
-        { menuName: { ko: "해산물 덮밥", ja: "海鮮丼" }, menuValue: "1,500", menuInfo: { ko: "신선한 해산물을 올린 덮밥", ja: "新鮮な海鮮をのせた丼" }, photoUrl: "" }
-    ]
-};
-
-// MR.EUM 수정부분: 장소 상세 리뷰는 마이페이지의 내 리뷰만 사용합니다.
-// 실제 백엔드 리뷰 API가 연결되면 이 배열 대신 API 응답을 사용합니다.
-
-// MR.EUM 수정부분: 현재 언어에 맞는 텍스트를 반환합니다.
-function getLocalizedPlaceText(value) {
-    if (value && typeof value === "object") {
-        return value[currentLanguage] || value.ko || value.ja || "";
-    }
-    return value || "";
-}
-
-// MR.EUM 수정부분: 장소별 메뉴 데이터를 가져옵니다.
-function getPlaceMenuData(placeKey) {
-    return placeMenuDemoData[placeKey] || [];
-}
-
-// MR.EUM 수정부분: 마이페이지 등록 장소(cafe, park)의 내 리뷰와 타인 리뷰를 조건 분기하여 반환
-function getPlaceReviewData(placeKey) {
-    const allowedPlaces = ["cafe", "park"];
-    if (!allowedPlaces.includes(placeKey)) return []; // 2곳을 제외한 모든 곳은 리뷰 차단
-    
-    return mockReviews
-        .filter(review => review.placeKey === placeKey)
-        .map(review => ({
-            ...review,
-            // 객체에 적힌 작성자가 '엄용민'이거나 isMine이 true인 것만 진짜 내 리뷰로 인정하네
-            isMine: review.isMine === true || review.userName === "엄용민"
-        }));
-}
-
-// MR.EUM 수정부분: 리뷰 별점을 문자로 표시합니다.
-function getReviewStars(rating) {
-    const score = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
-    return "★".repeat(score) + "☆".repeat(5 - score);
-}
-
-// MR.EUM 수정부분: 메뉴는 음식점(type: food)에서만 표시합니다.
-function renderPlaceMenu(placeKey) {
-    const list = document.getElementById("placeMenuList");
-    const count = document.getElementById("placeMenuCount");
-    const menuSection = document.getElementById("placeMenuSection");
-    const place = places[placeKey];
-
-    if (!list) return;
-
-    if (!place || place.type !== "food") {
-        if (menuSection) menuSection.style.display = "none";
-        return;
-    }
-
-    if (menuSection) menuSection.style.display = "block";
-
-    const menus = getPlaceMenuData(placeKey);
-
-    if (count) {
-        count.textContent = `${menus.length}${translate("place.menuCount")}`;
-    }
-
-    if (!menus.length) {
-        list.innerHTML = `<p class="place-empty-text">${translate("place.menuEmpty")}</p>`;
-        return;
-    }
-
-    list.innerHTML = menus.map(menu => {
-        const menuName = getLocalizedPlaceText(menu.menuName);
-        const menuInfo = getLocalizedPlaceText(menu.menuInfo) || translate("place.menuDescriptionEmpty");
-        const price = String(menu.menuValue || "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        const image = menu.photoUrl
-            ? `<img src="${menu.photoUrl}" alt="${menuName}">`
-            : `<i class="ti ti-tools-kitchen-2"></i>`;
-
-        return `
-            <article class="place-menu-item">
-                <div class="place-menu-thumb">${image}</div>
-                <div class="place-menu-info">
-                    <strong>${menuName}</strong>
-                    <p>${menuInfo}</p>
-                </div>
-                <strong class="place-menu-price">¥${price}</strong>
-            </article>
-        `;
-    }).join("");
-}
-
-// MR.EUM 수정부분: 내 리뷰가 없는 장소는 "등록된 리뷰가 없습니다"로 완벽 분기
-function renderPlaceReviews(placeKey) {
-    const list = document.getElementById("placeReviewList");
-    const score = document.getElementById("placeReviewScore");
-    const stars = document.getElementById("placeReviewStars");
-    const summary = document.getElementById("placeReviewSummaryText");
-
-    if (!list) return;
-
-    // 위에서 수정한 함수를 통해 현재 장소의 리뷰만 가져옵니다.
-    const reviews = getPlaceReviewData(placeKey);
-    const place = places[placeKey];
-    const average = Number(place?.rating);
-
-    // [중요] 리뷰가 없는 장소 스코어보드 초기화 및 예외 처리
-    if (!reviews.length) {
-        if (score) score.textContent = Number.isFinite(average) ? average.toFixed(1) : "-";
-        if (stars) stars.textContent = Number.isFinite(average) ? getReviewStars(average) : "☆☆☆☆☆";
-        if (summary) summary.textContent = `${translate("place.reviewCount")} 0${currentLanguage === "ko" ? "개" : "件"}`;
-        
-        list.innerHTML = `<p class="place-empty-text">${translate("place.reviewEmpty")}</p>`;
-        return;
-    }
-
-    // 리뷰가 존재하는 장소(cafe, park)의 정상 출력부
-    if (score) {
-        score.textContent = Number.isFinite(average) ? average.toFixed(1) : "-";
-    }
-
-    if (stars) {
-        stars.textContent = Number.isFinite(average) ? getReviewStars(average) : "☆☆☆☆☆";
-    }
-
-    if (summary) {
-        summary.textContent = `${translate("place.reviewCount")} ${reviews.length}${currentLanguage === "ko" ? "개" : "件"}`;
-    }
-
-    list.innerHTML = reviews.slice(0, 3).map(review => {
-        const content = getLocalizedPlaceText(review.content);
-        const reviewIndex = mockReviews.findIndex(r => r.placeKey === placeKey && r.date === review.date);
-
-        return `
-            <article class="place-review-item" data-review-index="${reviewIndex}">
-                <div class="place-review-top">
-                    <div class="place-review-user-wrap">
-                        <span class="place-review-user">${review.userName}</span>
-                        <span class="place-review-rating">${getReviewStars(review.rating)}</span>
-                    </div>
-                    ${review.isMine ? `
-                    <button type="button" class="place-review-edit-toggle" data-review-edit-toggle>
-                        ${translate("place.reviewEdit")}
-                    </button>` : ""}
-                </div>
-                <div class="place-review-view" data-review-view>
-                    <p class="place-review-content">${content}</p>
-                    <span class="place-review-date">${review.date}</span>
-                </div>
-                <div class="place-review-edit" data-review-edit hidden>
-                    <div class="place-review-edit-stars" data-review-edit-stars>
-                        ${[1,2,3,4,5].map(rating => `
-                            <button
-                                type="button"
-                                data-edit-rating="${rating}"
-                                class="${rating <= Number(review.rating) ? "selected" : ""}"
-                            >${rating <= Number(review.rating) ? "★" : "☆"}</button>
-                        `).join("")}
-                    </div>
-                    <textarea data-review-edit-content maxlength="500">${content}</textarea>
-                    <div class="place-review-edit-actions">
-                        <button type="button" class="place-review-edit-cancel" data-review-edit-cancel>
-                            ${translate("place.reviewEditCancel")}
-                        </button>
-                        <button type="button" class="place-review-edit-save" data-review-edit-save>
-                            ${translate("place.reviewEditSave")}
-                        </button>
-                    </div>
-                </div>
-            </article>
-        `;
-    }).join("");
-}
+/*
+   과거 화면 시연용 메뉴/리뷰 mock 데이터 제거.
+   실제 메뉴/리뷰 렌더링은 reviews.js에서 백엔드 API 기준으로 처리합니다.
+*/
 
 // MR.EUM 수정부분: 장소 상세의 메뉴/리뷰를 함께 갱신합니다.
 function renderPlaceExtraSections(placeKey) {
-    renderPlaceMenu(placeKey);
-    renderPlaceReviews(placeKey);
+    /* reviews.js의 실제 백엔드 렌더러가 로드된 뒤에만 호출합니다. */
+    if (typeof renderPlaceMenu === "function") {
+        renderPlaceMenu(placeKey);
+    }
+    if (typeof renderPlaceReviews === "function") {
+        renderPlaceReviews(placeKey);
+    }
 }
 
 /* =====================================================
@@ -4652,11 +5063,10 @@ document
                     } else {
                         try {
                             /*
-                                기존 localStorage 사용자 정보에 id가 없거나
-                                새로고침 직후라 currentUser가 비어 있어도
+                                새로고침 직후 currentUser가 비어 있어도
                                 서버에서 실제 로그인 사용자 정보를 다시 읽습니다.
                             */
-                            if (!currentUser?.id) {
+                            if (!currentUser) {
                                 await fetchCurrentUser();
                                 updateHeaderAuthState();
                             }
@@ -4871,6 +5281,126 @@ function normalizeSearchText(value) {
 }
 
 
+const RECENT_SEARCH_STORAGE_KEY = "cheeseMapRecentSearches";
+const RECENT_SEARCH_LIMIT = 8;
+
+function getRecentSearches() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(RECENT_SEARCH_STORAGE_KEY) || "[]");
+        return Array.isArray(saved)
+            ? saved.filter(item => typeof item === "string" && item.trim()).slice(0, RECENT_SEARCH_LIMIT)
+            : [];
+    } catch (error) {
+        console.warn("최근 검색어 불러오기 실패:", error);
+        return [];
+    }
+}
+
+function saveRecentSearch(keyword) {
+    const value = String(keyword || "").trim();
+    if (!value) return;
+
+    const normalized = normalizeSearchText(value);
+    const next = [
+        value,
+        ...getRecentSearches().filter(item => normalizeSearchText(item) !== normalized)
+    ].slice(0, RECENT_SEARCH_LIMIT);
+
+    localStorage.setItem(RECENT_SEARCH_STORAGE_KEY, JSON.stringify(next));
+}
+
+function clearRecentSearches() {
+    localStorage.removeItem(RECENT_SEARCH_STORAGE_KEY);
+    hideRecentSearches();
+}
+
+function deleteRecentSearch(keyword) {
+    const value = String(keyword || "").trim();
+    if (!value) return;
+
+    const normalized = normalizeSearchText(value);
+    const next = getRecentSearches().filter(item => normalizeSearchText(item) !== normalized);
+
+    if (next.length) {
+        localStorage.setItem(RECENT_SEARCH_STORAGE_KEY, JSON.stringify(next));
+    } else {
+        localStorage.removeItem(RECENT_SEARCH_STORAGE_KEY);
+    }
+}
+
+function hideRecentSearches() {
+    const dropdown = document.getElementById("recentSearchDropdown");
+    if (dropdown) dropdown.hidden = true;
+}
+
+function renderRecentSearches() {
+    const dropdown = document.getElementById("recentSearchDropdown");
+    const list = document.getElementById("recentSearchList");
+    const title = document.getElementById("recentSearchTitle");
+    const clearButton = document.getElementById("recentSearchClear");
+    const input = document.getElementById("searchInput");
+
+    if (!dropdown || !list) return;
+
+    const searches = getRecentSearches();
+    if (!searches.length) {
+        dropdown.hidden = true;
+        return;
+    }
+
+    const isKo = currentLanguage === "ko";
+    if (title) title.textContent = isKo ? "최근 검색어" : "最近の検索";
+    if (clearButton) clearButton.textContent = isKo ? "전체 삭제" : "すべて削除";
+
+    list.innerHTML = "";
+
+    searches.forEach(keyword => {
+        const item = document.createElement("div");
+        item.className = "recent-search-item";
+
+        const keywordButton = document.createElement("button");
+        keywordButton.type = "button";
+        keywordButton.className = "recent-search-keyword";
+        keywordButton.innerHTML = `
+            <i class="ti ti-history"></i>
+            <span></span>
+        `;
+        keywordButton.querySelector("span").textContent = keyword;
+        keywordButton.addEventListener("mousedown", event => event.preventDefault());
+        keywordButton.addEventListener("click", () => {
+            if (input) input.value = keyword;
+            hideRecentSearches();
+            searchPlace();
+        });
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "recent-search-delete";
+        deleteButton.innerHTML = '<i class="ti ti-x"></i>';
+        deleteButton.title = currentLanguage === "ja"
+            ? "この検索語を削除"
+            : currentLanguage === "en"
+                ? "Delete this search"
+                : "이 검색어 삭제";
+        deleteButton.setAttribute("aria-label", deleteButton.title);
+        deleteButton.addEventListener("mousedown", event => event.preventDefault());
+        deleteButton.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteRecentSearch(keyword);
+            renderRecentSearches();
+            input?.focus();
+        });
+
+        item.appendChild(keywordButton);
+        item.appendChild(deleteButton);
+        list.appendChild(item);
+    });
+
+    dropdown.hidden = false;
+}
+
+
 async function searchPlace() {
     const input = document.getElementById("searchInput");
     const rawKeyword = String(input?.value || "").trim();
@@ -4994,6 +5524,8 @@ async function searchPlace() {
                     googleMap?.setZoom(16);
                 }
 
+                saveRecentSearch(rawKeyword);
+                hideRecentSearches();
                 showToast("toast.searchFound");
                 return;
             }
@@ -5030,6 +5562,8 @@ async function searchPlace() {
     filterCategory(place.type);
     googleMap?.panTo(place.position);
     googleMap?.setZoom(16);
+    saveRecentSearch(rawKeyword);
+    hideRecentSearches();
     showToast("toast.searchFound");
 }
 
@@ -5041,17 +5575,33 @@ document
     );
 
 
-document
-    .getElementById("searchInput")
-    ?.addEventListener(
-        "keydown",
-        event => {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                searchPlace();
-            }
-        }
-    );
+const searchInputElement = document.getElementById("searchInput");
+
+searchInputElement?.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        hideRecentSearches();
+        searchPlace();
+    } else if (event.key === "Escape") {
+        hideRecentSearches();
+    }
+});
+
+searchInputElement?.addEventListener("focus", renderRecentSearches);
+searchInputElement?.addEventListener("click", renderRecentSearches);
+
+document.getElementById("recentSearchClear")?.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    clearRecentSearches();
+});
+
+document.addEventListener("pointerdown", event => {
+    const searchArea = document.getElementById("searchArea");
+    if (searchArea && !searchArea.contains(event.target)) {
+        hideRecentSearches();
+    }
+});
 
 /* =====================================================
    추천 UI / 추천 검색 강제 초기화

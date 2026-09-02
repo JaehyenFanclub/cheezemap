@@ -377,6 +377,17 @@ document.getElementById("loginForm")?.addEventListener("submit", async event => 
         updateHeaderAuthState();
         if (typeof updateMessageBadge === "function") updateMessageBadge();
         if (typeof applyCheeseSettings === "function") applyCheeseSettings();
+
+        // 로그인 직후: 추천 카테고리 선택 UI를 표시하고 개인화 추천을 다시 불러온다.
+        if (typeof renderRecommendedPlaces === "function") {
+            await renderRecommendedPlaces(
+                typeof getActiveRecommendationMapCategory === "function"
+                    ? getActiveRecommendationMapCategory()
+                    : "all",
+                { force: true }
+            );
+        }
+
         showToast("toast.loginSuccess");
     } catch (error) {
         console.error("로그인 API 오류:", error);
@@ -407,8 +418,25 @@ document.getElementById("logoutButton")?.addEventListener("click", async () => {
         clearAuthToken();
         currentUser = null;
         localStorage.removeItem(STORAGE_KEYS.user);
+        likedPlaces = [];
+        favoritePlaces = [];
+        writeStorage(STORAGE_KEYS.likes, likedPlaces);
+        writeStorage(STORAGE_KEYS.favorites, favoritePlaces);
+        updateFavoriteButtons?.();
         closeModal(mypageModal);
         updateHeaderAuthState();
+
+        // 로그아웃 직후: 추천 카테고리 선택 UI를 숨기고
+        // 토큰이 필요 없는 Google 주변 추천 장소로 즉시 전환한다.
+        if (typeof renderRecommendedPlaces === "function") {
+            await renderRecommendedPlaces(
+                typeof getActiveRecommendationMapCategory === "function"
+                    ? getActiveRecommendationMapCategory()
+                    : "all",
+                { force: true }
+            );
+        }
+
         showToast("toast.logoutSuccess");
     }
 });
@@ -418,68 +446,8 @@ document.getElementById("logoutButton")?.addEventListener("click", async () => {
    마이페이지
 ===================================================== */
 
-const mockReviews = [
-    /* MR.EUM 수정부분: 마이페이지에 등록된 두 장소의 내 리뷰만 사용합니다. */
-    {
-        placeKey: "cafe",
-        userName: "엄용민",
-        isMine: true,
-        rating: 5,
-        content: {
-            ko: "매장이 조용하고 치즈 디저트가 맛있었어요.",
-            ja: "店内が静かで、チーズデザートがおいしかったです。"
-        },
-        date: "2026-07-20"
-    },
-    /* MR.EUM 수정부분: 마이페이지에 등록된 두 번째 내 리뷰 */
-    {
-        placeKey: "park",
-        userName: "엄용민",
-        isMine: true,
-        rating: 4,
-        content: {
-            ko: "도심에서 산책하기 좋은 공원이었습니다.",
-            ja: "都心で散歩するのに良い公園でした。"
-        },
-        date: "2026-07-18"
-    },
-     // [타인 리뷰 1] cafe 장소 - 다른 사람이 쓴 리뷰라 수정 버튼이 절대 나오면 안 됨
-    {
-        placeKey: "cafe",
-        userName: "김철수",
-        isMine: false,
-        rating: 3,
-        content: {
-            ko: "커피 맛은 보통인데 자리가 조금 좁네요.",
-            ja: "コーヒーの味は普通ですが、席이 조금 좁네요."
-        },
-        date: "2026-07-19"
-    },
-    // [내 리뷰 2] park 장소 - 수정 버튼 나와야 함
-    {
-        placeKey: "park",
-        userName: "엄용민",
-        isMine: true,
-        rating: 4,
-        content: {
-            ko: "도심에서 산책하기 좋은 공원이었습니다.",
-            ja: "都심에서 산책하기 좋은 공원이었습니다."
-        },
-        date: "2026-07-18"
-    },
-    // [타인 리뷰 2] park 장소 - 다른 사람이 쓴 리뷰라 수정 버튼이 절대 나오면 안 됨
-    {
-        placeKey: "park",
-        userName: "야마다",
-        isMine: false,
-        rating: 5,
-        content: {
-            ko: "녹지가 풍부하고 힐링되는 공간입니다.",
-            ja: "緑が豊かで、とても癒される空間です。"
-        },
-        date: "2026-07-17"
-    }
-];
+/* 과거 시연용 mockReviews 제거: 실제 리뷰는 reviews.js + 백엔드 Review API 사용 */
+
 
 
 let currentMyPageTab =
@@ -581,20 +549,24 @@ function renderMyPage() {
 
 
 // 마이페이지 - 기존 백엔드 구조를 그대로 사용해 내가 작성한 리뷰를 모아 표시합니다.
-async function renderMyReviews(container, renderRequestId = myPageRenderRequestId) {
-    if (!getAuthToken() || !currentUser?.id) {
+async function renderMyReviewsLegacy(container, renderRequestId = myPageRenderRequestId) {
+    if (!getAuthToken() || !(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id)) {
         container.innerHTML = `
             <div class="mypage-empty">
-                <i class="ti ti-message-circle"></i>
-                <p>${translate("empty.reviews")}</p>
+                <div>
+                    <i class="ti ti-message-circle"></i>
+                    <p>${translate("empty.reviews")}</p>
+                </div>
             </div>`;
         return;
     }
 
     container.innerHTML = `
         <div class="mypage-empty">
-            <i class="ti ti-loader-2"></i>
-            <p>내 리뷰를 불러오는 중...</p>
+            <div>
+                <i class="ti ti-loader-2"></i>
+                <p>내 리뷰를 불러오는 중...</p>
+            </div>
         </div>`;
 
     const stale = () =>
@@ -609,9 +581,13 @@ async function renderMyReviews(container, renderRequestId = myPageRenderRequestI
         const reviewGroups = await Promise.all(
             placeIds.map(async placeId => {
                 try {
+                    // 오래된 localStorage placeId는 실제 장소 존재 확인 후 리뷰 API 호출
+                    const place = await getBackendPlaceById(placeId).catch(() => null);
+                    if (!place) return [];
+
                     const rows = await apiRequest(`/place/${placeId}/review`);
                     return (Array.isArray(rows) ? rows : []).filter(
-                        review => Number(review.userId) === Number(currentUser.id)
+                        review => Number(review.userId) === Number(typeof getCurrentUserId === "function" ? getCurrentUserId() : currentUser?.id)
                     );
                 } catch {
                     return [];
@@ -638,20 +614,52 @@ async function renderMyReviews(container, renderRequestId = myPageRenderRequestI
             const frontendKey = typeof backendPlaceIdToFrontendKey === "function"
                 ? await backendPlaceIdToFrontendKey(review.placeId)
                 : null;
+            const stateKey = frontendKey
+                ? (
+                    String(frontendKey).startsWith("google_")
+                        ? `google:${String(frontendKey).slice(7)}`
+                        : `static:${frontendKey}`
+                )
+                : `place:${review.placeId}`;
+
             let placeName = `장소 #${review.placeId}`;
+            let placeCategory = "";
+            let placeAddress = "";
+
             try {
-                const backendPlace = await getBackendPlaceById(review.placeId);
-                placeName = backendPlace?.placeName || placeName;
+                if (typeof resolveBackendPlaceCardMeta === "function") {
+                    const meta = await resolveBackendPlaceCardMeta(review.placeId, stateKey);
+                    placeName = meta?.name || placeName;
+                    placeCategory = meta?.category || "";
+                    placeAddress = meta?.address || "";
+                } else {
+                    const backendPlace = await getBackendPlaceById(review.placeId);
+                    placeName = backendPlace?.placeName || placeName;
+                    placeCategory = backendPlace?.placeCategory || "";
+                    placeAddress = backendPlace?.placeAddress || "";
+                }
             } catch {}
 
             return `
                 <article class="mypage-card" data-my-review-id="${review.reviewId}" data-my-review-place-id="${review.placeId}" data-my-review-place-key="${frontendKey || ""}" data-edit-rating="${review.rating}">
                     <span>${getReviewStars(review.rating)}</span>
-                    <div class="mypage-review-place-row">
-                        <i class="ti ti-map-pin"></i>
-                        <strong class="mypage-review-place">${escapeGroupHtml(placeName)}</strong>
-                    </div>
-                    <p>${escapeGroupHtml(review.content || "")}</p>
+                    <strong class="mypage-review-place">${escapeGroupHtml(placeName)}</strong>
+                    ${
+                        placeCategory
+                            ? `<p class="mypage-place-category">${escapeGroupHtml(placeCategory)}</p>`
+                            : ""
+                    }
+                    ${
+                        placeAddress
+                            ? `
+                                <p class="mypage-place-address">
+                                    <i class="ti ti-map-pin"></i>
+                                    ${escapeGroupHtml(placeAddress)}
+                                </p>
+                            `
+                            : ""
+                    }
+                    <p class="mypage-review-content">${escapeGroupHtml(review.content || "")}</p>
                     <div class="mypage-card-actions">
                         <button type="button" class="mypage-place-view-button" data-open-review-place="${review.placeId}">${currentLanguage === "ko" ? "장소 보기" : "場所を見る"}</button>
                         <button type="button" data-my-review-edit-toggle aria-expanded="false">${currentLanguage === "ko" ? "수정" : "編集"}</button>
@@ -673,14 +681,13 @@ async function renderMyReviews(container, renderRequestId = myPageRenderRequestI
 
         container.innerHTML = cards.join("");
 
-        container.querySelectorAll("[data-open-place]").forEach(button => {
+        container.querySelectorAll("[data-open-review-place]").forEach(button => {
             button.addEventListener("click", () => {
-                const placeKey = button.dataset.openPlace;
-                if (!places[placeKey]) return;
+                const placeId = Number(button.dataset.openReviewPlace);
                 closeModal(mypageModal);
-                openPlace(placeKey);
-                googleMap?.panTo(places[placeKey].position);
-                googleMap?.setZoom(15);
+                if (typeof openBackendPlaceById === "function") {
+                    openBackendPlaceById(placeId);
+                }
             });
         });
     } catch (error) {
@@ -962,49 +969,51 @@ async function renderMyLikes(
         .forEach(button => {
             button.addEventListener(
                 "click",
-                () => {
-                    const stateKey =
-                        button.dataset.removeLikeState;
+                async () => {
+                    const stateKey = button.dataset.removeLikeState;
+                    const placeId = backendPlaceIdFromStateKey(stateKey);
 
-                    likedPlaces =
-                        likedPlaces.filter(
-                            key => key !== stateKey
+                    if (!placeId) return;
+
+                    try {
+                        const result = await apiRequest(`/api/places/${placeId}/like`, {
+                            method: "POST",
+                            auth: true
+                        });
+
+                        if (result?.isLiked) {
+                            // 서버가 여전히 좋아요 상태라면 서버 목록을 다시 기준으로 맞춥니다.
+                            await syncBackendPlacePreferences?.();
+                            return;
+                        }
+
+                        likedPlaces = likedPlaces.filter(
+                            key => normalizePlaceStateKey(key) !== `place:${placeId}`
                         );
+                        writeStorage(STORAGE_KEYS.likes, likedPlaces);
 
-                    writeStorage(
-                        STORAGE_KEYS.likes,
-                        likedPlaces
-                    );
+                        button.closest(".mypage-card")?.remove();
+                        updateLikeButton?.();
+                        updateFavoriteButtons?.();
 
-                    const card =
-                        button.closest(
-                            ".mypage-card"
-                        );
-
-                    card?.remove();
-
-                    updateLikeButton?.();
-                    updateFavoriteButtons?.();
-
-                    const content =
-                        document.getElementById(
-                            "mypageContent"
-                        );
-
-                    if (
-                        content &&
-                        !content.querySelector(
-                            ".mypage-card"
-                        )
-                    ) {
-                        content.innerHTML = `
-                            <div class="empty-state">
-                                <div>
-                                    <i class="ti ti-heart"></i>
-                                    <p>${translate("empty.likes")}</p>
+                        const content = document.getElementById("mypageContent");
+                        if (content && !content.querySelector(".mypage-card")) {
+                            content.innerHTML = `
+                                <div class="empty-state">
+                                    <div>
+                                        <i class="ti ti-heart"></i>
+                                        <p>${translate("empty.likes")}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
+                        }
+                    } catch (error) {
+                        console.error("좋아요 삭제 실패:", error);
+                        showToast(
+                            currentLanguage === "ko"
+                                ? "좋아요 삭제에 실패했습니다."
+                                : "いいねの削除に失敗しました。"
+                        );
                     }
                 }
             );
@@ -1135,6 +1144,66 @@ document.addEventListener(
 
 
 /* =====================================================
+   OAuth2 제공자 목록 - 백엔드 설정 기준
+===================================================== */
+
+async function loadOAuthProviders() {
+    const container = document.getElementById("socialLoginButtons");
+    const divider = document.getElementById("socialLoginDivider");
+    const errorNode = document.getElementById("socialLoginError");
+    if (!container) return;
+
+    try {
+        const providers = await apiRequest("/user/auth/oauth2/providers");
+        const rows = Array.isArray(providers) ? providers : [];
+
+        container.innerHTML = rows.map(provider => {
+            const id = String(provider?.id || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+            const name = String(provider?.name || provider?.id || "").trim();
+            const authorizationUrl = String(provider?.authorizationUrl || "").trim();
+
+            if (!id || !name || !authorizationUrl.startsWith("/")) {
+                return "";
+            }
+
+            return `
+                <a
+                    href="${escapeGroupHtml(authorizationUrl)}"
+                    class="social-login-button social-login-${id}"
+                    data-provider="${escapeGroupHtml(id)}"
+                >
+                    ${escapeGroupHtml(name)}
+                </a>
+            `;
+        }).join("");
+
+        if (!container.children.length) {
+            container.hidden = true;
+            if (divider) divider.hidden = true;
+        } else {
+            container.hidden = false;
+            if (divider) divider.hidden = false;
+        }
+
+        if (errorNode) errorNode.textContent = "";
+    } catch (error) {
+        console.error("OAuth 제공자 목록 조회 실패:", error);
+        container.hidden = true;
+        if (divider) divider.hidden = true;
+        if (errorNode) {
+            errorNode.textContent =
+                currentLanguage === "ja"
+                    ? "ソーシャルログインを読み込めませんでした。"
+                    : currentLanguage === "en"
+                        ? "Could not load social sign-in options."
+                        : "소셜 로그인 정보를 불러오지 못했습니다.";
+        }
+    }
+}
+
+loadOAuthProviders();
+
+/* =====================================================
    OAuth2 소셜 로그인 콜백 처리
 ===================================================== */
 
@@ -1165,7 +1234,23 @@ async function handleOAuthCallback() {
 
     try {
         setAuthToken(token);
-        await fetchCurrentUser();
+        const socialUser = await fetchCurrentUser();
+
+        const provider = String(socialUser?.provider || "LOCAL").toUpperCase();
+        const needsSocialProfile =
+            provider !== "LOCAL" &&
+            (
+                !String(socialUser?.nickname || "").trim() ||
+                !String(socialUser?.phone || "").trim() ||
+                !String(socialUser?.birth || "").trim() ||
+                socialUser?.sex == null
+            );
+
+        if (needsSocialProfile) {
+            window.location.replace("complete-profile.html");
+            return;
+        }
+
         updateHeaderAuthState();
         if (typeof updateMessageBadge === "function") updateMessageBadge();
         if (typeof applyCheeseSettings === "function") applyCheeseSettings();
@@ -1198,7 +1283,22 @@ async function handleOAuthCallback() {
         return;
     }
     try {
-        await fetchCurrentUser();
+        const restoredUser = await fetchCurrentUser();
+        const restoredProvider = String(restoredUser?.provider || "LOCAL").toUpperCase();
+        const needsSocialProfile =
+            restoredProvider !== "LOCAL" &&
+            (
+                !String(restoredUser?.nickname || "").trim() ||
+                !String(restoredUser?.phone || "").trim() ||
+                !String(restoredUser?.birth || "").trim() ||
+                restoredUser?.sex == null
+            );
+
+        if (needsSocialProfile && !window.location.pathname.endsWith("complete-profile.html")) {
+            window.location.replace("complete-profile.html");
+            return;
+        }
+
         updateHeaderAuthState();
         if (typeof applyCheeseSettings === "function") applyCheeseSettings();
     } catch (error) {
@@ -1209,3 +1309,65 @@ async function handleOAuthCallback() {
         updateHeaderAuthState();
     }
 })();
+
+
+/* =====================================================
+   회원가입 페이지 -> 로그인 모달 바로 열기
+   - signup.html의 index.html?login=1
+   - sessionStorage cheeseMapOpenLogin
+   두 방법을 모두 지원합니다.
+===================================================== */
+
+function openLoginModalFromSignup() {
+    const params = new URLSearchParams(window.location.search);
+    const requestedByQuery = params.get("login") === "1";
+    const requestedBySession =
+        sessionStorage.getItem("cheeseMapOpenLogin") === "1";
+
+    if (!requestedByQuery && !requestedBySession) {
+        return;
+    }
+
+    sessionStorage.removeItem("cheeseMapOpenLogin");
+
+    if (requestedByQuery) {
+        params.delete("login");
+
+        const nextQuery = params.toString();
+        const cleanUrl =
+            `${window.location.pathname}` +
+            `${nextQuery ? `?${nextQuery}` : ""}` +
+            `${window.location.hash}`;
+
+        window.history.replaceState(
+            {},
+            document.title,
+            cleanUrl
+        );
+    }
+
+    // 로그인된 사용자는 다시 로그인 모달을 띄우지 않습니다.
+    if (getAuthToken()) {
+        return;
+    }
+
+    const show = () => {
+        openModal(loginModal);
+
+        setTimeout(() => {
+            document
+                .getElementById("loginEmail")
+                ?.focus();
+        }, 50);
+    };
+
+    // account.js는 body 하단에서 로드되지만,
+    // 다른 초기화 코드와 겹치는 상황까지 대비해 한 틱 뒤에 실행합니다.
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", show, { once: true });
+    } else {
+        setTimeout(show, 0);
+    }
+}
+
+openLoginModalFromSignup();

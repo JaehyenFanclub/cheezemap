@@ -111,7 +111,8 @@ const translations = {
         "auth.signupDescription":
             "나만의 도쿄 장소를 저장해보세요.",
 
-        "auth.goSignup": "회원가입",
+        "auth.orContinueWith": "다른 계정으로 로그인 또는 회원가입",
+        "auth.goSignup": "치즈맵 계정으로 회원가입",
         "auth.goLogin": "이미 계정이 있어요",
 
         "mypage.title": "마이페이지",
@@ -249,7 +250,8 @@ const translations = {
         "auth.loginDescription": "Save favorites and travel plans.",
         "auth.signupTitle": "Create a CHEESE MAP account",
         "auth.signupDescription": "Save your favorite places in Tokyo.",
-        "auth.goSignup": "Sign up",
+        "auth.orContinueWith": "Sign in or sign up with another account",
+        "auth.goSignup": "Create a CHEESE MAP account",
         "auth.goLogin": "Already have an account?",
         "mypage.title": "My page",
         "mypage.reviews": "My reviews",
@@ -402,7 +404,8 @@ const translations = {
         "auth.signupDescription":
             "お気に入りの東京スポットを保存しましょう。",
 
-        "auth.goSignup": "新規登録",
+        "auth.orContinueWith": "他のアカウントでログイン・新規登録",
+        "auth.goSignup": "チーズマップのアカウントを作成",
         "auth.goLogin": "すでにアカウントをお持ちですか",
 
         "mypage.title": "マイページ",
@@ -1168,6 +1171,15 @@ const loadingScreen =
    공통 함수
 ===================================================== */
 
+function escapeGroupHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
 function readStorage(key, fallbackValue) {
     try {
         const value = localStorage.getItem(key);
@@ -1309,6 +1321,23 @@ function applyLanguage(language) {
             currentLanguage === "ko" ? "한국어" : currentLanguage === "ja" ? "日本語" : "English";
     }
 
+    document
+        .querySelectorAll("[data-header-language]")
+        .forEach(button => {
+            const isActive =
+                button.dataset.headerLanguage === currentLanguage;
+
+            button.classList.toggle(
+                "active",
+                isActive
+            );
+
+            button.setAttribute(
+                "aria-pressed",
+                String(isActive)
+            );
+        });
+
     if (typeof renderCurrentAreaName === "function") {
         renderCurrentAreaName();
     }
@@ -1349,6 +1378,22 @@ function applyLanguage(language) {
     updateWeatherText();
 }
 
+
+
+
+/* 헤더 언어 전환 버튼 */
+document
+    .querySelectorAll("[data-header-language]")
+    .forEach(button => {
+        button.addEventListener(
+            "click",
+            () => {
+                applyLanguage(
+                    button.dataset.headerLanguage
+                );
+            }
+        );
+    });
 
 /* =====================================================
    도쿄 현재 시간 및 날씨
@@ -1745,3 +1790,8 @@ document.addEventListener(
 );
 
 
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    applyLanguage(currentLanguage);
+});

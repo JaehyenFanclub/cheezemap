@@ -16,6 +16,33 @@ function clearAuthToken() {
     localStorage.removeItem(CHEESE_TOKEN_KEY);
 }
 
+function decodeJwtPayload(token = getAuthToken()) {
+    const raw = String(token || "").trim();
+    const parts = raw.split(".");
+    if (parts.length < 2) return null;
+
+    try {
+        const base64 = parts[1]
+            .replace(/-/g, "+")
+            .replace(/_/g, "/");
+        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+        const json = decodeURIComponent(
+            Array.from(atob(padded))
+                .map(char => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
+                .join("")
+        );
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+}
+
+function getCurrentUserId() {
+    const payload = decodeJwtPayload();
+    const id = Number(payload?.sub);
+    return Number.isFinite(id) && id > 0 ? id : null;
+}
+
 async function apiRequest(path, options = {}) {
     const {
         method = "GET",
@@ -62,13 +89,17 @@ async function apiRequest(path, options = {}) {
     return data;
 }
 
-function mapMyPageUser(data) {
+function mapMyPageUser(data, fallbackUser = null) {
     if (!data) return null;
+
+    const fallback = fallbackUser || {};
 
     return {
         id:
+            getCurrentUserId() ??
             data.userId ??
             data.id ??
+            fallback.id ??
             null,
 
         name:
@@ -102,13 +133,32 @@ function mapMyPageUser(data) {
 
         photoUrl:
             data.photoUrl ||
-            null
+            fallback.photoUrl ||
+            null,
+
+        provider:
+            String(
+                data.provider ??
+                fallback.provider ??
+                "LOCAL"
+            ).toUpperCase()
     };
 }
 
 async function fetchCurrentUser() {
     const data = await apiRequest("/user/mypage", { auth: true });
-    currentUser = mapMyPageUser(data);
+    const cachedUser =
+        currentUser ||
+        (typeof STORAGE_KEYS !== "undefined"
+            ? readStorage(STORAGE_KEYS.user, null)
+            : JSON.parse(localStorage.getItem("cheeseMapUser") || "null"));
+
+    currentUser = mapMyPageUser(data, cachedUser);
     writeStorage(STORAGE_KEYS.user, currentUser);
+
+    if (typeof syncBackendPlacePreferences === "function") {
+        await syncBackendPlacePreferences();
+    }
+
     return currentUser;
 }

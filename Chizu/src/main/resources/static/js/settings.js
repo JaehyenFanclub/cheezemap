@@ -4,7 +4,7 @@
 ===================================================== */
 
 const SETTINGS_STORAGE_KEY = "cheeseMapSettings";
-const RECENT_SEARCH_STORAGE_KEY = "cheeseMapRecentSearches";
+const SETTINGS_RECENT_SEARCH_STORAGE_KEY = "cheeseMapRecentSearches";
 
 const DEFAULT_SETTINGS = {
     recommendVisible: true,
@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS = {
 const SETTINGS_TEXT = {
     ko: {
         title: "설정",
-        description: "언어와 추천 방식, 저장 데이터를 관리할 수 있어요.",
+        description: "추천 방식과 저장 데이터를 관리할 수 있어요.",
         languageSection: "언어",
         languageTitle: "언어 변경",
         languageDesc: "화면에 표시할 언어를 선택합니다.",
@@ -31,10 +31,10 @@ const SETTINGS_TEXT = {
         clearSearch: "최근 검색 기록 삭제",
         clearSearchDesc: "이 브라우저에 저장된 최근 검색어를 삭제합니다.",
         resetData: "저장 데이터 초기화",
-        resetDataDesc: "좋아요, 즐겨찾기, 그룹, 쪽지, 추천 설정을 초기화합니다.",
+        resetDataDesc: "좋아요, 즐겨찾기와 추천 설정을 초기화합니다.",
         cleared: "최근 검색 기록을 삭제했습니다.",
         noHistory: "삭제할 최근 검색 기록이 없습니다.",
-        resetConfirm: "좋아요, 즐겨찾기, 그룹, 쪽지와 추천 설정을 모두 초기화할까요?",
+        resetConfirm: "좋아요, 즐겨찾기와 추천 설정을 초기화할까요?",
         resetDone: "저장 데이터를 초기화했습니다.",
         deleteAccount: "회원 탈퇴",
         deleteAccountDesc: "계정과 서버에 저장된 회원 정보를 영구적으로 삭제합니다.",
@@ -44,7 +44,7 @@ const SETTINGS_TEXT = {
     },
     ja: {
         title: "設定",
-        description: "言語・おすすめ方法・保存データを管理できます。",
+        description: "おすすめ方法と保存データを管理できます。",
         languageSection: "言語",
         languageTitle: "言語を変更",
         languageDesc: "画面に表示する言語を選択します。",
@@ -61,10 +61,10 @@ const SETTINGS_TEXT = {
         clearSearch: "最近の検索履歴を削除",
         clearSearchDesc: "このブラウザに保存された検索履歴を削除します。",
         resetData: "保存データを初期化",
-        resetDataDesc: "いいね・お気に入り・グループ・メッセージ・おすすめ設定を初期化します。",
+        resetDataDesc: "いいね・お気に入り・おすすめ設定を初期化します。",
         cleared: "最近の検索履歴を削除しました。",
         noHistory: "削除する検索履歴がありません。",
-        resetConfirm: "いいね・お気に入り・グループ・メッセージ・おすすめ設定をすべて初期化しますか？",
+        resetConfirm: "いいね・お気に入り・おすすめ設定を初期化しますか？",
         resetDone: "保存データを初期化しました。",
         deleteAccount: "退会",
         deleteAccountDesc: "アカウントとサーバーに保存された会員情報を完全に削除します。",
@@ -74,7 +74,7 @@ const SETTINGS_TEXT = {
     },
     en: {
         title: "Settings",
-        description: "Manage language, recommendations, and saved data.",
+        description: "Manage recommendations and saved data.",
         languageSection: "Language",
         languageTitle: "Change language",
         languageDesc: "Choose the language shown on screen.",
@@ -91,10 +91,10 @@ const SETTINGS_TEXT = {
         clearSearch: "Clear recent searches",
         clearSearchDesc: "Delete recent searches saved in this browser.",
         resetData: "Reset saved data",
-        resetDataDesc: "Reset likes, favorites, groups, messages, and recommendation settings.",
+        resetDataDesc: "Reset likes, favorites, and recommendation settings.",
         cleared: "Recent search history cleared.",
         noHistory: "There is no recent search history to delete.",
-        resetConfirm: "Reset likes, favorites, groups, messages, and recommendation settings?",
+        resetConfirm: "Reset likes, favorites, and recommendation settings?",
         resetDone: "Saved data has been reset.",
         deleteAccount: "Delete account",
         deleteAccountDesc: "Permanently delete your account and member data stored on the server.",
@@ -153,12 +153,6 @@ function applyCheeseSettings() {
                 input.value === settings.recommendBasis;
         });
 
-    const languageSelect =
-        document.getElementById("settingsLanguage");
-
-    if (languageSelect) {
-        languageSelect.value = currentLanguage;
-    }
 }
 
 function updateSettingsLanguageText() {
@@ -174,15 +168,8 @@ function updateSettingsLanguageText() {
     if (title) title.textContent = text.title;
     if (description) description.textContent = text.description;
 
-    if (sectionTitles[0]) sectionTitles[0].textContent = text.languageSection;
-    if (sectionTitles[1]) sectionTitles[1].textContent = text.recommendSection;
-    if (sectionTitles[2]) sectionTitles[2].textContent = text.dataSection;
-
-    const selectCopy = modal.querySelector(".settings-select-row > span");
-    if (selectCopy) {
-        selectCopy.querySelector("strong").textContent = text.languageTitle;
-        selectCopy.querySelector("small").textContent = text.languageDesc;
-    }
+    if (sectionTitles[0]) sectionTitles[0].textContent = text.recommendSection;
+    if (sectionTitles[1]) sectionTitles[1].textContent = text.dataSection;
 
     const toggleCopy = modal.querySelector(".settings-toggle-row > span");
     if (toggleCopy) {
@@ -243,16 +230,6 @@ document
         openModal(document.getElementById("settingsModal"));
     });
 
-/* 언어 */
-
-document
-    .getElementById("settingsLanguage")
-    ?.addEventListener("change", event => {
-        applyLanguage(event.target.value);
-        updateSettingsLanguageText();
-        applyCheeseSettings();
-    });
-
 /* 추천 장소 표시 */
 
 document
@@ -292,14 +269,14 @@ function saveRecentSearchTerm() {
     if (!term) return;
 
     const history =
-        readStorage(RECENT_SEARCH_STORAGE_KEY, []);
+        readStorage(SETTINGS_RECENT_SEARCH_STORAGE_KEY, []);
 
     const nextHistory = [
         term,
         ...history.filter(item => item !== term)
     ].slice(0, 10);
 
-    writeStorage(RECENT_SEARCH_STORAGE_KEY, nextHistory);
+    writeStorage(SETTINGS_RECENT_SEARCH_STORAGE_KEY, nextHistory);
 }
 
 document
@@ -321,14 +298,14 @@ document
     ?.addEventListener("click", () => {
         const text = getSettingsText();
         const history =
-            readStorage(RECENT_SEARCH_STORAGE_KEY, []);
+            readStorage(SETTINGS_RECENT_SEARCH_STORAGE_KEY, []);
 
         if (!history.length) {
             showSettingsStatus(text.noHistory);
             return;
         }
 
-        localStorage.removeItem(RECENT_SEARCH_STORAGE_KEY);
+        localStorage.removeItem(SETTINGS_RECENT_SEARCH_STORAGE_KEY);
         showSettingsStatus(text.cleared);
     });
 
@@ -336,45 +313,68 @@ document
 
 document
     .getElementById("resetSavedDataButton")
-    ?.addEventListener("click", () => {
+    ?.addEventListener("click", async () => {
         const text = getSettingsText();
 
         if (!window.confirm(text.resetConfirm)) {
             return;
         }
 
-        [
-            STORAGE_KEYS.likes,
-            STORAGE_KEYS.favorites,
-            typeof GROUP_STORAGE_KEY !== "undefined" ? GROUP_STORAGE_KEY : null,
-            typeof MESSAGE_STORAGE_KEY !== "undefined" ? MESSAGE_STORAGE_KEY : null,
-            SETTINGS_STORAGE_KEY,
-            RECENT_SEARCH_STORAGE_KEY
-        ].filter(Boolean).forEach(key => {
-            if (key) {
-                localStorage.removeItem(key);
+        const button = document.getElementById("resetSavedDataButton");
+        if (button) button.disabled = true;
+
+        try {
+            /* 좋아요/즐겨찾기는 서버 DB가 기준이므로 localStorage만 지우지 않습니다. */
+            if (getAuthToken()) {
+                const [likedRows, savedRows] = await Promise.all([
+                    apiRequest("/api/places/me/likes", { auth: true }),
+                    apiRequest("/api/places/me/saved", { auth: true })
+                ]);
+
+                await Promise.all([
+                    ...(Array.isArray(likedRows) ? likedRows : []).map(place =>
+                        apiRequest(`/api/places/${Number(place.placeId)}/like`, {
+                            method: "POST",
+                            auth: true
+                        })
+                    ),
+                    ...(Array.isArray(savedRows) ? savedRows : []).map(place =>
+                        apiRequest(`/api/places/${Number(place.placeId)}/save`, {
+                            method: "POST",
+                            auth: true
+                        })
+                    )
+                ]);
             }
-        });
 
-        likedPlaces = [];
-        favoritePlaces = [];
+            [
+                STORAGE_KEYS.likes,
+                STORAGE_KEYS.favorites,
+                SETTINGS_STORAGE_KEY,
+                SETTINGS_RECENT_SEARCH_STORAGE_KEY
+            ].filter(Boolean).forEach(key => localStorage.removeItem(key));
 
-        const resetSettings = {
-            ...DEFAULT_SETTINGS
-        };
+            likedPlaces = [];
+            favoritePlaces = [];
 
-        writeCheeseSettings(resetSettings);
-        applyCheeseSettings();
+            const resetSettings = { ...DEFAULT_SETTINGS };
+            writeCheeseSettings(resetSettings);
+            applyCheeseSettings();
 
-        if (typeof renderRecommendedPlaces === "function") {
-            renderRecommendedPlaces();
+            if (typeof renderRecommendedPlaces === "function") {
+                renderRecommendedPlaces();
+            }
+            if (typeof updateFavoriteButtons === "function") {
+                updateFavoriteButtons();
+            }
+
+            showSettingsStatus(text.resetDone);
+        } catch (error) {
+            console.error("저장 데이터 초기화 실패:", error);
+            showSettingsStatus(error.message);
+        } finally {
+            if (button) button.disabled = false;
         }
-
-        if (typeof updateFavoriteButtons === "function") {
-            updateFavoriteButtons();
-        }
-
-        showSettingsStatus(text.resetDone);
     });
 
 /* 최초 적용 */
@@ -412,7 +412,7 @@ document
                 STORAGE_KEYS.favorites,
                 typeof GROUP_STORAGE_KEY !== "undefined" ? GROUP_STORAGE_KEY : null,
                 typeof MESSAGE_STORAGE_KEY !== "undefined" ? MESSAGE_STORAGE_KEY : null,
-                RECENT_SEARCH_STORAGE_KEY
+                SETTINGS_RECENT_SEARCH_STORAGE_KEY
             ].filter(Boolean).forEach(key => localStorage.removeItem(key));
 
             likedPlaces = [];

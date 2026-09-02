@@ -66,97 +66,77 @@ async function togglePlaceFavorite(placeKey = selectedPlaceKey) {
         return;
     }
 
-    let stateKeys = [];
-
     try {
-        stateKeys =
+        const stateKeys =
             typeof ensurePlaceStateKeys === "function"
-                ? await ensurePlaceStateKeys(
-                    placeKey
-                )
-                : [
-                    await ensureBackendStateKey(
-                        placeKey
-                    )
-                ].filter(Boolean);
-    } catch (error) {
-        console.error(
-            "즐겨찾기 장소 연결 실패:",
-            error
-        );
+                ? await ensurePlaceStateKeys(placeKey)
+                : [await ensureBackendStateKey(placeKey)].filter(Boolean);
 
-        showToast(
-            currentLanguage === "ko"
-                ? "장소 정보를 불러오지 못했습니다."
-                : currentLanguage === "ja"
-                    ? "場所情報を取得できませんでした。"
-                    : "Could not load place information."
-        );
-        return;
-    }
+        const placeStateKey = stateKeys.find(key => /^place:\d+$/.test(key));
+        const placeId = backendPlaceIdFromStateKey(placeStateKey);
 
-    if (!stateKeys.length) return;
+        if (!placeId) {
+            throw new Error("백엔드 장소 ID를 확인할 수 없습니다.");
+        }
 
-    const saved =
-        isPlaceFavorite(
-            stateKeys
-        );
+        const result = await apiRequest(`/api/places/${placeId}/save`, {
+            method: "POST",
+            auth: true
+        });
 
-    if (saved) {
-        favoritePlaces =
-            favoritePlaces.filter(
-                key =>
-                    !stateKeys.includes(
-                        typeof normalizePlaceStateKey === "function"
-                            ? normalizePlaceStateKey(key)
-                            : key
-                    )
+        const canonicalKey = `place:${placeId}`;
+        const isSaved = Boolean(result?.isSaved);
+
+        if (isSaved) {
+            favoritePlaces = [
+                ...new Set([
+                    ...favoritePlaces.filter(key => !stateKeys.includes(normalizePlaceStateKey(key))),
+                    canonicalKey
+                ])
+            ];
+
+            showToast(
+                currentLanguage === "ko"
+                    ? "즐겨찾기에 저장했습니다."
+                    : "お気に入りに保存しました。"
             );
 
-        showToast(
-            currentLanguage === "ko"
-                ? "즐겨찾기에서 삭제했습니다."
-                : "お気に入りから削除しました。"
-        );
-    } else {
-        favoritePlaces = [
-            ...new Set([
-                ...favoritePlaces,
-                ...stateKeys
-            ])
-        ];
+            if (typeof recordPlacePreferenceAction === "function") {
+                recordPlacePreferenceAction("save", placeKey).catch?.(console.warn);
+            }
+        } else {
+            favoritePlaces = favoritePlaces.filter(key => {
+                const normalized = normalizePlaceStateKey(key);
+                return normalized !== canonicalKey && !stateKeys.includes(normalized);
+            });
 
-        showToast(
-            currentLanguage === "ko"
-                ? "즐겨찾기에 저장했습니다."
-                : "お気に入りに保存しました。"
-        );
+            showToast(
+                currentLanguage === "ko"
+                    ? "즐겨찾기에서 삭제했습니다."
+                    : "お気に入りから削除しました。"
+            );
+        }
+
+        writeStorage(STORAGE_KEYS.favorites, favoritePlaces);
+        updateSaveButton?.();
 
         if (
-            typeof recordPlacePreferenceAction === "function"
+            mypageModal?.classList.contains("show") &&
+            currentMyPageTab === "favorites"
         ) {
-            recordPlacePreferenceAction(
-                "save",
-                placeKey
-            ).catch?.(console.warn);
+            renderMyPage();
         }
-    }
-
-    writeStorage(
-        STORAGE_KEYS.favorites,
-        favoritePlaces
-    );
-
-    updateSaveButton?.();
-
-    if (
-        mypageModal?.classList.contains("show") &&
-        currentMyPageTab === "favorites"
-    ) {
-        renderMyPage();
+    } catch (error) {
+        console.error("즐겨찾기 서버 처리 실패:", error);
+        showToast(
+            currentLanguage === "ko"
+                ? "즐겨찾기 처리에 실패했습니다."
+                : currentLanguage === "ja"
+                    ? "お気に入りの処理に失敗しました。"
+                    : "Could not update saved place."
+        );
     }
 }
-
 
 async function resolveSavedStateRow(stateKey) {
     const normalized =
@@ -428,49 +408,51 @@ async function renderMyFavorites(
         .forEach(button => {
             button.addEventListener(
                 "click",
-                () => {
-                    const stateKey =
-                        button.dataset.removeFavoriteState;
+                async () => {
+                    const stateKey = button.dataset.removeFavoriteState;
+                    const placeId = backendPlaceIdFromStateKey(stateKey);
 
-                    favoritePlaces =
-                        favoritePlaces.filter(
-                            key => key !== stateKey
+                    if (!placeId) return;
+
+                    try {
+                        const result = await apiRequest(`/api/places/${placeId}/save`, {
+                            method: "POST",
+                            auth: true
+                        });
+
+                        if (result?.isSaved) {
+                            // 서버가 여전히 저장 상태라면 화면도 유지합니다.
+                            await syncBackendPlacePreferences?.();
+                            return;
+                        }
+
+                        favoritePlaces = favoritePlaces.filter(
+                            key => normalizePlaceStateKey(key) !== `place:${placeId}`
                         );
+                        writeStorage(STORAGE_KEYS.favorites, favoritePlaces);
 
-                    writeStorage(
-                        STORAGE_KEYS.favorites,
-                        favoritePlaces
-                    );
+                        button.closest(".mypage-card")?.remove();
+                        updateSaveButton?.();
+                        updateFavoriteButtons?.();
 
-                    const card =
-                        button.closest(
-                            ".mypage-card"
-                        );
-
-                    card?.remove();
-
-                    updateSaveButton?.();
-                    updateFavoriteButtons?.();
-
-                    const content =
-                        document.getElementById(
-                            "mypageContent"
-                        );
-
-                    if (
-                        content &&
-                        !content.querySelector(
-                            ".mypage-card"
-                        )
-                    ) {
-                        content.innerHTML = `
-                            <div class="empty-state">
-                                <div>
-                                    <i class="ti ti-bookmark"></i>
-                                    <p>${translate("empty.favorites")}</p>
+                        const content = document.getElementById("mypageContent");
+                        if (content && !content.querySelector(".mypage-card")) {
+                            content.innerHTML = `
+                                <div class="empty-state">
+                                    <div>
+                                        <i class="ti ti-bookmark"></i>
+                                        <p>${translate("empty.favorites")}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
+                        }
+                    } catch (error) {
+                        console.error("즐겨찾기 삭제 실패:", error);
+                        showToast(
+                            currentLanguage === "ko"
+                                ? "즐겨찾기 삭제에 실패했습니다."
+                                : "お気に入りの削除に失敗しました。"
+                        );
                     }
                 }
             );
