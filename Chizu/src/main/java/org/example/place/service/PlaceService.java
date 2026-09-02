@@ -31,16 +31,29 @@ public class PlaceService {
 
     @Transactional
     public Place getOrCreateFromAutoPlace(AutoPlace autoPlace) {
+        // 1. AutoPlace 객체 및 ID 유효성 검증
         if (autoPlace == null || autoPlace.getAutoPlaceId() == null || autoPlace.getAutoPlaceId().isBlank()) {
             throw new IllegalArgumentException("AutoPlace 정보가 올바르지 않습니다.");
         }
 
         String googlePlaceId = autoPlace.getAutoPlaceId().trim();
+
+        // 2. AutoPlace의 필수 정보(이름, 주소) 누락 여부 검증 (AutoPlace와 동일한 기준 적용)
+        if (autoPlace.getName() == null || autoPlace.getName().isBlank() ||
+                autoPlace.getAddress() == null || autoPlace.getAddress().isBlank()) {
+            throw new IllegalArgumentException(
+                    "AutoPlace 필수 정보가 누락되어 Place를 생성/저장할 수 없습니다 - ID: " + googlePlaceId
+            );
+        }
+
+        // 3. 기존에 저장된 Place가 있는지 확인
         Place existing = findExistingForAutoPlace(googlePlaceId);
         if (existing != null) {
             existing.attachSourceKey(googlePlaceId);
             return syncPlaceFromAutoPlace(existing, autoPlace);
         }
+
+        // 4. 기존 Place가 없을 때만 신규 생성 및 DB 저장
         return createPlaceFromAutoPlace(autoPlace, googlePlaceId);
     }
 
