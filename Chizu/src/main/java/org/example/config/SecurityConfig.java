@@ -101,6 +101,11 @@ public class SecurityConfig {
                                 "/api/places/**"
                         ).permitAll()
 
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/public/**"
+                        ).permitAll()
+
                         // 그룹 공유 조회
                         .requestMatchers(
                                 HttpMethod.GET,

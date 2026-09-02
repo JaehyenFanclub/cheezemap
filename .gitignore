@@ -49,5 +49,6 @@ Thumbs.db
 
 # Local env / secrets (prefer env vars over committing real keys)
 .env
-.env.*
-!.env.example
+.env
+!.env
+**/application-local.properties
