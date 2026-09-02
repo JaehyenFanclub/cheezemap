@@ -99,7 +99,7 @@ async function loadSocialProfile() {
         const user = mapMyPageUser(data);
 
         const provider = String(user?.provider || "LOCAL").toUpperCase();
-        if (provider === "LOCAL") {
+        if (provider === "LOCAL" || user?.profileComplete === true) {
             window.location.replace("index.html");
             return;
         }

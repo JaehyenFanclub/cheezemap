@@ -23,6 +23,9 @@ public class MyPageEditRequest {
     @Schema(description = "생년월일 (기존 값이 없을 때만 설정 가능)", example = "2000-01-01")
     private LocalDate birth;
 
+    @Schema(description = "성별 (true: 남성, false: 여성)", example = "true")
+    private Boolean sex;
+
     @Schema(description = "현재 비밀번호 (비밀번호 변경 시에만 전달)", example = "password123")
     private String currentPassword;
 

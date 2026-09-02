@@ -1207,6 +1207,32 @@ loadOAuthProviders();
    OAuth2 소셜 로그인 콜백 처리
 ===================================================== */
 
+function needsSocialProfileCompletion(user) {
+    if (!user) {
+        return false;
+    }
+
+    if (user.profileComplete === true) {
+        return false;
+    }
+
+    const provider = String(user.provider || "LOCAL").toUpperCase();
+    if (provider === "LOCAL") {
+        return false;
+    }
+
+    if (user.profileComplete === false) {
+        return true;
+    }
+
+    return (
+        !String(user.nickname || "").trim() ||
+        !String(user.phone || "").trim() ||
+        !String(user.birth || "").trim() ||
+        user.sex == null
+    );
+}
+
 async function handleOAuthCallback() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
@@ -1236,17 +1262,7 @@ async function handleOAuthCallback() {
         setAuthToken(token);
         const socialUser = await fetchCurrentUser();
 
-        const provider = String(socialUser?.provider || "LOCAL").toUpperCase();
-        const needsSocialProfile =
-            provider !== "LOCAL" &&
-            (
-                !String(socialUser?.nickname || "").trim() ||
-                !String(socialUser?.phone || "").trim() ||
-                !String(socialUser?.birth || "").trim() ||
-                socialUser?.sex == null
-            );
-
-        if (needsSocialProfile) {
+        if (needsSocialProfileCompletion(socialUser)) {
             window.location.replace("complete-profile.html");
             return;
         }
@@ -1284,17 +1300,11 @@ async function handleOAuthCallback() {
     }
     try {
         const restoredUser = await fetchCurrentUser();
-        const restoredProvider = String(restoredUser?.provider || "LOCAL").toUpperCase();
-        const needsSocialProfile =
-            restoredProvider !== "LOCAL" &&
-            (
-                !String(restoredUser?.nickname || "").trim() ||
-                !String(restoredUser?.phone || "").trim() ||
-                !String(restoredUser?.birth || "").trim() ||
-                restoredUser?.sex == null
-            );
 
-        if (needsSocialProfile && !window.location.pathname.endsWith("complete-profile.html")) {
+        if (
+            needsSocialProfileCompletion(restoredUser) &&
+            !window.location.pathname.endsWith("complete-profile.html")
+        ) {
             window.location.replace("complete-profile.html");
             return;
         }

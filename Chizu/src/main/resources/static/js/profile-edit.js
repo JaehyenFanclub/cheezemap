@@ -302,9 +302,9 @@ function getTrimmedValue(id) {
 
 async function loadProfileForEdit() {
     if (!getAuthToken()) {
-        window.location.replace(
-            "index.html?login=1"
-        );
+        window.location.href =
+            "/";
+
         return;
     }
 
@@ -380,8 +380,12 @@ async function loadProfileForEdit() {
             "cheeseMapUser"
         );
 
-        window.location.replace(
-            "index.html?login=1"
+        setTimeout(
+            () => {
+                window.location.href =
+                    "/";
+            },
+            1000
         );
     }
 }
@@ -709,10 +713,13 @@ document
                     true
                 );
 
-                setTimeout(() => {
-                    window.location.href =
-                        "index.html";
-                }, 500);
+                setTimeout(
+                    () => {
+                        window.location.href =
+                            "/";
+                    },
+                    700
+                );
             } catch (error) {
                 console.error(
                     "프로필 수정 실패:",

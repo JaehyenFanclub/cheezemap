@@ -23,8 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SocialLoginService {
 
-    private static final LocalDate DEFAULT_BIRTH = LocalDate.of(2000, 1, 1);
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -127,13 +125,7 @@ public class SocialLoginService {
     }
 
     private LocalDate resolveBirth(OAuth2Attributes attributes) {
-        if (attributes.birth() != null) {
-            return attributes.birth();
-        }
-        if (attributes.provider() == SocialProvider.LINE) {
-            return null;
-        }
-        return DEFAULT_BIRTH;
+        return attributes.birth();
     }
 
     private String resolveUniqueNickname(OAuth2Attributes attributes) {
