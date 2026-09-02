@@ -13,6 +13,7 @@ import org.example.user.dto.MyPageResponse;
 import org.example.user.dto.SignupRequest;
 import org.example.user.entity.User;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.example.user.entity.UserPhoto;
 import org.example.user.repository.UserPhotoRepository;
 import org.example.user.repository.UserRepository;
@@ -36,13 +37,13 @@ public class UserService {
 
     @Transactional
     public void signup(SignupRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByEmailAndDeletedFalse(request.email())) {
             throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
         }
-        if (userRepository.existsByUserNickname(request.userNickname())) {
+        if (userRepository.existsByUserNicknameAndDeletedFalse(request.userNickname())) {
             throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
         }
-        if (userRepository.existsByPhone(request.phone())) {
+        if (userRepository.existsByPhoneAndDeletedFalse(request.phone())) {
             throw new IllegalArgumentException("이미 사용 중인 전화번호입니다.");
         }
 
@@ -64,7 +65,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.userEmail())
+        User user = userRepository.findByEmailAndDeletedFalse(request.userEmail())
                 .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다."));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
@@ -128,12 +129,12 @@ public class UserService {
         }
 
         if (!newUserNickname.equals(user.getUserNickname())
-                && userRepository.existsByUserNickname(newUserNickname)) {
+                && userRepository.existsByUserNicknameAndDeletedFalse(newUserNickname)) {
             throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
         }
 
         if (!newPhone.equals(user.getPhone())
-                && userRepository.existsByPhone(newPhone)) {
+                && userRepository.existsByPhoneAndDeletedFalse(newPhone)) {
             throw new IllegalArgumentException("이미 사용 중인 전화번호입니다.");
         }
 
@@ -211,7 +212,8 @@ public class UserService {
             imageStorageService.deleteByStoredPath(userPhoto.getPhotoUrl());
             userPhotoRepository.delete(userPhoto);
         });
-        userRepository.delete(user);
+        user.withdraw(passwordEncoder.encode(UUID.randomUUID().toString()));
+        user.markUpdated(user.getId());
         tokenBlacklist.add(token, jwtTokenProvider.getExpiration(token));
     }
 
@@ -227,8 +229,12 @@ public class UserService {
                 throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
             }
             Long userId = Long.valueOf(jwtTokenProvider.getSubject(token));
-            return userRepository.findById(userId)
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            if (user.isDeleted()) {
+                throw new IllegalArgumentException("탈퇴한 계정입니다.");
+            }
+            return user;
         } catch (JwtException | NumberFormatException ex) {
             throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
         }
