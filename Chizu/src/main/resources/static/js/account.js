@@ -1212,25 +1212,11 @@ function needsSocialProfileCompletion(user) {
         return false;
     }
 
-    if (user.profileComplete === true) {
-        return false;
-    }
-
     const provider = String(user.provider || "LOCAL").toUpperCase();
-    if (provider === "LOCAL") {
-        return false;
-    }
 
-    if (user.profileComplete === false) {
-        return true;
-    }
-
-    return (
-        !String(user.nickname || "").trim() ||
-        !String(user.phone || "").trim() ||
-        !String(user.birth || "").trim() ||
-        user.sex == null
-    );
+    // 새 백에서는 LOCAL은 항상 profileComplete=true,
+    // 소셜 계정은 백의 SocialProfileCompletion 결과를 그대로 내려준다.
+    return provider !== "LOCAL" && user.profileComplete === false;
 }
 
 async function handleOAuthCallback() {

@@ -17,7 +17,8 @@ const messages = {
         notice: "이미 소셜 계정에서 받은 정보는 자동으로 입력됩니다. 비밀번호는 소셜 서비스에서 관리됩니다.",
         submit: "가입 완료",
         required: "닉네임, 전화번호, 생년월일, 성별을 모두 입력해주세요.",
-        success: "추가 정보 저장이 완료되었습니다."
+        success: "추가 정보 저장이 완료되었습니다.",
+        incomplete: "필수 정보가 아직 모두 저장되지 않았습니다. 입력값을 다시 확인해주세요."
     },
     ja: {
         title: "追加情報の入力",
@@ -33,7 +34,8 @@ const messages = {
         notice: "SNSから取得できた情報は自動入力されます。パスワードは各SNSサービスで管理されます。",
         submit: "登録を完了",
         required: "ニックネーム、電話番号、生年月日、性別をすべて入力してください。",
-        success: "追加情報を保存しました。"
+        success: "追加情報を保存しました。",
+        incomplete: "必須情報がまだすべて保存されていません。入力内容を確認してください。"
     },
     en: {
         title: "Complete your profile",
@@ -49,7 +51,8 @@ const messages = {
         notice: "Information provided by your social account is filled automatically. Your password is managed by the social provider.",
         submit: "Complete sign-up",
         required: "Please enter nickname, phone, date of birth, and gender.",
-        success: "Your profile has been completed."
+        success: "Your profile has been completed.",
+        incomplete: "Some required profile information is still missing. Please check your entries."
     }
 };
 
@@ -167,6 +170,13 @@ document.getElementById("completeProfileForm")?.addEventListener("submit", async
         const latestData = await apiRequest("/user/mypage", { auth: true });
         const latestUser = mapMyPageUser(latestData);
         localStorage.setItem("cheeseMapUser", JSON.stringify(latestUser));
+
+        // 새 백의 profileComplete를 최종 기준으로 사용한다.
+        // DB에 닉네임/전화번호/생년월일/성별이 모두 저장된 경우에만 가입 완료 처리.
+        if (latestUser?.profileComplete !== true) {
+            setMessage(t("incomplete"));
+            return;
+        }
 
         setMessage(t("success"), true);
         setTimeout(() => window.location.replace("index.html"), 500);
