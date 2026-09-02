@@ -94,7 +94,6 @@ public class PlaceService {
                 .placeDate(request.getPlaceDate())
                 .placeLatitude(request.getPlaceLatitude())
                 .placeLongitude(request.getPlaceLongitude())
-                .user(user)
                 .build();
 
         try {
@@ -152,12 +151,6 @@ public class PlaceService {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 장소가 존재하지 않습니다."));
 
-        Long userId = Long.parseLong(jwtTokenProvider.getSubject(token));
-
-        if (place.getUser() == null || !place.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("해당 장소를 수정할 권한이 없습니다.");
-        }
-
         place.updatePlaceInfo(updateDTO);
         return convertToDTO(place);
     }
@@ -166,12 +159,6 @@ public class PlaceService {
     public void deletePlace(Long placeId, String token){
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 장소가 존재하지 않습니다."));
-
-        Long userId = Long.parseLong(jwtTokenProvider.getSubject(token));
-
-        if (place.getUser() == null || !place.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("해당 장소를 삭제할 권한이 없습니다.");
-        }
 
         placeRepository.delete(place);
     }
@@ -282,7 +269,6 @@ public class PlaceService {
                 .placeLongitude(place.getPlaceLongitude())
                 .avgRating(avgRating != null ? avgRating : 0.0)
                 .reviewCount(reviewCount != null ? reviewCount : 0)
-                .userId(place.getUser() != null ? place.getUser().getId() : null)
                 .build();
     }
 

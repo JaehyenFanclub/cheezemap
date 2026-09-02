@@ -1522,7 +1522,8 @@ body.dark .mypage-edit-button {
     text-align:left;
     cursor:pointer
 }
-.transit-route-option:hover,.transit-route-option.active {
+.transit-route-option:hover,
+.transit-route-option.active {
     border-color:var(--yellow-dark);
     background:var(--yellow-light)
 }
@@ -1632,3 +1633,36 @@ body:has(#routePanel.show) #placeRouteButton:hover {
 .mypage-empty i { display: block; margin-bottom: 9px; color: var(--cheese-deep); font-size: 34px; }
 .mypage-empty p { margin: 0; font-size: 13px; line-height: 1.6; }
 body.dark .mypage-empty { color: #bcb5a8; }
+
+/* =====================================================
+   MR.EUM 수정부분
+   다크모드 주변 추천 장소 스크롤바
+===================================================== */
+
+/* 주변 추천 장소 가로 스크롤바 */
+body.dark .place-list::-webkit-scrollbar {
+    height: 6px;
+}
+
+/* 스크롤바 배경 */
+body.dark .place-list::-webkit-scrollbar-track {
+    background: #25231f;
+    border-radius: 10px;
+}
+
+/* 실제 움직이는 스크롤바 */
+body.dark .place-list::-webkit-scrollbar-thumb {
+    background-color: #6b675e;
+    border-radius: 10px;
+}
+
+/* 마우스를 올렸을 때 */
+body.dark .place-list::-webkit-scrollbar-thumb:hover {
+    background-color: #8a8478;
+}
+
+/* Firefox */
+body.dark .place-list {
+    scrollbar-width: thin;
+    scrollbar-color: #6b675e #25231f;
+}

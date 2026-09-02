@@ -19,7 +19,7 @@
    상단 카테고리 필터
 ===================================================== */
 
-.top-filter-bar {
+/* .top-filter-bar {
     top: 18px;
     left: 18px;
     right: 18px;
@@ -65,14 +65,14 @@
     background-color: #ffd65a;
     color: #3e3014;
 }
-
+ */
 
 /* =====================================================
    현재 지역 카드
 ===================================================== */
 
 .map-status-card {
-    top: 76px;
+    top: 18px;
     left: 18px;
 
     display: flex;
@@ -90,6 +90,14 @@
     box-shadow: 0 10px 24px rgba(75, 57, 28, 0.1);
 
     backdrop-filter: blur(10px);
+
+    /* MR.EUM 수정: 마우스 오버 시 부드럽게 투명해지도록 설정 */
+    transition: opacity 0.2s ease;
+}
+
+/* MR.EUM 추가: 마우스를 올리면 카드가 살짝 반투명해짐 */
+.map-status-card:hover {
+    opacity: 0.00;
 }
 
 .map-status-card div {
@@ -121,7 +129,6 @@
         0 0 0 5px rgba(226, 168, 0, 0.18),
         0 2px 6px rgba(124, 88, 0, 0.18);
 }
-
 
 /* =====================================================
    커스텀 치즈 마커

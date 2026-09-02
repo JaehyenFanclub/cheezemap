@@ -14,6 +14,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -134,6 +135,27 @@ public class User extends BaseEntity {
 
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
+    }
+
+    public void withdraw(String encodedRandomPassword) {
+        if (isDeleted()) {
+            return;
+        }
+
+        markDeleted();
+        this.userName = UUID.randomUUID().toString().replace("-", "");
+        this.userNickname = UUID.randomUUID().toString().replace("-", "");
+        this.email = UUID.randomUUID().toString().replace("-", "");
+        this.phone = UUID.randomUUID().toString().replace("-", "");
+        this.birth = null;
+        this.sex = true;
+        this.password = encodedRandomPassword;
+        this.provider = SocialProvider.LOCAL;
+        this.providerId = UUID.randomUUID().toString().replace("-", "");
+    }
+
+    public static String withdrawnEmail(Long userId) {
+        return "withdrawn_" + userId + "@deleted.local";
     }
 
     @PrePersist

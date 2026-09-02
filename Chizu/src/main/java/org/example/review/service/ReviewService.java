@@ -24,6 +24,7 @@ import org.example.review.entity.ReviewPhoto;
 import org.example.review.repository.ReviewLikeRepository;
 import org.example.review.repository.ReviewPhotoRepository;
 import org.example.review.repository.ReviewRepository;
+import org.example.user.service.UserDisplayNames;
 import org.example.user.entity.User;
 import org.example.user.entity.UserPhoto;
 import org.example.user.repository.UserPhotoRepository;
@@ -91,8 +92,10 @@ public class ReviewService {
                         review.getId(),
                         review.getPlace().getPlaceId(),
                         review.getUser().getId(),
-                        review.getUser().getUserNickname(),
-                        userPhotoUrlByUserId.get(review.getUser().getId()),
+                        UserDisplayNames.nickname(review.getUser()),
+                        review.getUser().isDeleted()
+                                ? null
+                                : userPhotoUrlByUserId.get(review.getUser().getId()),
                         review.getContents(),
                         review.getRating(),
                         review.getLikeCount(),

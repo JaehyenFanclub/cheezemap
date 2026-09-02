@@ -2,7 +2,6 @@ package org.example.menu.service;
 
 
 import lombok.RequiredArgsConstructor;
-import org.example.config.JwtTokenProvider;
 import org.example.menu.domain.Menu;
 import org.example.menu.domain.MenuPhoto;
 import org.example.menu.dto.MenuPhotoCreateRequest;
@@ -23,17 +22,11 @@ public class MenuPhotoService {
 
     private final MenuPhotoRepository menuPhotoRepository;
     private final MenuRepository menuRepository;
-    private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
     public MenuPhotoResponse createPhoto(MenuPhotoCreateRequest dto, Long menuId, String token){
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new IllegalArgumentException("없는 메뉴"));
-
-        Long userId = Long.parseLong(jwtTokenProvider.getSubject(token));
-        if(!menu.getPlace().getUser().getId().equals(userId)){
-            throw new IllegalArgumentException("해당 사진을 추가할 권한 없음");
-        }
 
         MultipartFile file = dto.getFile();
 
@@ -80,11 +73,6 @@ public class MenuPhotoService {
         MenuPhoto menuPhoto = menuPhotoRepository.findById(menuPhotoId)
                 .orElseThrow(() -> new IllegalArgumentException("사진 없음"));
 
-        Long userId = Long.parseLong(jwtTokenProvider.getSubject(token));
-
-        if (!menuPhoto.getMenu().getPlace().getUser().getId().equals(userId)){
-            throw new IllegalArgumentException("해당 사진을 삭제 할 권한이 없습니다.");
-        }
         menuPhotoRepository.delete(menuPhoto);
 
     }

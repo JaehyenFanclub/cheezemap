@@ -348,6 +348,8 @@ body.dark .route-panel {
     box-shadow: 12px 0 30px rgba(0, 0, 0, 0.32) !important;
 }
 
+
+
 /* 태블릿/모바일에서는 화면 전체 너비의 슬라이드 패널 */
 @media (max-width: 850px) {
     .route-panel {
@@ -1610,7 +1612,7 @@ body:has(#routePanel.show) .place-side-panel #placeRouteButton:hover {
     z-index: 2;
     width: 22px;
     height: 22px;
-    margin-left: 2px;
+    margin-left: 1px;
     padding-top: 3px;
     border-radius: 50%;
     background: var(--gray-50);
@@ -1858,4 +1860,511 @@ body.dark .google-place-photo-carousel {
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   다크모드 장소/길찾기 패널 스크롤바
+===================================================== */
+
+/* 다크모드일 때만 스크롤바 크기 변경 */
+body.dark .place-side-panel .place-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+/* 스크롤바 배경 */
+body.dark .place-side-panel .place-content::-webkit-scrollbar-track {
+    background: #25231f;
+}
+
+/* 실제 움직이는 스크롤바 */
+body.dark .place-side-panel .place-content::-webkit-scrollbar-thumb {
+    background: #6b675e;
+    border-radius: 10px;
+}
+
+/* 마우스를 올렸을 때 */
+body.dark .place-side-panel .place-content::-webkit-scrollbar-thumb:hover {
+    background: #8a8478;
+}
+
+/* Firefox */
+body.dark .place-side-panel .place-content {
+    scrollbar-width: thin;
+    scrollbar-color: #6b675e #25231f;
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   도보 / 자동차 길찾기 카드
+===================================================== */
+
+/* 기본 카드 */
+.place-side-panel .simple-route-option {
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 16px;
+    border: 1px solid var(--gray-200);
+    border-radius: 15px;
+    background: var(--white);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+
+    box-sizing: border-box;
+
+    transition:
+        border-color .15s ease,
+        background .15s ease,
+        transform .15s ease;
+}
+
+
+/* 마우스를 올렸을 때 */
+.place-side-panel .simple-route-option:hover {
+    border-color: var(--yellow-dark);
+    transform: translateY(-1px);
+}
+
+
+/* 선택된 경로 */
+.place-side-panel .simple-route-option.active {
+    border-color: var(--yellow-dark);
+    background: #fff9e8;
+}
+
+
+/* =====================================================
+   상단 시간 영역
+===================================================== */
+
+.place-side-panel .simple-route-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+
+/* 시간 + 아이콘 */
+.place-side-panel .simple-route-time {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+
+/* 교통수단 아이콘 */
+.place-side-panel .simple-route-time > i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 30px;
+    height: 30px;
+
+    border-radius: 9px;
+
+    background: var(--yellow-light);
+    color: var(--brown-dark);
+
+    font-size: 16px;
+}
+
+
+/* 시간 */
+.place-side-panel .simple-route-time strong {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+
+/* =====================================================
+   거리
+===================================================== */
+
+.place-side-panel .simple-route-distance {
+    margin-top: 6px;
+    margin-left: 38px;
+
+    color: var(--gray-600);
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+/* =====================================================
+   출발 → 도착
+===================================================== */
+
+.place-side-panel .simple-route-path {
+    margin-top: 16px;
+    padding: 12px;
+
+    border-radius: 11px;
+
+    background: var(--gray-50);
+}
+
+
+/* 출발 / 도착 */
+.place-side-panel .simple-route-point {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+/* 점 */
+.place-side-panel .simple-route-dot {
+    width: 8px;
+    height: 8px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background: var(--yellow-dark);
+}
+
+
+/* 가운데 이동 영역 */
+.place-side-panel .simple-route-line {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    margin: 7px 0 7px 3px;
+    padding-left: 13px;
+
+    color: var(--gray-500);
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+
+/* 가운데 교통수단 아이콘 */
+.place-side-panel .simple-route-line i {
+    font-size: 13px;
+}
+
+
+/* =====================================================
+   경로 설명
+===================================================== */
+
+.place-side-panel .simple-route-description {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    margin-top: 12px;
+    padding-top: 11px;
+
+    border-top: 1px solid var(--gray-100);
+
+    color: var(--gray-600);
+
+    font-size: 10px;
+    font-weight: 600;
+}
+
+
+.place-side-panel .simple-route-description i {
+    font-size: 13px;
+}
+
+
+/* =====================================================
+   다크모드
+===================================================== */
+
+body.dark .place-side-panel .simple-route-option {
+    background: #2e2c27;
+    border-color: #4a4740;
+    color: #f5f2ea;
+}
+
+
+/* 다크모드 선택 카드 */
+body.dark .place-side-panel .simple-route-option.active {
+    background: #3a3528;
+    border-color: #d8a900;
+}
+
+
+/* 다크모드 내부 경로 영역 */
+body.dark .place-side-panel .simple-route-path {
+    background: #25231f;
+}
+
+
+/* 다크모드 설명 */
+body.dark .place-side-panel .simple-route-description {
+    border-top-color: #4a4740;
+    color: #aaa59b;
+}
+
+
+/* 다크모드 거리 */
+body.dark .place-side-panel .simple-route-distance {
+    color: #aaa59b;
+}
+
+
+/* =====================================================
+   도보 / 자동차 아이콘 영역
+===================================================== */
+
+body.dark .place-side-panel .walking-route-option .simple-route-time > i {
+    background: #3f3a2d;
+    color: #e8c84a;
+}
+
+
+body.dark .place-side-panel .driving-route-option .simple-route-time > i {
+    background: #343a3d;
+    color: #8fc4e8;
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   도보 상세 경로
+   ===================================================== */
+
+.walking-detail {
+    margin-top: 14px;
+    padding: 14px;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    border-radius: 12px;
+}
+
+.walking-detail-title {
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.walking-step-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.walking-step-point {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 30px;
+    font-size: 13px;
+}
+
+.walking-step-dot {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    border-radius: 50%;
+    background: #4285F4;
+}
+
+.walking-step-item {
+    display: flex;
+    min-height: 58px;
+}
+
+.walking-step-timeline {
+    position: relative;
+    width: 28px;
+    flex: 0 0 28px;
+    display: flex;
+    justify-content: center;
+}
+
+.walking-step-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--gray-300);
+}
+
+.walking-step-icon {
+    position: relative;
+    z-index: 1;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.walking-step-content {
+    min-width: 0;
+    padding: 3px 0 10px 10px;
+}
+
+.walking-step-instruction {
+    font-size: 13px;
+    line-height: 1.45;
+    font-weight: 600;
+}
+
+.walking-step-distance {
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.walking-detail-empty {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--gray-50);
+    font-size: 13px;
+    color: var(--gray-500);
+}
+
+
+/* =====================================================
+   다크모드
+   ===================================================== */
+
+[data-theme="dark"] .walking-detail {
+    border-color: var(--gray-700);
+    background: var(--gray-800);
+}
+
+[data-theme="dark"] .walking-step-line {
+    background: var(--gray-600);
+}
+
+[data-theme="dark"] .walking-step-icon {
+    background: var(--gray-800);
+    border-color: var(--gray-600);
+}
+
+[data-theme="dark"] .walking-detail-empty {
+    background: var(--gray-800);
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 사진 크기 조정
+   Google Maps 리뷰처럼 작고 일정한 정사각형으로 표시
+===================================================== */
+
+.place-review-photos {
+    display: grid;
+    grid-template-columns: repeat(4, 72px);
+    gap: 6px;
+    margin-top: 9px;
+    max-width: 306px;
+}
+
+/* 리뷰 사진 하나의 실제 크기 */
+.place-review-photo-item {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #f3f3f3;
+}
+
+/* 실제 이미지 크기 강제 */
+.place-review-photo-item img {
+    display: block;
+    width: 72px !important;
+    height: 72px !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: cover;
+}
+
+/* 사진이 1장일 때 */
+.place-review-photos.is-one {
+    grid-template-columns: 72px;
+}
+
+/* 사진이 2장일 때 */
+.place-review-photos.is-two {
+    grid-template-columns: repeat(2, 72px);
+}
+
+/* 사진이 3장일 때 */
+.place-review-photos.is-three {
+    grid-template-columns: repeat(3, 72px);
+}
+
+/* 사진이 4장 이상일 때 */
+.place-review-photos.is-four {
+    grid-template-columns: repeat(4, 72px);
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   5장 이상일 경우 마지막 사진 위에 +N 표시
+===================================================== */
+
+.place-review-photo-more {
+    position: absolute;
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0, 0, 0, 0.48);
+    color: #fff;
+
+    font-size: 16px;
+    font-weight: 800;
+
+    pointer-events: none;
+}
+
+/* 모바일에서는 조금 더 작게 */
+@media (max-width: 620px) {
+
+    .place-review-photos {
+        grid-template-columns: repeat(4, 64px);
+        gap: 5px;
+        max-width: 271px;
+    }
+
+    .place-review-photo-item {
+        width: 64px;
+        height: 64px;
+    }
+
+    .place-review-photo-item img {
+        width: 64px !important;
+        height: 64px !important;
+    }
+
+    .place-review-photos.is-one {
+        grid-template-columns: 64px;
+    }
+
+    .place-review-photos.is-two {
+        grid-template-columns: repeat(2, 64px);
+    }
+
+    .place-review-photos.is-three {
+        grid-template-columns: repeat(3, 64px);
+    }
+
+    .place-review-photos.is-four {
+        grid-template-columns: repeat(4, 64px);
+    }
 }
