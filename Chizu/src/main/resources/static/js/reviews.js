@@ -142,6 +142,14 @@ function renderReviewPhotos(photoUrls) {
 let reviewPhotoViewerIndex = 0;
 let reviewPhotoViewerUrls = [];
 
+// =====================================================
+// MR.EUM 수정부분
+// 현재 열려있는 사진의 리뷰 정보를 저장
+// 사진만 저장하면 작성자/리뷰 내용을 알 수 없기 때문에
+// 클릭한 리뷰 객체 자체를 같이 저장한다.
+// =====================================================
+let reviewPhotoViewerReview = null;
+
 function ensureReviewPhotoViewer() {
     if (document.getElementById("reviewPhotoViewer")) {
         return;
@@ -193,10 +201,50 @@ function ensureReviewPhotoViewer() {
                 ›
             </button>
 
-            <div
-                class="review-photo-viewer-count"
-                data-review-photo-viewer-count
-            ></div>
+
+            <!-- =================================================
+                MR.EUM 수정부분
+
+                사진 아래에 작성자 + 리뷰 내용을 표시한다.
+
+                기존에는 사진만 있었기 때문에
+                사진을 크게 봤을 때 어떤 사용자가 작성한 리뷰인지
+                확인할 수 없었다.
+
+                프로필 / 닉네임 / 리뷰 내용을
+                사진 아래에 표시하도록 추가한다.
+            ================================================= -->
+            <div class="review-photo-viewer-info">
+
+                <div class="review-photo-viewer-user">
+
+                    <span
+                        class="review-photo-viewer-avatar"
+                        data-review-photo-viewer-avatar
+                    >
+                        <i class="ti ti-user"></i>
+                    </span>
+
+                    <span
+                        class="review-photo-viewer-nickname"
+                        data-review-photo-viewer-nickname
+                    >
+                        CHEESE USER
+                    </span>
+
+                </div>
+
+                <p
+                    class="review-photo-viewer-text"
+                    data-review-photo-viewer-text
+                ></p>
+
+            </div>
+
+            // <div
+            //     class="review-photo-viewer-count"
+            //     data-review-photo-viewer-count
+            // ></div>
         </div>
     `;
 
@@ -219,7 +267,11 @@ function ensureReviewPhotoViewer() {
     });
 }
 
-function openReviewPhotoViewer(photoUrls, index = 0) {
+function openReviewPhotoViewer(
+    photoUrls,
+    index = 0,
+    review = null
+) {
     const photos = Array.isArray(photoUrls)
         ? photoUrls.filter(Boolean)
         : [];
@@ -231,6 +283,13 @@ function openReviewPhotoViewer(photoUrls, index = 0) {
     ensureReviewPhotoViewer();
 
     reviewPhotoViewerUrls = photos;
+    // =====================================================
+    // MR.EUM 수정부분
+    // 현재 사진에 해당하는 리뷰 정보를 저장한다.
+    // 작성자 프로필 / 닉네임 / 리뷰 내용을
+    // 사진 아래에 표시하기 위해 필요하다.
+    // =====================================================
+    reviewPhotoViewerReview = review;
     reviewPhotoViewerIndex = Math.max(
         0,
         Math.min(Number(index) || 0, photos.length - 1)
@@ -257,9 +316,9 @@ function updateReviewPhotoViewer() {
         "[data-review-photo-viewer-image]"
     );
 
-    const count = viewer.querySelector(
-        "[data-review-photo-viewer-count]"
-    );
+    // const count = viewer.querySelector(
+    //     "[data-review-photo-viewer-count]"
+    // );
 
     const prev = viewer.querySelector(
         "[data-review-photo-viewer-prev]"
@@ -267,6 +326,22 @@ function updateReviewPhotoViewer() {
 
     const next = viewer.querySelector(
         "[data-review-photo-viewer-next]"
+    );
+
+    // =====================================================
+    // MR.EUM 수정부분
+    // 사진 아래에 표시할 작성자 / 프로필 / 리뷰 내용 요소
+    // =====================================================
+    const avatar = viewer.querySelector(
+        "[data-review-photo-viewer-avatar]"
+    );
+
+    const nickname = viewer.querySelector(
+        "[data-review-photo-viewer-nickname]"
+    );
+
+    const reviewText = viewer.querySelector(
+        "[data-review-photo-viewer-text]"
     );
 
     const url =
@@ -278,10 +353,94 @@ function updateReviewPhotoViewer() {
             `리뷰 사진 ${reviewPhotoViewerIndex + 1}`;
     }
 
-    if (count) {
-        count.textContent =
-            `${reviewPhotoViewerIndex + 1} / ${reviewPhotoViewerUrls.length}`;
+    // =====================================================
+// MR.EUM 수정부분
+// 작성자 정보 표시
+// =====================================================
+
+    const review = reviewPhotoViewerReview;
+
+    if (review) {
+
+        // 작성자 이름
+        if (nickname) {
+            nickname.textContent =
+                review.userNickname ||
+                "CHEESE USER";
+        }
+
+        // 리뷰 내용
+        if (reviewText) {
+            reviewText.textContent =
+                review.content || "";
+        }
+
+        // 작성자 프로필
+        if (avatar) {
+
+            const photoUrl =
+                normalizeReviewUserPhotoUrl(
+                    review.userPhotoUrl
+                );
+
+            if (photoUrl) {
+
+                const separator =
+                    photoUrl.includes("?")
+                        ? "&"
+                        : "?";
+
+                avatar.classList.add("has-photo");
+
+                avatar.innerHTML = `
+                    <img
+                        src="${escapeGroupHtml(
+                            `${photoUrl}${separator}v=${Date.now()}`
+                        )}"
+                        alt="${escapeGroupHtml(
+                            review.userNickname ||
+                            "리뷰 작성자"
+                        )} 프로필 사진"
+                        onerror="
+                            this.parentElement.classList.remove('has-photo');
+                            this.parentElement.innerHTML='<i class=&quot;ti ti-user&quot;></i>';
+                        "
+                    >
+                `;
+
+            } else {
+
+                avatar.classList.remove("has-photo");
+
+                avatar.innerHTML = `
+                    <i class="ti ti-user"></i>
+                `;
+            }
+        }
+
+    } else {
+
+        if (nickname) {
+            nickname.textContent = "CHEESE USER";
+        }
+
+        if (reviewText) {
+            reviewText.textContent = "";
+        }
+
+        if (avatar) {
+            avatar.classList.remove("has-photo");
+
+            avatar.innerHTML = `
+                <i class="ti ti-user"></i>
+            `;
+        }
     }
+
+    // if (count) {
+    //     count.textContent =
+    //         `${reviewPhotoViewerIndex + 1} / ${reviewPhotoViewerUrls.length}`;
+    // }
 
     /*
         사진이 1장뿐이면 좌우 버튼을 숨깁니다.
@@ -361,6 +520,20 @@ document
         const photoContainer =
             photoItem.closest("[data-review-photos]");
 
+        // =====================================================
+        // MR.EUM 수정부분
+        // 사진이 들어있는 리뷰 article을 찾는다.
+        //
+        // 이 article 안에
+        // - 작성자
+        // - 프로필
+        // - 리뷰 내용
+        // 이 모두 들어있다.
+        // =====================================================
+        const reviewItem =
+
+    photoItem.closest(".place-review-item");
+
         if (!photoContainer) {
             return;
         }
@@ -383,9 +556,32 @@ document
                 photoItem.dataset.reviewPhotoIndex
             ) || 0;
 
+        // =====================================================
+        // MR.EUM 수정부분
+        // 클릭한 사진의 리뷰 정보까지 같이 전달
+        // =====================================================
         openReviewPhotoViewer(
             photoUrls,
-            index
+            index,
+            reviewItem
+                ? {
+                    userNickname:
+                        reviewItem.querySelector(
+                            ".place-review-user"
+                        )?.textContent?.trim(),
+
+                    content:
+                        reviewItem.querySelector(
+                            ".place-review-content"
+                        )?.textContent?.trim(),
+
+                    userPhotoUrl:
+                        reviewItem
+                            .querySelector(
+                                ".place-review-avatar img"
+                            )?.src || ""
+                }
+                : null
         );
     });
 
