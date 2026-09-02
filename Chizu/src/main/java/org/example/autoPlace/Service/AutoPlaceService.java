@@ -9,6 +9,7 @@ import org.example.autoPlace.Entity.AutoPlace;
 import org.example.autoPlace.Entity.AutoPlacePhoto;
 import org.example.autoPlace.Repository.AutoPlaceRepository;
 import org.example.place.domain.Place;
+import org.example.place.repository.PlaceRepository;
 import org.example.place.service.PlaceService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -27,6 +28,7 @@ import java.util.*;
 public class AutoPlaceService {
 
     private final AutoPlaceRepository autoPlaceRepository;
+    private final PlaceRepository placeRepository; // 👈 추가: Place 존재 여부 '단순 조회'용
     private final PlaceService placeService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -102,8 +104,15 @@ public class AutoPlaceService {
         }
     }
 
+    /**
+     * 💡 핵심 수정 파트:
+     * 더 이상 Place를 자동 생성(getOrCreateFromAutoPlace)하지 않습니다.
+     * DB에 이미 저장된 Place가 있는지만 단순히 조회하여 응답을 만듭니다.
+     */
     private AutoPlaceResponseDto toResponse(AutoPlace autoPlace) {
-        Place place = placeService.getOrCreateFromAutoPlace(autoPlace);
+        Place place = placeRepository.findByGooglePlaceId(autoPlace.getAutoPlaceId())
+                .orElse(null);
+
         return AutoPlaceResponseDto.fromEntity(autoPlace, place);
     }
 
@@ -232,7 +241,6 @@ public class AutoPlaceService {
             return original;
         }
     }
-
 
     private boolean needsRichGoogleFields(GooglePlaceResponseDTO place) {
         if (place == null) return true;
@@ -397,7 +405,6 @@ public class AutoPlaceService {
                     candidate.getLocation().getLongitude()
             );
 
-            // 같은 역 복합체 안에서 가장 가까운 풍부한 Place를 우선 선택
             if (distance <= 50) score += 100;
             else if (distance <= 120) score += 75;
             else if (distance <= 250) score += 40;
@@ -446,7 +453,6 @@ public class AutoPlaceService {
 
         String rawId = placeId.trim().replace("\"", "").replace("'", "");
 
-        // 1. 입력값이 Place ID 형식(ChIJ...)이 아니고 일반 장소명인 경우 바로 Text Search 실행
         if (!rawId.startsWith("ChIJ") && !rawId.startsWith("places/")) {
             System.out.println(">>> [장소명 검색어 감지] Text Search를 바로 실행합니다: " + rawId);
             return fetchByTextSearchFallback(rawId);
@@ -461,7 +467,6 @@ public class AutoPlaceService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Goog-Api-Key", googleApikey);
-        // FieldMask에 rating, userRatingCount 추가
         headers.set("X-Goog-FieldMask", "id,displayName,formattedAddress,location,photos.name,types,rating,userRatingCount");
 
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
@@ -486,14 +491,12 @@ public class AutoPlaceService {
             System.err.println("HTTP Status Code : " + e.getStatusCode());
             System.err.println("Error Response   : " + e.getResponseBodyAsString());
 
-            // 2. 404(만료) 또는 400(잘못된 ID) 발생 시 DB에서 장소명을 먼저 찾은 후 Fallback 시도
             if (e.getStatusCode().value() == 404 || e.getStatusCode().value() == 400) {
                 System.out.println(">>> [Place ID 단건 조회 실패] DB에서 기존 장소명을 찾아 재검색을 시도합니다. ID: " + rawId);
 
-                // DB에서 기존 저장된 장소 이름 조회 (AutoPlace 또는 Place Repository 활용)
                 String fallbackSearchQuery = autoPlaceRepository.findById(rawId)
                         .map(AutoPlace::getName)
-                        .orElse(rawId); // DB에 저장된 이름이 없으면 rawId 그대로 사용
+                        .orElse(rawId);
 
                 System.out.println(">>> [Fallback 실행] 최종 검색어: " + fallbackSearchQuery);
                 return fetchByTextSearchFallback(fallbackSearchQuery);
@@ -632,7 +635,6 @@ public class AutoPlaceService {
      * Places API (New) Text Search Fallback
      */
     private GooglePlaceResponseDTO fetchByTextSearchFallback(String searchQuery) {
-        // 만약 DB에도 이름이 없고 'ChIJ'로 시작하는 만료 ID가 그대로 들어왔다면 Text Search 불가능
         if (searchQuery != null && searchQuery.startsWith("ChIJ")) {
             throw new IllegalArgumentException("DB에 장소 이름이 없고, Google API에서 만료된 Place ID입니다: " + searchQuery);
         }
@@ -641,7 +643,6 @@ public class AutoPlaceService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Goog-Api-Key", googleApikey);
-        // FieldMask에 places.rating, places.userRatingCount 추가
         headers.set("X-Goog-FieldMask", "places.id,places.displayName,places.formattedAddress,places.location,places.photos.name,places.types,places.rating,places.userRatingCount");
 
         Map<String, Object> requestBody = new HashMap<>();

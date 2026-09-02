@@ -22,12 +22,22 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class PlaceService {
 
-
     private final PlaceRepository placeRepository;
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PlacePreferenceService placePreferenceService;
 
+    /**
+     * AutoPlace 정보 기반으로 저장된 Place 단건 조회 (생성 X)
+     * AutoPlaceService에서 단순 조회용으로 호출합니다.
+     */
+    @Transactional(readOnly = true)
+    public Place getExistingPlaceForAutoPlace(AutoPlace autoPlace) {
+        if (autoPlace == null || autoPlace.getAutoPlaceId() == null || autoPlace.getAutoPlaceId().isBlank()) {
+            return null;
+        }
+        return findExistingForAutoPlace(autoPlace.getAutoPlaceId().trim());
+    }
 
     @Transactional
     public Place getOrCreateFromAutoPlace(AutoPlace autoPlace) {
@@ -97,7 +107,6 @@ public class PlaceService {
             }
             return PlaceResponse.from(duplicated);
         }
-
     }
 
     @Transactional
@@ -151,7 +160,6 @@ public class PlaceService {
 
         place.updatePlaceInfo(updateDTO);
         return convertToDTO(place);
-
     }
 
     @Transactional
@@ -167,7 +175,6 @@ public class PlaceService {
 
         placeRepository.delete(place);
     }
-
 
     private Place createPlaceFromAutoPlace(AutoPlace autoPlace, String googlePlaceId) {
         Place place = Place.builder()
@@ -258,6 +265,10 @@ public class PlaceService {
     }
 
     private PlaceResponse convertToDTO(Place place){
+        // 원시 타입 / Wrapper 타입에 관한 Null safety 처리
+        Double avgRating = place != null ? place.getAvgRating() : 0.0;
+        Integer reviewCount = place != null ? place.getReviewCount() : 0;
+
         return PlaceResponse.builder()
                 .placeId(place.getPlaceId())
                 .googlePlaceId(place.getGooglePlaceId())
@@ -269,11 +280,10 @@ public class PlaceService {
                 .placeDate(place.getPlaceDate())
                 .placeLatitude(place.getPlaceLatitude())
                 .placeLongitude(place.getPlaceLongitude())
-                .avgRating(place.getAvgRating())
-                .reviewCount(place.getReviewCount())
+                .avgRating(avgRating != null ? avgRating : 0.0)
+                .reviewCount(reviewCount != null ? reviewCount : 0)
                 .userId(place.getUser() != null ? place.getUser().getId() : null)
                 .build();
-
     }
 
 }
