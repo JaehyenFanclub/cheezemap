@@ -60,6 +60,7 @@ public class SecurityConfig {
                                 "/index.html",
                                 "/signup",
                                 "/profile-edit",
+                                "/complete-profile",
                                 "/*.html",
                                 "/css/**",
                                 "/js/**",

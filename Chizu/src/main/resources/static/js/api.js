@@ -141,7 +141,12 @@ function mapMyPageUser(data, fallbackUser = null) {
                 data.provider ??
                 fallback.provider ??
                 "LOCAL"
-            ).toUpperCase()
+            ).toUpperCase(),
+
+        profileComplete:
+            data.profileComplete ??
+            fallback.profileComplete ??
+            null
     };
 }
 

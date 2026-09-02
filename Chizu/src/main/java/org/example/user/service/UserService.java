@@ -1,5 +1,6 @@
 package org.example.user.service;
 
+import org.example.auth.SocialProfileCompletion;
 import org.example.auth.enums.SocialProvider;
 import org.example.common.service.ImageStorageService;
 import org.example.common.service.ImageStorageService.ImageFolder;
@@ -104,7 +105,9 @@ public class UserService {
                 user.getPhone(),
                 user.getBirth(),
                 user.getSex(),
-                photoUrl
+                photoUrl,
+                user.getProvider().name(),
+                SocialProfileCompletion.isComplete(user)
         );
     }
 
@@ -119,6 +122,10 @@ public class UserService {
         if (user.getBirth() == null && request.getBirth() != null) {
             newBirth = request.getBirth();
         }
+        Boolean newSex = user.getSex();
+        if (user.getSex() == null && request.getSex() != null) {
+            newSex = request.getSex();
+        }
 
         if (!newUserNickname.equals(user.getUserNickname())
                 && userRepository.existsByUserNickname(newUserNickname)) {
@@ -130,7 +137,7 @@ public class UserService {
             throw new IllegalArgumentException("이미 사용 중인 전화번호입니다.");
         }
 
-        user.updateProfile(newUserName, newUserNickname, newPhone, user.getEmail(), newBirth);
+        user.updateProfile(newUserName, newUserNickname, newPhone, user.getEmail(), newBirth, newSex);
         updatePasswordIfRequested(user, request);
         user.markUpdated(user.getId());
 

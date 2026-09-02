@@ -106,13 +106,17 @@ public class User extends BaseEntity {
             String userNickname,
             String phone,
             String email,
-            LocalDate birth
+            LocalDate birth,
+            Boolean sex
     ) {
         this.userName = userName;
         this.userNickname = userNickname;
         this.phone = phone;
         this.email = email;
         this.birth = birth;
+        if (sex != null) {
+            this.sex = sex;
+        }
     }
 
     public void updateSocialProfile(String userName, String phone, LocalDate birth, Boolean sex) {
