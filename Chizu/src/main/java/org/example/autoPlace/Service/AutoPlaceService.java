@@ -104,15 +104,9 @@ public class AutoPlaceService {
         }
     }
 
-    /**
-     * 💡 핵심 수정 파트:
-     * 더 이상 Place를 자동 생성(getOrCreateFromAutoPlace)하지 않습니다.
-     * DB에 이미 저장된 Place가 있는지만 단순히 조회하여 응답을 만듭니다.
-     */
     private AutoPlaceResponseDto toResponse(AutoPlace autoPlace) {
-        Place place = placeRepository.findByGooglePlaceId(autoPlace.getAutoPlaceId())
-                .orElse(null);
-
+        // 이제 Google Place ID 검증을 통과한 경우에만 안전하게 Place가 생성/조회됩니다.
+        Place place = placeService.getOrCreateFromAutoPlace(autoPlace);
         return AutoPlaceResponseDto.fromEntity(autoPlace, place);
     }
 
