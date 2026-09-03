@@ -2647,7 +2647,7 @@ async function searchGoogleNearbyRecommendationPlaces() {
                     : "ko"
     });
 
-    return (result.places || []).filter(place => {
+    const places = (result.places || []).filter(place => {
         const point = locationToPlainObject(place.location);
         const distance = calculateDistanceMeters(
             nearbyRecommendationState.center,
@@ -2660,6 +2660,24 @@ async function searchGoogleNearbyRecommendationPlaces() {
             distance <= RECOMMEND_RADIUS_METERS
         );
     });
+
+    // Nearby Search 자체가 현재 언어(ko/ja/en)로 요청되므로
+    // 응답받은 장소명/주소를 기존 Google POI 다국어 캐시에 바로 저장합니다.
+    // 이후 상세카드/추천카드에서 같은 언어를 다시 요청할 때 API 호출을 줄입니다.
+    places.forEach(place => {
+        rememberGooglePoiLocalizedText(
+            place.id,
+            currentLanguage,
+            {
+                displayName: place.displayName || "",
+                formattedAddress: place.formattedAddress || "",
+                primaryTypeDisplayName:
+                    place.primaryTypeDisplayName || ""
+            }
+        );
+    });
+
+    return places;
 }
 
 async function loadNearbyRecommendationPlaces(
@@ -2837,6 +2855,120 @@ function doesRecommendationMatchMapCategory(
             ) ??
         true
     );
+}
+
+async function localizeRecommendationRankedPlaces(
+    ranked = []
+) {
+    const language =
+        ["ko", "ja", "en"].includes(
+            currentLanguage
+        )
+            ? currentLanguage
+            : "ko";
+
+    await Promise.all(
+        ranked.map(async item => {
+            const place = item?.place;
+
+            if (!place) {
+                return;
+            }
+
+            // 백 추천은 id가 backend_123 형태이므로 실제 Google Place ID를 사용합니다.
+            // Google fallback은 place.id 자체가 Google Place ID입니다.
+            const googlePlaceId =
+                String(
+                    place.googlePlaceId ||
+                    (
+                        String(place.id || "")
+                            .startsWith("backend_")
+                            ? ""
+                            : place.id
+                    ) ||
+                    ""
+                )
+                    .replace(/^places\//, "")
+                    .trim();
+
+            if (!googlePlaceId) {
+                return;
+            }
+
+            try {
+                let localized =
+                    getRememberedGooglePoiLocalizedText(
+                        googlePlaceId,
+                        language
+                    );
+
+                // Google Nearby 결과는 이미 현재 언어로 받아온 값이므로
+                // 캐시에 없을 때 먼저 현재 결과를 기억하고 추가 호출을 피합니다.
+                if (
+                    !localized?.displayName &&
+                    place.recommendationSource !== "backend"
+                ) {
+                    rememberGooglePoiLocalizedText(
+                        googlePlaceId,
+                        language,
+                        {
+                            displayName:
+                                place.displayName || "",
+                            formattedAddress:
+                                place.formattedAddress || "",
+                            primaryTypeDisplayName:
+                                place.primaryTypeDisplayName || ""
+                        }
+                    );
+
+                    localized =
+                        getRememberedGooglePoiLocalizedText(
+                            googlePlaceId,
+                            language
+                        );
+                }
+
+                // DB 개인화/남녀 추천의 장소명은 DB 대표 언어일 수 있으므로,
+                // 현재 언어 캐시가 없을 때만 Google에서 이름/주소를 한 번 가져옵니다.
+                if (
+                    !localized?.displayName &&
+                    place.recommendationSource === "backend"
+                ) {
+                    localized =
+                        await fetchGooglePoiLocalizedText(
+                            googlePlaceId,
+                            language
+                        );
+                }
+
+                if (localized?.displayName) {
+                    place.displayName =
+                        localized.displayName;
+                }
+
+                if (localized?.formattedAddress) {
+                    place.formattedAddress =
+                        localized.formattedAddress;
+                }
+
+                if (
+                    localized?.primaryTypeDisplayName
+                ) {
+                    place.primaryTypeDisplayName =
+                        localized.primaryTypeDisplayName;
+                }
+            } catch (error) {
+                // 번역/현지화 실패 시 기존 DB/Google 이름을 그대로 사용합니다.
+                console.debug(
+                    "추천 장소 다국어 이름 적용 실패:",
+                    googlePlaceId,
+                    error
+                );
+            }
+        })
+    );
+
+    return ranked;
 }
 
 function renderRecommendationLoading() {
@@ -3172,6 +3304,14 @@ async function renderRecommendedPlaces(
 
             return;
         }
+
+        // 추천 카드도 일반 장소 상세와 동일하게
+        // 현재 UI 언어(ko/ja/en)의 Google 장소명을 사용합니다.
+        // 캐시가 있으면 API를 다시 호출하지 않고,
+        // 백 추천에서 캐시가 없는 장소만 최초 1회 Google 이름을 요청합니다.
+        await localizeRecommendationRankedPlaces(
+            ranked
+        );
 
         list.innerHTML =
             ranked
@@ -3654,7 +3794,11 @@ function updatePlaceCard(placeKey) {
 
 
 const GOOGLE_POI_LOCALIZED_TEXT_CACHE_KEY =
-    "cheeseMapGooglePoiLocalizedTextV1";
+    "cheeseMapGooglePoiLocalizedTextV2";
+
+// 포트폴리오/AWS 시연용으로는 장소명·주소 같은 짧은 텍스트만
+// 브라우저에 캐시하고, 무한정 쌓이지 않도록 최근 500개 장소까지만 유지합니다.
+const GOOGLE_POI_LOCALIZED_TEXT_CACHE_MAX_PLACES = 500;
 
 function readGooglePoiLocalizedTextCache() {
     try {
@@ -3674,13 +3818,36 @@ function readGooglePoiLocalizedTextCache() {
 
 function writeGooglePoiLocalizedTextCache(cache) {
     try {
+        const normalizedCache =
+            cache && typeof cache === "object"
+                ? { ...cache }
+                : {};
+
+        const placeIds =
+            Object.keys(normalizedCache);
+
+        if (
+            placeIds.length >
+            GOOGLE_POI_LOCALIZED_TEXT_CACHE_MAX_PLACES
+        ) {
+            const removeCount =
+                placeIds.length -
+                GOOGLE_POI_LOCALIZED_TEXT_CACHE_MAX_PLACES;
+
+            placeIds
+                .slice(0, removeCount)
+                .forEach((placeId) => {
+                    delete normalizedCache[placeId];
+                });
+        }
+
         localStorage.setItem(
             GOOGLE_POI_LOCALIZED_TEXT_CACHE_KEY,
-            JSON.stringify(cache || {})
+            JSON.stringify(normalizedCache)
         );
     } catch (error) {
         console.debug(
-            "Google 장소 다국어 이름 캐시 저장 실패:",
+            "Google 장소 다국어 이름/주소 캐시 저장 실패:",
             error
         );
     }
@@ -3728,8 +3895,16 @@ function rememberGooglePoiLocalizedText(
     const cache =
         readGooglePoiLocalizedTextCache();
 
+    const existingPlaceCache = {
+        ...(cache[normalizedPlaceId] || {})
+    };
+
+    // 다시 사용된 장소는 가장 최근 항목으로 이동시켜
+    // 500개 제한을 넘을 때 오래된 장소부터 자연스럽게 정리되게 합니다.
+    delete cache[normalizedPlaceId];
+
     cache[normalizedPlaceId] = {
-        ...(cache[normalizedPlaceId] || {}),
+        ...existingPlaceCache,
         [lang]: {
             displayName,
             formattedAddress,
@@ -3863,7 +4038,28 @@ async function refreshCurrentGooglePoiLanguage() {
                 language
             );
 
-        if (!localized) {
+        // 사용자가 요청 도중 다시 언어/장소를 바꿨다면
+        // 이전 요청 결과로 현재 카드 내용을 덮어쓰지 않습니다.
+        const activePlaceId =
+            typeof normalizeGooglePlaceId === "function"
+                ? normalizeGooglePlaceId(
+                    selectedGooglePoi?.placeId || ""
+                )
+                : String(
+                    selectedGooglePoi?.placeId || ""
+                ).replace(/^places\//, "");
+
+        const requestedPlaceId =
+            typeof normalizeGooglePlaceId === "function"
+                ? normalizeGooglePlaceId(placeId)
+                : String(placeId || "")
+                    .replace(/^places\//, "");
+
+        if (
+            !localized ||
+            currentLanguage !== language ||
+            activePlaceId !== requestedPlaceId
+        ) {
             return;
         }
 
@@ -5103,15 +5299,38 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
 
     if (placeAddress) {
         /*
-            Google POI 카드에서는 현재 클릭한 실제 Place의 주소를 가장 우선합니다.
-            DB/AutoPlace에 예전 빈 주소나 임시 주소가 남아 있어도
-            실제 Google formattedAddress가 있으면 그 값을 사용합니다.
+            장소 주소도 현재 선택 언어(ko/ja/en)의 Google 주소를 최우선으로 사용합니다.
+
+            언어 전환 직후 refreshCurrentGooglePoiLanguage()가 화면을 바꿔도,
+            뒤늦게 AutoPlace/Google 카드 렌더가 다시 실행되면서 영어 주소로
+            덮어쓰는 경우가 있었기 때문에 updateGooglePoiCard() 자체에서도
+            언어별 캐시 주소를 가장 먼저 사용합니다.
         */
+        const currentGooglePlaceId =
+            typeof normalizeGooglePlaceId === "function"
+                ? normalizeGooglePlaceId(
+                    poi?.id ||
+                    selectedGooglePoi?.placeId ||
+                    ""
+                )
+                : String(
+                    poi?.id ||
+                    selectedGooglePoi?.placeId ||
+                    ""
+                ).replace(/^places\//, "");
+
+        const localizedAddress =
+            getRememberedGooglePoiLocalizedText(
+                currentGooglePlaceId,
+                currentLanguage
+            )?.formattedAddress || "";
+
         placeAddress.textContent =
+            localizedAddress ||
+            selectedGooglePoi?.address ||
             poi.formattedAddress ||
             autoPlace?.placeAddress ||
             autoPlace?.address ||
-            selectedGooglePoi?.address ||
             (currentLanguage === "ko"
                 ? "주소 정보 없음"
                 : currentLanguage === "ja"

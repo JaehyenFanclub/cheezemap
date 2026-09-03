@@ -1293,10 +1293,6 @@ function renderSelectedGroup() {
         </div>
 
         <div class="group-detail-meta">
-            <span class="group-detail-meta-chip">
-                <i class="ti ti-map-pin"></i>
-                장소 ${groupPlaces.length}곳
-            </span>
             <span
                 class="group-detail-meta-chip group-clone-count"
                 title="다른 사용자가 이 그룹을 가져간 횟수"
