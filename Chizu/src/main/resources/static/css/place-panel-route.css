@@ -2022,7 +2022,10 @@ body.dark .place-side-panel .place-content {
 /* mr.eum수정부분
    거리 */
 .place-side-panel .simple-route-option .route-summary-time {
-    display: block !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
 
     margin: 1px 0 0 !important;
 
@@ -2036,6 +2039,21 @@ body.dark .place-side-panel .place-content {
     text-align: right;
 
     white-space: nowrap;
+}
+
+/* mr.eum수정부분 */
+/* 시작 시간 → 도착 시간은 조금 더 또렷하게 표시합니다. */
+.place-side-panel .simple-route-option .route-summary-clock {
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* mr.eum수정부분 */
+/* 시간과 거리 사이의 구분점입니다. */
+.place-side-panel .simple-route-option .route-summary-time > b {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--gray-400);
 }
 
 
@@ -2356,16 +2374,22 @@ body.dark .place-side-panel
 .walking-step-list {
     display: flex;
     flex-direction: column;
+    gap: 10px;
 }
 
+/* mr.eum수정부분 */
+/* 출발 지점이 첫 번째 안내와 너무 붙지 않도록 여백을 확보합니다. */
 .walking-step-point {
     display: flex;
     align-items: center;
     gap: 10px;
-    min-height: 30px;
+
+    min-height: 34px;
+
+    margin-bottom: 18px;
+
     font-size: 13px;
 }
-
 .walking-step-dot {
     width: 9px;
     height: 9px;
@@ -2375,8 +2399,11 @@ body.dark .place-side-panel
 }
 
 .walking-step-item {
+    margin-top : 18px;
     display: flex;
+    align-items: flex-start;
     min-height: 58px;
+    min-width: 0;
 }
 
 .walking-step-timeline {
@@ -2398,33 +2425,72 @@ body.dark .place-side-panel
 .walking-step-icon {
     position: relative;
     z-index: 1;
+
     width: 26px;
+    min-width: 26px;
+    max-width: 26px;
+
     height: 26px;
+    min-height: 26px;
+    max-height: 26px;
+
+    flex: 0 0 26px;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    background: var(--white);
-    border: 1px solid var(--gray-200);
-    font-size: 15px;
+
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+
+    font-size: 17px;
     font-weight: 700;
+    line-height: 1;
 }
 
 .walking-step-content {
+    flex: 1 1 auto;
     min-width: 0;
-    padding: 3px 0 10px 10px;
+    padding: 2px 0 13px 10px;
 }
 
 .walking-step-instruction {
+    display: block;
+    min-width: 0;
+
     font-size: 13px;
-    line-height: 1.45;
-    font-weight: 600;
+    line-height: 1.55;
+    font-weight: 500;
+
+    overflow-wrap: anywhere;
+    word-break: normal;
 }
 
+
+/* mr.eum수정부분 */
+/* 거리 정보 뒤에 가로 구분선을 넣어 각 도보 단계를 명확하게 구분합니다. */
 .walking-step-distance {
-    margin-top: 3px;
-    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 5px;
+
+    font-size: 11px;
+    line-height: 1.4;
+    font-weight: 200;
+
     color: var(--gray-500);
+}
+
+/* mr.eum수정부분 */
+/* 거리 표시 오른쪽에 남은 공간만큼 실선을 표시합니다. */
+.walking-step-distance::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--gray-200);
 }
 
 .walking-detail-empty {
@@ -3132,4 +3198,35 @@ body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
     color: #fff;
     font-size: 8px;
     font-weight: 800;
+}
+
+/* mr.eum수정부분 */
+/* 자동차 상세 안내의 통행료를 도보 상세 안내와 자연스럽게 연결합니다. */
+.driving-toll {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    margin-top: 6px;
+    padding-top: 12px;
+
+    border-top: 1px solid var(--gray-200);
+}
+
+/* mr.eum수정부분 */
+/* 통행료 제목은 보조 정보처럼 가볍게 표시합니다. */
+.driving-toll-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-500);
+}
+
+/* mr.eum수정부분 */
+/* 실제 통행료 금액은 조금 더 또렷하게 표시합니다. */
+.driving-toll-price {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gray-700);
+    white-space: nowrap;
 }
