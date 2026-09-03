@@ -1266,6 +1266,8 @@ body.dark .place-card button:not(.close-panel):hover {
     background-color: #d8ad35;
 }
 
+
+
 body.dark .weather-button:hover,
 body.dark .icon-button:hover,
 body.dark .header-message-button:hover,
@@ -1522,10 +1524,11 @@ body.dark .mypage-edit-button {
     text-align:left;
     cursor:pointer
 }
-.transit-route-option:hover,
-.transit-route-option.active {
-    border-color:var(--yellow-dark);
-    background:var(--yellow-light)
+/* MR.EUM수정부분 - 대중교통 경로 hover/active 노란색 제거 */
+body.dark .transit-route-option:hover,
+body.dark .transit-route-option.active {
+    background: #34312b;
+    border-color: #5a554b;
 }
 .transit-route-option .route-summary {
     display:flex;
