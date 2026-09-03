@@ -104,6 +104,12 @@ public class SecurityConfig {
                                 "/api/places/**"
                         ).permitAll()
 
+                        // 리뷰 번역 (공개)
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/translate"
+                        ).permitAll()
+
                         // 그룹 공유 조회
                         .requestMatchers(
                                 HttpMethod.GET,
