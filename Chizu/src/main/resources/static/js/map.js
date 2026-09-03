@@ -4024,6 +4024,15 @@ async function openGooglePoi(placeId, fallbackPosition, fallbackName = "", optio
     };
 
     selectedPlaceKey = null;
+
+    // 새 Google POI를 열 때 이전 장소의 DB placeId가 카드에 남아
+    // 다른 Place로 재사용되는 것을 막습니다.
+    if (placeCard) {
+        delete placeCard.dataset.backendPlaceId;
+        delete placeCard.dataset.placeKey;
+        placeCard.dataset.googlePlaceId = normalizedPlaceId;
+    }
+
     selectedGooglePoi = {
         placeId: normalizedPlaceId,
         name: displayNameOverride || safeName,
@@ -4758,17 +4767,22 @@ function updateGooglePoiCard(poi, autoPlace = null, options = {}) {
     }
 
     if (placeCategory) {
+        const googleCategory =
+            String(category || "").trim();
+
         const backendCategory =
             autoPlace?.placeCategory ||
             autoPlace?.category ||
             "";
 
+        // 현재 클릭한 Google/AutoPlace 카테고리를 우선 표시합니다.
+        // 잘못 연결된 과거 DB Place의 카테고리(예: 카페)가
+        // 현재 호텔 등의 카테고리를 덮어쓰지 않게 합니다.
         placeCategory.textContent =
-            !isGenericPlaceCategory(
-                backendCategory
-            )
-                ? backendCategory
-                : category;
+            googleCategory &&
+            !isGenericPlaceCategory(googleCategory)
+                ? googleCategory
+                : backendCategory;
     }
 
     if (placeRating) {
