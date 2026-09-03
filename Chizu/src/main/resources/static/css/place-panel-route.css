@@ -3033,8 +3033,7 @@ body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    text-decoration: none;
 }
 
 .place-review-translated-text {

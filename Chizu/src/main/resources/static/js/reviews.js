@@ -891,7 +891,7 @@ async function loadReviewsForActivePlace(
 
 
 const REVIEW_TRANSLATION_CACHE_KEY =
-    "cheeseMapReviewTranslationV1";
+    "cheeseMapReviewTranslationV2";
 
 function readReviewTranslationCache() {
     try {
@@ -923,31 +923,62 @@ function writeReviewTranslationCache(cache) {
     }
 }
 
+function hashReviewTranslationText(text) {
+    const value = String(text || "");
+    let hash = 2166136261;
+
+    for (let i = 0; i < value.length; i += 1) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+
+    return (hash >>> 0).toString(36);
+}
+
 function getReviewTranslationCacheKey(
     reviewId,
-    targetLanguage
+    targetLanguage,
+    sourceText = ""
 ) {
-    return `${reviewId}:${targetLanguage}`;
+    return `${reviewId}:${targetLanguage}:${hashReviewTranslationText(sourceText)}`;
 }
 
 function getCachedReviewTranslation(
     reviewId,
-    targetLanguage
+    targetLanguage,
+    sourceText = ""
 ) {
     const cache =
         readReviewTranslationCache();
 
-    return cache[
-        getReviewTranslationCacheKey(
-            reviewId,
-            targetLanguage
-        )
-    ] || null;
+    const entry =
+        cache[
+            getReviewTranslationCacheKey(
+                reviewId,
+                targetLanguage,
+                sourceText
+            )
+        ] || null;
+
+    if (!entry?.translatedText) {
+        return null;
+    }
+
+    // 원문이 바뀌었는데 예전 해시 충돌/구버전 캐시가 있으면 쓰지 않습니다.
+    if (
+        entry.sourceText != null &&
+        String(entry.sourceText) !== String(sourceText || "")
+    ) {
+        return null;
+    }
+
+    return entry;
 }
 
 function cacheReviewTranslation(
     reviewId,
     targetLanguage,
+    sourceText,
     translatedText,
     detectedLanguage = ""
 ) {
@@ -957,9 +988,11 @@ function cacheReviewTranslation(
     cache[
         getReviewTranslationCacheKey(
             reviewId,
-            targetLanguage
+            targetLanguage,
+            sourceText
         )
     ] = {
+        sourceText: String(sourceText || ""),
         translatedText:
             String(translatedText || ""),
         detectedLanguage:
@@ -984,6 +1017,27 @@ function cacheReviewTranslation(
     }
 
     writeReviewTranslationCache(cache);
+}
+
+function invalidateReviewTranslationCache(reviewId) {
+    if (reviewId == null || reviewId === "") {
+        return;
+    }
+
+    const prefix = `${reviewId}:`;
+    const cache = readReviewTranslationCache();
+    let changed = false;
+
+    Object.keys(cache).forEach(key => {
+        if (key.startsWith(prefix)) {
+            delete cache[key];
+            changed = true;
+        }
+    });
+
+    if (changed) {
+        writeReviewTranslationCache(cache);
+    }
 }
 
 function detectReviewLanguage(text) {
@@ -1036,7 +1090,7 @@ function getReviewOriginalButtonLabel() {
         ? "原文を見る"
         : currentLanguage === "en"
             ? "View original"
-            : "원문 보기";
+            : "×";
 }
 
 function renderReviewTranslationControls(
@@ -1121,10 +1175,13 @@ async function requestReviewTranslation(
     text,
     targetLanguage
 ) {
+    const sourceText = String(text || "").trim();
+
     const cached =
         getCachedReviewTranslation(
             reviewId,
-            targetLanguage
+            targetLanguage,
+            sourceText
         );
 
     if (cached?.translatedText) {
@@ -1137,7 +1194,7 @@ async function requestReviewTranslation(
             {
                 method: "POST",
                 body: {
-                    text,
+                    text: sourceText,
                     targetLanguage
                 }
             }
@@ -1162,13 +1219,16 @@ async function requestReviewTranslation(
         translatedText,
         detectedLanguage:
             String(
-                result?.detectedLanguage || ""
+                result?.detectedLanguage ||
+                result?.detectedSourceLanguage ||
+                ""
             ).trim()
     };
 
     cacheReviewTranslation(
         reviewId,
         targetLanguage,
+        sourceText,
         normalized.translatedText,
         normalized.detectedLanguage
     );
@@ -2668,6 +2728,8 @@ document
                         }
                     );
 
+                    invalidateReviewTranslationCache(reviewId);
+
                     reviewCacheByPlace.delete(
                         String(
                             activeReviewBackendPlace.placeId
@@ -2726,6 +2788,8 @@ document
                             auth: true
                         }
                     );
+
+                    invalidateReviewTranslationCache(reviewId);
 
                     reviewCacheByPlace.delete(
                         String(
@@ -4329,6 +4393,7 @@ async function saveMyPageReviewEdit() {
             { method: "PUT", auth: true, body: form }
         );
 
+        invalidateReviewTranslationCache(target.review.reviewId);
         reviewCacheByPlace.delete(String(target.placeId));
         invalidateMyReviewsPageCache();
         closeMyPageReviewEditModal();
@@ -4556,6 +4621,8 @@ document
                         }
                     );
 
+                    invalidateReviewTranslationCache(reviewId);
+
                     reviewCacheByPlace.delete(
                         String(placeId)
                     );
@@ -4642,6 +4709,8 @@ document
                             auth: true
                         }
                     );
+
+                    invalidateReviewTranslationCache(reviewId);
 
                     if (
                         activeReviewBackendPlace &&
