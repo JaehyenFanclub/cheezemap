@@ -979,31 +979,24 @@ updateReviewMoreButtons();
 
 // mr.eum수정부분
 function renderPlaceReviewEditPhotos(item) {
-    // mr.eum수정부분
-    // 서버에서 받은 기존 사진은 그대로 보여주고, 새로 선택한 사진만 삭제할 수 있게 합니다.
     const container = item.querySelector('[data-place-review-edit-photos]');
     const count = item.querySelector('[data-place-review-edit-photo-count]');
     if (!container) return;
 
-    let existingUrls = [];
-    try {
-        existingUrls = JSON.parse(item.dataset.reviewPhotoUrls || '[]').filter(Boolean);
-    } catch {}
-
     const newUrls = placeReviewEditNewPhotos.map(file => URL.createObjectURL(file));
-    const total = existingUrls.length + newUrls.length;
+    const total = placeReviewEditExistingPhotos.length + newUrls.length;
     if (count) count.textContent = `${total}장`;
 
     container.innerHTML = total
-        ? existingUrls.map((url, index) => `
+        ? placeReviewEditExistingPhotos.map((photo, index) => `
             <div class="place-review-edit-photo">
-                <img src="${escapeGroupHtml(url)}" alt="기존 리뷰 사진">
-                <span class="place-review-edit-photo-badge">기존</span>
+                <img src="${escapeGroupHtml(photo.url)}" alt="기존 리뷰 사진">
+                <button type="button" class="place-review-edit-photo-delete" data-place-review-edit-photo-delete="existing" data-photo-index="${index}" aria-label="사진 삭제">×</button>
             </div>`).join('') +
           newUrls.map((url, index) => `
             <div class="place-review-edit-photo">
                 <img src="${escapeGroupHtml(url)}" alt="새 리뷰 사진">
-                <button type="button" class="place-review-edit-photo-delete" data-place-review-edit-photo-delete="${index}" aria-label="사진 삭제">×</button>
+                <button type="button" class="place-review-edit-photo-delete" data-place-review-edit-photo-delete="new" data-photo-index="${index}" aria-label="사진 삭제">×</button>
             </div>`).join('')
         : '<span class="place-review-edit-photo-empty">사진을 추가해보세요.</span>';
 }
@@ -1135,6 +1128,7 @@ async function renderPlaceReviews(placeKey) {
                     data-review-id="${review.reviewId}"
                     data-review-rating="${review.rating}"
                     data-review-photo-urls="${escapeGroupHtml(JSON.stringify(Array.isArray(review.photoUrls) ? review.photoUrls : []))}"
+                    data-review-photo-ids="${escapeGroupHtml(JSON.stringify(Array.isArray(review.photoIds) ? review.photoIds : []))}"
                 >
                     <div class="place-review-top">
                         <div class="place-review-user-wrap">
@@ -1946,6 +1940,19 @@ document
                 // mr.eum수정부분
                 // 장소 리뷰 수정창을 열 때 기존 사진을 즉시 표시합니다.
                 if (opening && edit) {
+                    let reviewPhotoUrls = [];
+                    let reviewPhotoIds = [];
+
+                    try {
+                        reviewPhotoUrls = JSON.parse(item.dataset.reviewPhotoUrls || "[]").filter(Boolean);
+                        reviewPhotoIds = JSON.parse(item.dataset.reviewPhotoIds || "[]");
+                    } catch {}
+
+                    placeReviewEditExistingPhotos = reviewPhotoUrls.map((url, index) => ({
+                        url,
+                        id: reviewPhotoIds[index] ?? null
+                    }));
+                    placeReviewEditDeletePhotoIds = [];
                     placeReviewEditNewPhotos = [];
                     renderPlaceReviewEditPhotos(item);
                 }
@@ -1961,11 +1968,21 @@ document
             }
 
             if (event.target.closest('[data-place-review-edit-photo-delete]')) {
-                const index = Number(event.target.closest('[data-place-review-edit-photo-delete]').dataset.placeReviewEditPhotoDelete);
-                if (Number.isInteger(index)) {
+                const deleteButton = event.target.closest('[data-place-review-edit-photo-delete]');
+                const type = deleteButton.dataset.placeReviewEditPhotoDelete;
+                const index = Number(deleteButton.dataset.photoIndex);
+
+                if (type === "existing" && Number.isInteger(index)) {
+                    const photo = placeReviewEditExistingPhotos[index];
+                    if (photo?.id != null) {
+                        placeReviewEditDeletePhotoIds.push(photo.id);
+                    }
+                    placeReviewEditExistingPhotos.splice(index, 1);
+                } else if (type === "new" && Number.isInteger(index)) {
                     placeReviewEditNewPhotos.splice(index, 1);
-                    renderPlaceReviewEditPhotos(item);
                 }
+
+                renderPlaceReviewEditPhotos(item);
                 return;
             }
 
@@ -2098,6 +2115,7 @@ document
                 placeReviewEditNewPhotos.forEach(file => {
                     form.append("images", file);
                 });
+                appendReviewDeleteImageIds(form, placeReviewEditDeletePhotoIds);
 
                 try {
 
@@ -2118,6 +2136,8 @@ document
 
                     // mr.eum수정부분
                     placeReviewEditNewPhotos = [];
+                    placeReviewEditExistingPhotos = [];
+                    placeReviewEditDeletePhotoIds = [];
                     invalidateMyReviewsPageCache();
 
                     await renderPlaceReviews(
@@ -2981,6 +3001,28 @@ let myPageReviewEditTarget = null;
 // mr.eum수정부분
 // 장소 상세 리뷰 수정에서 새로 선택한 사진을 보관합니다.
 let placeReviewEditNewPhotos = [];
+let placeReviewEditExistingPhotos = [];
+let placeReviewEditDeletePhotoIds = [];
+
+function appendReviewDeleteImageIds(form, deletePhotoIds) {
+    (deletePhotoIds || []).forEach(photoId => {
+        form.append("deleteImageIds", String(photoId));
+    });
+}
+
+function toReviewEditPhotos(review) {
+    const urls = Array.isArray(review?.photoUrls)
+        ? review.photoUrls.filter(Boolean)
+        : [];
+    const ids = Array.isArray(review?.photoIds)
+        ? review.photoIds
+        : [];
+
+    return urls.map((url, index) => ({
+        url,
+        id: ids[index] ?? null
+    }));
+}
 
 
 /* =====================================================
@@ -3331,12 +3373,9 @@ function ensureMyPageReviewEditModal() {
 
                 if (Number.isFinite(photoId)) {
                     myPageReviewEditDeletePhotoIds.push(photoId);
-                    myPageReviewEditExistingPhotos.splice(index, 1);
-                } else {
-                    // mr.eum수정부분
-                    // 현재 ReviewResponse에는 사진 ID가 없어서 기존 사진 삭제를 서버에 전달할 수 없습니다.
-                    showToast("기존 사진 삭제는 현재 지원할 수 없습니다.");
                 }
+
+                myPageReviewEditExistingPhotos.splice(index, 1);
 
             } else if (
                 type === "new"
@@ -3443,15 +3482,7 @@ function openMyPageReviewEditModal(
        그것을 기존 사진으로 사용합니다.
     */
 
-    myPageReviewEditExistingPhotos =
-        Array.isArray(review.photoUrls)
-            ? review.photoUrls
-                .filter(Boolean)
-                .map(url => ({
-                    url,
-                    id: null
-                }))
-            : [];
+    myPageReviewEditExistingPhotos = toReviewEditPhotos(review);
 
 
     const placeName =
@@ -3750,6 +3781,7 @@ async function saveMyPageReviewEdit() {
     myPageReviewEditNewPhotos.forEach(file => {
         form.append("images", file);
     });
+    appendReviewDeleteImageIds(form, myPageReviewEditDeletePhotoIds);
 
     try {
         await apiRequest(
