@@ -608,29 +608,6 @@ function getTransitousFareText(itinerary, responseData = null) {
     // 현재 콘솔에서 effectiveFareLegProducts가 Array(0)으로
     // 확인되었기 때문에 transferProducts도 반드시 확인합니다.
     // =====================================================
-    console.log(
-    "========== MR.EUM fareTransfers JSON 전체 확인 =========="
-    );
-
-    console.log(
-        JSON.stringify(
-            itinerary.fareTransfers,
-            null,
-            2
-        )
-    );
-
-    console.log(
-        "========== MR.EUM itinerary 전체 JSON 확인 =========="
-    );
-
-    console.log(
-        JSON.stringify(
-            itinerary,
-            null,
-            2
-        )
-    );
 
     const fareTransfers = itinerary?.fareTransfers;
 
@@ -1986,8 +1963,6 @@ function renderTransitousResults(data) {
             // itinerary뿐 아니라 Transitous 전체 응답에서도 운임 정보를 찾습니다.
             const fareText =
                 getTransitousFareText(it, data);
-
-           
             const lineChips = transitLegs.map(leg => ({
                 name: getTransitousSummaryLineName(leg),
                 code: getTransitousLineCode(leg),

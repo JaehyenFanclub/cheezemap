@@ -1740,3 +1740,90 @@ body.dark .mypage-review-edit-textarea, body.dark .mypage-review-edit-close, bod
     word-break: break-word;
     max-width: 100%;
 }
+
+
+/* =========================================================
+   MR.EUM 수정부분
+   마이페이지 내 리뷰 수정 모달 디자인 개선
+   - 기본 브라우저 스크롤바를 치즈맵 스타일로 변경
+   - 다크모드 사진 추가 / 수정 완료 버튼 가독성 개선
+   ========================================================= */
+
+/* 리뷰 수정 모달 스크롤바 */
+.mypage-review-edit-dialog {
+    scrollbar-width: thin;
+    scrollbar-color: #b8a98b #f1eee7;
+}
+
+.mypage-review-edit-dialog::-webkit-scrollbar {
+    width: 8px;
+}
+
+.mypage-review-edit-dialog::-webkit-scrollbar-track {
+    background: #f1eee7;
+    border-radius: 10px;
+}
+
+.mypage-review-edit-dialog::-webkit-scrollbar-thumb {
+    background: #b8a98b;
+    border-radius: 10px;
+    border: 2px solid #f1eee7;
+}
+
+.mypage-review-edit-dialog::-webkit-scrollbar-thumb:hover {
+    background: #8f8065;
+}
+
+/* 다크모드 리뷰 수정 모달 스크롤바 */
+body.dark .mypage-review-edit-dialog {
+    scrollbar-color: #746b5b #25231f;
+}
+
+body.dark .mypage-review-edit-dialog::-webkit-scrollbar-track {
+    background: #25231f;
+}
+
+body.dark .mypage-review-edit-dialog::-webkit-scrollbar-thumb {
+    background: #746b5b;
+    border-color: #25231f;
+}
+
+body.dark .mypage-review-edit-dialog::-webkit-scrollbar-thumb:hover {
+    background: #9b907c;
+}
+
+/* 다크모드 - 사진 추가 버튼 */
+body.dark .mypage-review-edit-add-photo {
+    background: #3a352c;
+    color: #f7e9a8;
+    border: 1px solid #c5a84b;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+body.dark .mypage-review-edit-add-photo:hover {
+    background: #4a4337;
+    color: #fff4bd;
+    border-color: #e0c45f;
+}
+
+/* 다크모드 - 수정 완료 버튼 */
+body.dark .mypage-review-edit-save {
+    background: #d6b94f;
+    color: #211e18;
+    border: 1px solid #f0d66a;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    font-weight: 700;
+}
+
+body.dark .mypage-review-edit-save:hover {
+    background: #e5ca61;
+    color: #171510;
+    border-color: #f5df83;
+}
+
+/* 키보드 포커스 시에도 버튼 위치와 가독성 유지 */
+body.dark .mypage-review-edit-add-photo:focus-visible,
+body.dark .mypage-review-edit-save:focus-visible {
+    outline: 2px solid #f5df83;
+    outline-offset: 2px;
+}
