@@ -138,31 +138,56 @@ function clearRenderedRoute() {
 }
 
 
+// mr.eum수정부분
+// 도보/자동차 경로 시간을 현재 선택된 언어에 맞춰 표시합니다.
 function getRouteDurationText(route) {
-    return (
+    const localizedDuration =
         route?.localizedValues?.duration ||
-        route?.legs?.[0]?.localizedValues?.duration ||
-        (
-            Number.isFinite(route?.durationMillis)
-                ? `${Math.round(route.durationMillis / 60000)}분`
-                : "-"
-        )
-    );
+        route?.legs?.[0]?.localizedValues?.duration;
+
+    if (localizedDuration) {
+        return localizedDuration;
+    }
+
+    if (Number.isFinite(route?.durationMillis)) {
+        const totalMinutes =
+            Math.max(1, Math.round(route.durationMillis / 60000));
+
+        if (currentLanguage === "ko") {
+            return `${totalMinutes}분`;
+        }
+
+        if (currentLanguage === "ja") {
+            return `${totalMinutes}分`;
+        }
+
+        return `${totalMinutes} min`;
+    }
+
+    return "-";
 }
 
 
+// mr.eum수정부분
+// 도보/자동차 경로 거리를 Google의 현재 언어 지역화 값으로 표시합니다.
 function getRouteDistanceText(route) {
-    return (
+    const localizedDistance =
         route?.localizedValues?.distance ||
-        route?.legs?.[0]?.localizedValues?.distance ||
-        (
-            Number.isFinite(route?.distanceMeters)
-                ? route.distanceMeters >= 1000
-                    ? `${(route.distanceMeters / 1000).toFixed(1)} km`
-                    : `${Math.round(route.distanceMeters)} m`
-                : "-"
-        )
-    );
+        route?.legs?.[0]?.localizedValues?.distance;
+
+    if (localizedDistance) {
+        return localizedDistance;
+    }
+
+    if (Number.isFinite(route?.distanceMeters)) {
+        if (route.distanceMeters >= 1000) {
+            return `${(route.distanceMeters / 1000).toFixed(1)} km`;
+        }
+
+        return `${Math.round(route.distanceMeters)} m`;
+    }
+
+    return "-";
 }
 
 // =====================================================
@@ -207,14 +232,22 @@ function getRoutePlaceNames(route) {
    도보 상세 경로
    ===================================================== */
 
+// mr.eum수정부분
+// Google Routes가 현재 언어로 반환한 도보 상세 안내를 그대로 사용합니다.
 function getWalkingStepDetails(route) {
     const steps =
         route?.legs?.flatMap(leg => leg?.steps || []) || [];
 
     return steps
         .filter(step => {
-            const mode = String(step?.travelMode || "").toUpperCase();
-            return !mode || mode === "WALKING" || mode === "WALK";
+            const mode =
+                String(step?.travelMode || "").toUpperCase();
+
+            return (
+                !mode ||
+                mode === "WALKING" ||
+                mode === "WALK"
+            );
         })
         .map((step, index) => {
             const instruction =
@@ -227,7 +260,8 @@ function getWalkingStepDetails(route) {
                 step?.navigationInstruction?.maneuver ||
                 "";
 
-            const distanceMeters = Number(step?.distanceMeters);
+            const distanceMeters =
+                Number(step?.distanceMeters);
 
             const distanceText =
                 step?.localizedValues?.distance ||
@@ -241,12 +275,19 @@ function getWalkingStepDetails(route) {
 
             return {
                 index: index + 1,
-                instruction: String(instruction).trim(),
-                maneuver: String(maneuver).trim(),
-                distanceText
+                instruction:
+                    String(instruction).trim(),
+                maneuver:
+                    String(maneuver).trim(),
+                distanceText:
+                    String(distanceText).trim()
             };
         })
-        .filter(step => step.instruction || step.distanceText);
+        .filter(
+            step =>
+                step.instruction ||
+                step.distanceText
+        );
 }
 
 
@@ -468,64 +509,74 @@ function renderRouteResults(routes) {
         return;
     }
 
-    // =====================================================
-    // MR.EUM 수정부분
-    // 현재 선택된 교통수단 확인
-    // 대중교통은 기존의 별도 렌더링을 사용하고
-    // 여기서는 도보 / 자동차 경로를 보기 좋게 표시한다.
-    // =====================================================
+    const visibleRoutes = Array.isArray(routes)
+        ? routes.slice(0, 5)
+        : [];
 
-    const travelMode = getSelectedTravelMode();
-
-    // 대중교통은 기존 Transit 전용 렌더링을 사용하므로
-    // 여기서는 기존 방식 그대로 둔다.
-    if (travelMode === "TRANSIT") {
+    if (!visibleRoutes.length) {
+        routeResult.innerHTML = "";
+        routeResult.classList.remove("show");
         return;
     }
 
-    // 도보 / 자동차에 따라 아이콘과 이름을 결정
-    const isWalking = travelMode === "WALKING";
+    // mr.eum수정부분
+    // 추천 경로와 대안 경로를 별도 버튼 없이 처음부터 모두 표시합니다.
+    routeResult.innerHTML = visibleRoutes
+        .map((route, index) => {
+            const isRecommended = index === 0;
+            const travelMode = getSelectedTravelMode();
+            const isWalking =
+                travelMode === "WALKING";
 
-    const modeIcon = isWalking
-        ? "ti-walk"
-        : "ti-car";
+            const names = getRoutePlaceNames(route);
 
-    const modeName = isWalking
-        ? rt("도보", "徒歩", "Walking")
-        : rt("자동차", "自動車", "Driving");
+            const durationText =
+                route?.localizedValues?.duration
+                || formatRouteDuration(route?.duration);
 
-    routeResult.innerHTML =
-        routes.map((route, index) => {
+            const distanceText =
+                route?.localizedValues?.distance
+                || formatRouteDistance(route?.distanceMeters);
 
-            // 추천 경로인지 대체 경로인지 확인
-            const routeLabel =
-                index === 0
-                    ? rt("추천", "おすすめ", "Recommended")
-                    : rt(
-                        `대안 ${index + 1}`,
-                        `候補 ${index + 1}`,
-                        `Option ${index + 1}`
-                    );
+            const routeLabel = isRecommended
+                ? rt(
+                    "추천",
+                    "おすすめ",
+                    "Recommended"
+                )
+                : rt(
+                    `대안 ${index + 1}`,
+                    `候補 ${index + 1}`,
+                    `Option ${index + 1}`
+                );
 
-            // 경로 설명
-            const summary =
-                getRouteSummary(route, index);
+            const lineText = isWalking
+                ? rt(
+                    `${names.start} → ${names.end}`,
+                    `${names.start} → ${names.end}`,
+                    `${names.start} → ${names.end}`
+                )
+                : rt(
+                    "자동차 경로",
+                    "自動車ルート",
+                    "Driving route"
+                );
+
+            const details = isWalking
+                ? renderWalkingStepDetails(route)
+                : "";
 
             return `
                 <button
                     type="button"
-                    class="route-option simple-route-option ${isWalking ? "walking-route-option" : "driving-route-option"}${index === 0 ? " active" : ""}"
+                    class="route-option simple-route-option${isRecommended ? " active expanded" : ""}"
                     data-route-index="${index}"
+                    aria-expanded="${isRecommended ? "true" : "false"}"
                 >
-
-                    <!-- 시간 + 추천 뱃지 -->
-                    <div class="simple-route-header">
-
-                        <div class="simple-route-time">
-                           
-
+                    <div class="route-summary">
+                        <div class="route-summary-main">
                             <strong>
-                                ${getRouteDurationText(route)}
+                                ${escapeWalkingText(durationText)}
                             </strong>
 
                             <span class="route-recommend-badge">
@@ -533,60 +584,52 @@ function renderRouteResults(routes) {
                             </span>
                         </div>
 
+                        <span class="route-summary-time">
+                            ${escapeWalkingText(distanceText)}
+                        </span>
                     </div>
 
+                    <div class="route-line">
+                        <span class="route-mode-icon">
+                            <i
+                                class="ti ${isWalking ? "ti-walk" : "ti-car"}"
+                                aria-hidden="true"
+                            ></i>
+                        </span>
 
-                    <!-- 거리 -->
-                    <div class="simple-route-distance">
-                        ${getRouteDistanceText(route)}
+                        <div class="route-line-chips">
+                            <span>
+                                ${escapeWalkingText(lineText)}
+                            </span>
+                        </div>
+
+                        <i
+                            class="ti ti-chevron-down simple-route-chevron"
+                            aria-hidden="true"
+                        ></i>
                     </div>
 
-
-                    <!-- 출발 → 이동수단 → 도착 -->
-                    <div class="simple-route-path">
-                        <div class="simple-route-point">
-                            <span class="simple-route-dot"></span>
-                            <span>${escapeWalkingText(getRoutePlaceNames(route).start)}</span>
-                        </div>
-
-                        <div class="simple-route-line">
-                            <i class="ti ${modeIcon}" aria-hidden="true"></i>
-                            <span>${modeName}</span>
-                        </div>
-
-                        <div class="simple-route-point">
-                            <span class="simple-route-dot"></span>
-                            <span>${escapeWalkingText(getRoutePlaceNames(route).end)}</span>
-                        </div>
+                    <div class="simple-route-details">
+                        ${details}
                     </div>
-
-                    ${isWalking ? renderWalkingStepDetails(route) : ""}
-
                 </button>
             `;
-        }).join("");
-
+        })
+        .join("");
 
     routeResult.classList.add("show");
 
-
-    // =====================================================
-    // MR.EUM 수정부분
-    // 경로 카드를 클릭하면 해당 경로를 지도에 표시
-    // =====================================================
-
+    // mr.eum수정부분
+    // 추천 경로는 처음부터 펼치고, 대안 경로는 카드만 표시한 채 상세 내용은 닫습니다.
     routeResult
         .querySelectorAll("[data-route-index]")
         .forEach(button => {
-
             button.addEventListener("click", () => {
+                const index =
+                    Number(button.dataset.routeIndex);
 
-                selectRoute(
-                    Number(button.dataset.routeIndex)
-                );
-
+                selectRoute(index);
             });
-
         });
 }
 
@@ -725,15 +768,19 @@ async function selectRoute(index) {
                 isActive
             );
 
-            button.style.borderColor =
+            // mr.eum수정부분
+            // 도보 / 자동차 경로 카드의 선택 상태를 CSS 클래스로 관리합니다.
+            button.classList.toggle(
+                "expanded",
                 isActive
-                    ? "var(--yellow-dark)"
-                    : "var(--gray-200)";
+            );
 
-            button.style.background =
+            button.setAttribute(
+                "aria-expanded",
                 isActive
-                    ? "var(--yellow-light)"
-                    : "var(--white)";
+                    ? "true"
+                    : "false"
+            );
         });
 }
 
@@ -2151,6 +2198,15 @@ async function findRoute() {
             destination: normalizeGoogleRouteLocation(destination),
             travelMode,
             // mr.eum수정부분
+            // 현재 선택된 사이트 언어를 Google Routes 경로 안내에도 적용합니다.
+            language: routeLocale(),
+            units: google.maps.UnitSystem.METRIC,
+
+            // mr.eum수정부분
+            // 도보 / 자동차 경로의 대안 경로도 함께 계산합니다.
+            computeAlternativeRoutes: true,
+
+            // mr.eum수정부분
             fields: [
                 "path",
                 "viewport",
@@ -2370,7 +2426,12 @@ document
                 origin = {
                     ...selectedGooglePoi.position
                 };
-                originName = selectedGooglePoi.name;
+
+                // mr.eum수정부분
+                // 장소에서 도보/자동차 길찾기를 시작할 때 현재 표시 중인 장소명을 사용합니다.
+                originName =
+                    selectedGooglePoi.name ||
+                    rt("출발지", "出発地", "Origin");
             } else {
                 const place = places[selectedPlaceKey];
 
