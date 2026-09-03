@@ -70,11 +70,8 @@ public class ReviewService {
         }
 
         List<Long> reviewIds = reviews.stream().map(Review::getId).toList();
-        Map<Long, List<String>> photoUrlsByReviewId = reviewPhotoRepository.findByReview_IdIn(reviewIds).stream()
-                .collect(Collectors.groupingBy(
-                        photo -> photo.getReview().getId(),
-                        Collectors.mapping(ReviewPhoto::getPhotoUrl, Collectors.toList())
-                ));
+        Map<Long, List<ReviewPhoto>> photosByReviewId = reviewPhotoRepository.findByReview_IdIn(reviewIds).stream()
+                .collect(Collectors.groupingBy(photo -> photo.getReview().getId()));
 
         List<Long> userIds = reviews.stream()
                 .map(review -> review.getUser().getId())
@@ -88,20 +85,27 @@ public class ReviewService {
                 ));
 
         return reviews.stream()
-                .map(review -> new ReviewResponse(
-                        review.getId(),
-                        review.getPlace().getPlaceId(),
-                        review.getUser().getId(),
-                        UserDisplayNames.nickname(review.getUser()),
-                        review.getUser().isDeleted()
-                                ? null
-                                : userPhotoUrlByUserId.get(review.getUser().getId()),
-                        review.getContents(),
-                        review.getRating(),
-                        review.getLikeCount(),
-                        photoUrlsByReviewId.getOrDefault(review.getId(), Collections.emptyList()),
-                        review.getCreatedAt()
-                ))
+                .map(review -> {
+                    List<ReviewPhoto> photos = photosByReviewId.getOrDefault(
+                            review.getId(),
+                            Collections.emptyList()
+                    );
+                    return new ReviewResponse(
+                            review.getId(),
+                            review.getPlace().getPlaceId(),
+                            review.getUser().getId(),
+                            UserDisplayNames.nickname(review.getUser()),
+                            review.getUser().isDeleted()
+                                    ? null
+                                    : userPhotoUrlByUserId.get(review.getUser().getId()),
+                            review.getContents(),
+                            review.getRating(),
+                            review.getLikeCount(),
+                            photos.stream().map(ReviewPhoto::getPhotoUrl).toList(),
+                            photos.stream().map(ReviewPhoto::getPhotoId).toList(),
+                            review.getCreatedAt()
+                    );
+                })
                 .toList();
     }
 
