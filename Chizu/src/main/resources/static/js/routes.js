@@ -389,89 +389,490 @@ function renderWalkingStepDetails(route) {
     `;
 }
 
-
-function getTransitStepDetails(route) {
+// mr.eum수정부분
+// 자동차 경로도 도보와 동일한 방식으로 단계별 길안내를 표시합니다.
+function renderDrivingStepDetails(route) {
     const steps =
-        route?.legs?.flatMap(leg => leg.steps || []) || [];
+        route?.legs?.flatMap(leg => leg?.steps || []) || [];
 
-    return steps
-        .filter(step => step.travelMode === "TRANSIT")
+    const drivingSteps = steps
+        .filter(step => {
+            const mode =
+                String(step?.travelMode || "").toUpperCase();
+
+            return (
+                !mode ||
+                mode === "DRIVING" ||
+                mode === "DRIVE"
+            );
+        })
         .map(step => {
-            const details = step.transitDetails;
-            const line = details?.transitLine;
-
-            const lineName =
-                line?.shortName ||
-                line?.name ||
-                line?.vehicle?.name ||
+            const instruction =
+                step?.instructions ||
+                step?.navigationInstruction?.instructions ||
                 "";
 
-            const departureStop =
-                details?.departureStop?.name || "";
+            const maneuver =
+                step?.maneuver ||
+                step?.navigationInstruction?.maneuver ||
+                "";
 
-            const arrivalStop =
-                details?.arrivalStop?.name || "";
+            const distanceMeters =
+                Number(step?.distanceMeters);
 
-            const stopCount =
-                Number.isFinite(details?.stopCount)
-                    ? details.stopCount
-                    : null;
+            const distanceText =
+                step?.localizedValues?.distance ||
+                (
+                    Number.isFinite(distanceMeters)
+                        ? distanceMeters >= 1000
+                            ? `${(distanceMeters / 1000).toFixed(1)} km`
+                            : `${Math.round(distanceMeters)} m`
+                        : ""
+                );
 
             return {
-                lineName,
-                departureStop,
-                arrivalStop,
-                stopCount,
-                headsign: details?.headsign || ""
+                instruction:
+                    String(instruction)
+                        .replace(/<[^>]*>/g, "")
+                        .trim(),
+
+                maneuver:
+                    String(maneuver).trim(),
+
+                distanceText:
+                    String(distanceText).trim()
             };
-        });
+        })
+        .filter(step =>
+            step.instruction ||
+            step.distanceText
+        );
+
+    if (!drivingSteps.length) {
+        return `
+            <div class="walking-step-empty">
+                ${escapeWalkingText(
+                    rt(
+                        "상세 자동차 안내가 없습니다.",
+                        "詳細な自動車案内はありません。",
+                        "Detailed driving instructions are unavailable."
+                    )
+                )}
+            </div>
+        `;
+    }
+
+    const names =
+        getRoutePlaceNames(route);
+
+    return `
+        <div class="walking-step-details">
+            <div class="walking-step-endpoint">
+                <span class="walking-step-dot"></span>
+                <strong>
+                    ${escapeWalkingText(names.start)}
+                </strong>
+            </div>
+
+            <div class="walking-step-list">
+                ${drivingSteps.map(step => `
+                    <div class="walking-step-item">
+
+                        <span class="walking-step-icon">
+                            <i
+                                class="ti ${getWalkingManeuverIcon(step.maneuver)}"
+                                aria-hidden="true"
+                            ></i>
+                        </span>
+
+                        <div class="walking-step-content">
+
+                            <span class="walking-step-instruction">
+                                ${escapeWalkingText(step.instruction)}
+                            </span>
+
+                            ${step.distanceText ? `
+                                <span class="walking-step-distance">
+                                    ${escapeWalkingText(step.distanceText)}
+                                </span>
+                            ` : ""}
+
+                        </div>
+                    </div>
+                `).join("")}
+            </div>
+
+            <div class="walking-step-endpoint">
+                <span class="walking-step-dot"></span>
+                <strong>
+                    ${escapeWalkingText(names.end)}
+                </strong>
+            </div>
+        </div>
+    `;
 }
 
+// mr.eum수정부분
+// 자동차 경로의 통행료를 Google Routes API 응답에서 가져옵니다.
+// mr.eum수정부분
+// Google Routes JS SDK의 Route 객체에서 자동차 통행료를 읽습니다.
+// 공식 응답 필드는 travelAdvisory.tollInfo.estimatedPrices(복수형)입니다.
+function getDrivingTollText(route) {
+    const tollInfo =
+        route?.travelAdvisory?.tollInfo
+        || route?.legs?.[0]?.travelAdvisory?.tollInfo;
 
-function getTransitRouteText(route) {
-    const transitSteps =
-        getTransitStepDetails(route);
-
-    if (!transitSteps.length) {
+    if (!tollInfo) {
         return "";
     }
 
-    return transitSteps
-        .slice(0, 3)
-        .map(step => {
-            const parts = [];
+    // Google Routes JS SDK의 실제 tollInfo 구조를 확인하기 위한 로그
+    console.log("MR.EUM 통행료 tollInfo =", tollInfo);
+    console.log(
+        "MR.EUM 통행료 estimatedPrices =",
+        tollInfo?.estimatedPrices
+    );
+    console.log(
+        "MR.EUM 통행료 estimatedPrice =",
+        tollInfo?.estimatedPrice
+    );
 
-            if (step.lineName) {
-                parts.push(step.lineName);
+    const estimatedPrices =
+        Array.isArray(tollInfo.estimatedPrices)
+            ? tollInfo.estimatedPrices
+            : Array.isArray(tollInfo.estimatedPrice)
+                ? tollInfo.estimatedPrice
+                : [];
+
+    if (!estimatedPrices.length) {
+        return rt(
+            "통행료 정보 확인 필요",
+            "通行料金情報を確認してください",
+            "Toll information unavailable"
+        );
+    }
+
+    const price = estimatedPrices[0];
+
+    const units = Number(price?.units ?? 0);
+    const nanos = Number(price?.nanos ?? 0);
+
+    if (!Number.isFinite(units) || !Number.isFinite(nanos)) {
+        return rt(
+            "통행료 정보 확인 필요",
+            "通行料金情報を確認してください",
+            "Toll information unavailable"
+        );
+    }
+
+    const numericPrice = units + nanos / 1e9;
+
+    const currency =
+        String(price?.currencyCode || "JPY").trim();
+
+    // 일본 엔화는 소수점 없이 표시
+    if (currency === "JPY") {
+        return `${Math.round(numericPrice).toLocaleString()}円`;
+    }
+
+    try {
+        return new Intl.NumberFormat(
+            currentLanguage === "ko"
+                ? "ko-KR"
+                : currentLanguage === "ja"
+                    ? "ja-JP"
+                    : "en-US",
+            {
+                style: "currency",
+                currency
             }
-
-            if (step.departureStop && step.arrivalStop) {
-                parts.push(
-                    `${step.departureStop} → ${step.arrivalStop}`
-                );
-            }
-
-            if (step.stopCount !== null) {
-                parts.push(
-                    currentLanguage === "ko"
-                        ? `${step.stopCount}개 정류장`
-                        : `${step.stopCount}駅`
-                );
-            }
-
-            return parts.join(" · ");
-        })
-        .filter(Boolean)
-        .join("<br>");
+        ).format(numericPrice);
+    } catch (error) {
+        return `${currency} ${numericPrice}`;
+    }
 }
 
-
-function getTransitFareText(route) {
-    return (
-        route?.localizedValues?.transitFare ||
-        route?.travelAdvisory?.transitFare?.text ||
-        ""
+// mr.eum수정부분
+// Transitous(MOTIS)의 withFares=true 응답에서 실제 운임 객체를 재귀적으로 찾습니다.
+function getTransitousFareText(itinerary, responseData = null) {
+    // =====================================================
+    // MR.EUM 수정부분
+    // Transitous 운임 구조를 실제 MOTIS API 구조에 맞게 처리합니다.
+    //
+    // FareTransfer 구조
+    // ├─ effectiveFareLegProducts
+    // │   └─ 실제 운임 상품 배열
+    // └─ transferProducts
+    //     └─ 환승 시 적용되는 운임 상품
+    //
+    // 현재 콘솔에서 effectiveFareLegProducts가 Array(0)으로
+    // 확인되었기 때문에 transferProducts도 반드시 확인합니다.
+    // =====================================================
+    console.log(
+    "========== MR.EUM fareTransfers JSON 전체 확인 =========="
     );
+
+    console.log(
+        JSON.stringify(
+            itinerary.fareTransfers,
+            null,
+            2
+        )
+    );
+
+    console.log(
+        "========== MR.EUM itinerary 전체 JSON 확인 =========="
+    );
+
+    console.log(
+        JSON.stringify(
+            itinerary,
+            null,
+            2
+        )
+    );
+
+    const fareTransfers = itinerary?.fareTransfers;
+
+    if (!Array.isArray(fareTransfers) || fareTransfers.length === 0) {
+        console.log("MR.EUM: fareTransfers가 없습니다.");
+        return "";
+    }
+
+    console.log(
+        "========== MR.EUM Transitous fareTransfers 전체 =========="
+    );
+    console.log(fareTransfers);
+
+    /*
+     * FareProduct에서 실제 금액을 읽습니다.
+     *
+     * MOTIS 공식 스키마:
+     * amount   : 숫자
+     * currency : "JPY" 등의 ISO 통화 코드
+     * name     : 운임 상품명
+     */
+    function readFareProduct(product) {
+        if (!product || typeof product !== "object") {
+            return null;
+        }
+
+        const amount = Number(product.amount);
+        const currency =
+            product.currency
+            || product.currencyCode
+            || "JPY";
+
+        if (!Number.isFinite(amount)) {
+            return null;
+        }
+
+        return {
+            amount,
+            currency
+        };
+    }
+
+    /*
+     * FareProduct가 몇 단계 배열 안에 들어 있어도
+     * 전부 찾아냅니다.
+     */
+    function collectFareProducts(value, result = []) {
+        if (!value) {
+            return result;
+        }
+
+        if (Array.isArray(value)) {
+            value.forEach(item => {
+                collectFareProducts(item, result);
+            });
+            return result;
+        }
+
+        if (typeof value !== "object") {
+            return result;
+        }
+
+        // 실제 FareProduct라면 amount + currency가 존재합니다.
+        if (
+            value.amount !== undefined &&
+            value.currency !== undefined
+        ) {
+            const product = readFareProduct(value);
+
+            if (product) {
+                result.push(product);
+            }
+
+            return result;
+        }
+
+        // FareProduct가 더 깊은 곳에 있는 경우 재귀 탐색
+        Object.values(value).forEach(child => {
+            collectFareProducts(child, result);
+        });
+
+        return result;
+    }
+
+    let fareProducts = [];
+
+    fareTransfers.forEach((transfer, transferIndex) => {
+        console.log(
+            `MR.EUM: fareTransfers[${transferIndex}] =`,
+            transfer
+        );
+
+        /*
+         * 1순위: transferProducts
+         *
+         * 현재 네 로그에서는 effectiveFareLegProducts[0]이
+         * Array(0)이므로 이 부분이 핵심입니다.
+         */
+        const transferProducts =
+            transfer?.transferProducts;
+
+        console.log(
+            `MR.EUM: fareTransfers[${transferIndex}].transferProducts =`,
+            transferProducts
+        );
+
+        const transferFareProducts =
+            collectFareProducts(transferProducts);
+
+        if (transferFareProducts.length > 0) {
+            fareProducts.push(...transferFareProducts);
+        }
+
+        /*
+         * 2순위: effectiveFareLegProducts
+         */
+        const effectiveFareLegProducts =
+            transfer?.effectiveFareLegProducts;
+
+        console.log(
+            `MR.EUM: fareTransfers[${transferIndex}].effectiveFareLegProducts =`,
+            effectiveFareLegProducts
+        );
+
+        const effectiveFareProducts =
+            collectFareProducts(effectiveFareLegProducts);
+
+        if (effectiveFareProducts.length > 0) {
+            fareProducts.push(...effectiveFareProducts);
+        }
+    });
+
+    /*
+     * 중복 운임 제거
+     *
+     * 같은 금액/통화의 상품이 여러 transfer에 반복되어
+     * 들어오는 경우를 방지합니다.
+     */
+    const uniqueFareProducts = [];
+    const seen = new Set();
+
+    fareProducts.forEach(product => {
+        const key =
+            `${product.currency}:${product.amount}`;
+
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueFareProducts.push(product);
+        }
+    });
+
+    console.log(
+        "MR.EUM: 발견한 FareProduct =",
+        uniqueFareProducts
+    );
+
+    if (uniqueFareProducts.length === 0) {
+        console.log(
+            "MR.EUM: Transitous FareProduct를 찾지 못했습니다."
+        );
+        return "";
+    }
+
+    /*
+     * 같은 여정에서 여러 운임 상품이 존재할 수 있으므로
+     * 가장 저렴한 양수 운임을 선택합니다.
+     *
+     * 예:
+     * 180 JPY
+     * 200 JPY
+     * 500 JPY
+     *
+     * → 180 JPY
+     */
+    const positiveProducts =
+        uniqueFareProducts.filter(
+            product =>
+                product.amount > 0 &&
+                Number.isFinite(product.amount)
+        );
+
+    if (positiveProducts.length === 0) {
+        /*
+         * 실제로 0엔인 무료 운임만 존재한다면 무료로 처리합니다.
+         */
+        const zeroProduct =
+            uniqueFareProducts.find(
+                product => product.amount === 0
+            );
+
+        if (zeroProduct) {
+            return "0円";
+        }
+
+        return "";
+    }
+
+    const selectedFare =
+        positiveProducts.reduce(
+            (lowest, current) =>
+                current.amount < lowest.amount
+                    ? current
+                    : lowest
+        );
+
+    const amount = selectedFare.amount;
+    const currency =
+        String(selectedFare.currency || "JPY")
+            .toUpperCase();
+
+    let fareText;
+
+    if (currency === "JPY") {
+        fareText =
+            `${Math.round(amount).toLocaleString()}円`;
+    } else {
+        try {
+            fareText =
+                new Intl.NumberFormat(
+                    currentLanguage === "ko"
+                        ? "ko-KR"
+                        : currentLanguage === "ja"
+                            ? "ja-JP"
+                            : "en-US",
+                    {
+                        style: "currency",
+                        currency
+                    }
+                ).format(amount);
+        } catch (error) {
+            fareText =
+                `${currency} ${amount}`;
+        }
+    }
+
+    console.log(
+        "========== MR.EUM Transitous 교통비 결과 =========="
+    );
+    console.log("선택된 운임 =", selectedFare);
+    console.log("최종 표시값 =", fareText);
+
+    return fareText;
 }
 
 
@@ -504,7 +905,12 @@ function getRouteSummary(route, index) {
 }
 
 
-function renderRouteResults(routes) {
+// mr.eum수정부분
+// 검색 시작 시각을 받아 추천/대안 경로가 동일한 출발 시각을 사용하게 합니다.
+function renderRouteResults(
+    routes,
+    routeStartTime = new Date()
+) {
     if (!routeResult) {
         return;
     }
@@ -538,6 +944,47 @@ function renderRouteResults(routes) {
                 route?.localizedValues?.distance
                 || formatRouteDistance(route?.distanceMeters);
 
+            // mr.eum수정부분
+            // 자동차 경로에만 통행료 정보를 표시합니다.
+            const tollText =
+                travelMode === "DRIVING"
+                    ? getDrivingTollText(route)
+                    : "";
+            
+            // mr.eum수정부분
+            // 한 번의 길찾기 결과에 포함된 모든 경로가 동일한 출발 시각을 사용하도록 합니다.
+            const cardStartTime =
+            routeStartTime || new Date();
+            const routeDurationMillis =
+                Number(route?.durationMillis)
+                || Number(route?.legs?.[0]?.durationMillis)
+                || Number(route?.duration?.seconds) * 1000
+                || Number(route?.duration?.value) * 1000
+                || 0;
+
+            const routeEndTime = new Date(
+                cardStartTime.getTime() + routeDurationMillis
+            );
+
+            const formatRouteClockTime = date => {
+                return date.toLocaleTimeString(
+                    currentLanguage === "en"
+                        ? "en-US"
+                        : currentLanguage === "ko"
+                            ? "ko-KR"
+                            : "ja-JP",
+                    {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false
+                    }
+                );
+            };
+
+            // mr.eum수정부분
+            // 모든 경로 카드에서 동일한 출발 시각을 표시하고 경로별 도착 시각만 다르게 표시합니다.
+            const routeTimeText =
+                `${formatRouteClockTime(cardStartTime)} → ${formatRouteClockTime(routeEndTime)}`;
             const routeLabel = isRecommended
                 ? rt(
                     "추천",
@@ -562,9 +1009,11 @@ function renderRouteResults(routes) {
                     "Driving route"
                 );
 
+            // mr.eum수정부분
+            // 도보와 자동차 모두 동일한 단계별 상세 안내를 표시합니다.
             const details = isWalking
                 ? renderWalkingStepDetails(route)
-                : "";
+                : renderDrivingStepDetails(route);
 
             return `
                 <button
@@ -585,7 +1034,13 @@ function renderRouteResults(routes) {
                         </div>
 
                         <span class="route-summary-time">
-                            ${escapeWalkingText(distanceText)}
+                            <span class="route-summary-clock">
+                                ${escapeWalkingText(routeTimeText)}
+                            </span>
+                            <b>·</b>
+                            <span>
+                                ${escapeWalkingText(distanceText)}
+                            </span>
                         </span>
                     </div>
 
@@ -610,7 +1065,32 @@ function renderRouteResults(routes) {
                     </div>
 
                     <div class="simple-route-details">
+
                         ${details}
+
+                        
+                        
+
+                        ${tollText ? `
+                            <div class="driving-toll">
+
+                                <span class="driving-toll-label">
+                                    ${escapeWalkingText(
+                                        rt(
+                                            "통행료",
+                                            "通行料金",
+                                            "Toll"
+                                        )
+                                    )}
+                                </span>
+
+                                <strong class="driving-toll-price">
+                                    ${escapeWalkingText(tollText)}
+                                </strong>
+
+                            </div>
+                        ` : ""}
+
                     </div>
                 </button>
             `;
@@ -748,6 +1228,8 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
 }
 
 
+// mr.eum수정부분
+// 선택된 도보/자동차 경로를 다시 클릭하면 상세 내용을 접을 수 있도록 합니다.
 async function selectRoute(index) {
     const route = computedRoutes[index];
 
@@ -755,33 +1237,59 @@ async function selectRoute(index) {
         return;
     }
 
-    await drawRoute(route, true, getSelectedTravelMode());
+    const buttons =
+        routeResult?.querySelectorAll("[data-route-index]");
 
-    routeResult
-        ?.querySelectorAll("[data-route-index]")
-        .forEach(button => {
-            const isActive =
-                Number(button.dataset.routeIndex) === index;
+    const currentButton =
+        routeResult?.querySelector(
+            `[data-route-index="${index}"]`
+        );
 
-            button.classList.toggle(
-                "active",
-                isActive
-            );
+    const wasExpanded =
+        currentButton?.classList.contains("expanded");
 
-            // mr.eum수정부분
-            // 도보 / 자동차 경로 카드의 선택 상태를 CSS 클래스로 관리합니다.
-            button.classList.toggle(
-                "expanded",
-                isActive
-            );
+    // mr.eum수정부분
+    // 같은 경로를 다시 클릭하면 상세 안내를 접습니다.
+    if (wasExpanded) {
+        currentButton.classList.remove("expanded");
+        currentButton.setAttribute(
+            "aria-expanded",
+            "false"
+        );
 
-            button.setAttribute(
-                "aria-expanded",
-                isActive
-                    ? "true"
-                    : "false"
-            );
-        });
+        return;
+    }
+
+    // 다른 경로를 선택하면 해당 경로를 지도에 표시합니다.
+    await drawRoute(
+        route,
+        true,
+        getSelectedTravelMode()
+    );
+
+    // mr.eum수정부분
+    // 하나의 경로만 선택 및 펼침 상태가 되도록 관리합니다.
+    buttons?.forEach(button => {
+        const isActive =
+            Number(button.dataset.routeIndex) === index;
+
+        button.classList.toggle(
+            "active",
+            isActive
+        );
+
+        button.classList.toggle(
+            "expanded",
+            isActive
+        );
+
+        button.setAttribute(
+            "aria-expanded",
+            isActive
+                ? "true"
+                : "false"
+        );
+    });
 }
 
 
@@ -1184,11 +1692,26 @@ async function requestTransitousRoute(origin, destination) {
         directModes: "",
         preTransitModes: "WALK",
         postTransitModes: "WALK",
+        // mr.eum수정부분
+        // 좌표가 정류장에서 조금 떨어져 있어도 주변 정류장을 찾아 대중교통 경로를 계산합니다.
+        radius: "2000",
+        maxMatchingDistance: "1000",
+        maxPreTransitTime: "1800",
+        maxPostTransitTime: "1800",
         detailedLegs: "true",
         detailedTransfers: "true",
         timetableView: "true",
+        // mr.eum수정부분
+        // 현재 시각 근처의 출발편을 충분히 탐색해 ZERO_TRANSIT_RESULTS를 줄입니다.
+        searchWindow: "3600",
         numItineraries: "5",
         maxItineraries: "5",
+        // mr.eum수정부분
+        // 가장 빠른 도보 경로 때문에 대중교통 탐색이 잘리지 않도록 여유를 둡니다.
+        fastestDirectFactor: "50",
+        // mr.eum수정부분
+        // Transitous에서 대중교통 운임 정보를 함께 요청합니다.
+        withFares: "true",
         language: routeLanguagePreference()
     });
 
@@ -1203,9 +1726,18 @@ async function requestTransitousRoute(origin, destination) {
 
     const data = await response.json();
 
-
+    // mr.eum수정부분
+    // Transitous의 실제 응답 상태를 보존해 ZERO_TRANSIT_RESULTS의 원인을 구분할 수 있게 합니다.
     if (!Array.isArray(data?.itineraries) || !data.itineraries.length) {
-        throw new Error("ZERO_TRANSIT_RESULTS");
+        const transitError =
+            data?.error ||
+            data?.message ||
+            data?.status ||
+            "ZERO_TRANSIT_RESULTS";
+        const error = new Error(String(transitError));
+        error.code = "ZERO_TRANSIT_RESULTS";
+        error.transitousResponse = data;
+        throw error;
     }
 
     return data;
@@ -1448,6 +1980,14 @@ function renderTransitousResults(data) {
 
             const transferCount = Number(it.transfers || 0);
             const details = renderTransitousItineraryDetails(it);
+            // mr.eum수정부분
+            // 대중교통 경로별 교통비를 계산합니다.
+            // mr.eum수정부분
+            // itinerary뿐 아니라 Transitous 전체 응답에서도 운임 정보를 찾습니다.
+            const fareText =
+                getTransitousFareText(it, data);
+
+           
             const lineChips = transitLegs.map(leg => ({
                 name: getTransitousSummaryLineName(leg),
                 code: getTransitousLineCode(leg),
@@ -1482,6 +2022,25 @@ function renderTransitousResults(data) {
                     </div>
 
                     ${details}
+
+                    <!-- mr.eum수정부분 -->
+                    <!-- Transitous가 운임 정보를 반환한 경우 상세 경로 아래에 표시합니다. -->
+                    ${fareText ? `
+                        <div class="transit-fare">
+                            <span class="transit-fare-label">
+                                ${escapeTransitText(
+                                    rt(
+                                        "교통비",
+                                        "運賃",
+                                        "Fare"
+                                    )
+                                )}
+                            </span>
+                            <strong class="transit-fare-price">
+                                ${escapeTransitText(fareText)}
+                            </strong>
+                        </div>
+                    ` : ""}
                 </button>
             `;
         })
@@ -2207,12 +2766,17 @@ async function findRoute() {
             computeAlternativeRoutes: true,
 
             // mr.eum수정부분
+            // mr.eum수정부분
+            // Google Routes JS SDK는 TOLLS 추가 계산 결과를 받으려면
+            // travelAdvisory를 응답 필드에 포함해야 합니다.
             fields: [
                 "path",
                 "viewport",
                 "legs",
                 "routeLabels",
-                "localizedValues"
+                "localizedValues",
+                "durationMillis",
+                "travelAdvisory"
             ]
         };
 
@@ -2239,16 +2803,45 @@ async function findRoute() {
         }
 
         // mr.eum수정부분
-        // 이동수단에 따라 대안 경로 옵션을 적용합니다.
+        // 자동차 경로에서는 대안 경로와 함께 통행료 계산도 요청합니다.
         const request = {
             ...baseRequest,
+
             ...(travelMode === "DRIVING"
-                ? { computeAlternativeRoutes: true }
+                ? {
+                    computeAlternativeRoutes: true,
+                    // mr.eum수정부분
+                    // 자동차 통행료 계산을 활성화합니다.
+                    extraComputations: ["TOLLS"],
+                    // mr.eum수정부분
+                    // 통행료 계산 대상 차량을 일반 승용차(휘발유)로 명시합니다.
+                    routeModifiers: {
+                        vehicleInfo: {
+                            emissionType: "GASOLINE"
+                        },
+                        // MR.EUM 수정부분
+                        // 일본 고속도로 ETC 통행료 기준으로 계산하도록 요청합니다.
+                        tollPasses: ["JP_ETC"]
+                    }
+                }
                 : {})
         };
+        // mr.eum수정부분
+        // 한 번의 길찾기 검색에 동일한 출발 시각을 사용합니다.
+        const routeSearchStartedAt = new Date();
 
         const { routes = [] } =
             await RouteClass.computeRoutes(request);
+
+        // MR.EUM 수정부분
+        // Google Routes API가 반환한 자동차 경로의 통행료 구조를 확인합니다.
+        console.log("========== MR.EUM 통행료 routes 응답 확인 ==========");
+        routes.forEach((route, index) => {
+            console.log(`자동차 경로 ${index + 1} tollInfo =`,
+                route?.travelAdvisory?.tollInfo
+            );
+        });
+
         if (!routes.length) {
             throw new Error("ZERO_RESULTS");
         }
@@ -2261,8 +2854,11 @@ async function findRoute() {
             travelMode
         );
 
+        // mr.eum수정부분
+        // 검색 시작 시각을 모든 도보/자동차 경로 카드에 전달합니다.
         renderRouteResults(
-            computedRoutes
+            computedRoutes,
+            routeSearchStartedAt
         );
 
         mapRouteSelectionMode = false;
@@ -2280,9 +2876,21 @@ async function findRoute() {
             error?.code ||
             error?.message ||
             "UNKNOWN_ERROR";
+            const selectedModeForError = getSelectedTravelMode();
             // mr.eum수정부분
-            console.error("도보/자동차 Routes API 오류:", error);
+            // 대중교통 Transitous 오류와 Google 도보/자동차 오류를 구분해서 기록합니다.
+            console.error(
+                selectedModeForError === "TRANSIT"
+                    ? "대중교통 Transitous 오류:"
+                    : "도보/자동차 Routes API 오류:",
+                error
+            );
             console.error("Routes API 오류 상세:", error?.message, error?.code);
+            // mr.eum수정부분
+            // Transitous가 반환한 원본 응답이 있으면 디버깅용으로 함께 확인합니다.
+            if (error?.transitousResponse) {
+                console.error("Transitous 원본 응답:", error.transitousResponse);
+            }
 
         const status =
             String(rawStatus).length > 120
@@ -2296,13 +2904,14 @@ async function findRoute() {
             routeResult.classList.remove("show");
         }
 
-        const selectedMode =
-            getSelectedTravelMode();
+        const selectedMode = selectedModeForError;
 
         const noTransitMessage =
             selectedMode === "TRANSIT" &&
             (
                 status === "ZERO_RESULTS" ||
+                status === "ZERO_TRANSIT_RESULTS" ||
+                String(status).includes("ZERO_TRANSIT_RESULTS") ||
                 String(status).includes("ZERO_RESULTS")
             );
 
@@ -2502,5 +3111,7 @@ document
             );
         }
     );
+
+    
 
 

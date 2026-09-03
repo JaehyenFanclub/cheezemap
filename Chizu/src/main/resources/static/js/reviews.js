@@ -889,6 +889,541 @@ async function loadReviewsForActivePlace(
 // "더보기"를 누르면 전체 내용을 표시
 // =====================================================
 
+
+const REVIEW_TRANSLATION_CACHE_KEY =
+    "cheeseMapReviewTranslationV1";
+
+function readReviewTranslationCache() {
+    try {
+        const parsed = JSON.parse(
+            localStorage.getItem(
+                REVIEW_TRANSLATION_CACHE_KEY
+            ) || "{}"
+        );
+
+        return parsed && typeof parsed === "object"
+            ? parsed
+            : {};
+    } catch {
+        return {};
+    }
+}
+
+function writeReviewTranslationCache(cache) {
+    try {
+        localStorage.setItem(
+            REVIEW_TRANSLATION_CACHE_KEY,
+            JSON.stringify(cache || {})
+        );
+    } catch (error) {
+        console.debug(
+            "리뷰 번역 캐시 저장 실패:",
+            error
+        );
+    }
+}
+
+function getReviewTranslationCacheKey(
+    reviewId,
+    targetLanguage
+) {
+    return `${reviewId}:${targetLanguage}`;
+}
+
+function getCachedReviewTranslation(
+    reviewId,
+    targetLanguage
+) {
+    const cache =
+        readReviewTranslationCache();
+
+    return cache[
+        getReviewTranslationCacheKey(
+            reviewId,
+            targetLanguage
+        )
+    ] || null;
+}
+
+function cacheReviewTranslation(
+    reviewId,
+    targetLanguage,
+    translatedText,
+    detectedLanguage = ""
+) {
+    const cache =
+        readReviewTranslationCache();
+
+    cache[
+        getReviewTranslationCacheKey(
+            reviewId,
+            targetLanguage
+        )
+    ] = {
+        translatedText:
+            String(translatedText || ""),
+        detectedLanguage:
+            String(detectedLanguage || ""),
+        savedAt: Date.now()
+    };
+
+    // 포트폴리오/AWS 시연용: 리뷰 번역 캐시는 최대 300개까지만 유지
+    const keys = Object.keys(cache);
+
+    if (keys.length > 300) {
+        keys
+            .sort(
+                (a, b) =>
+                    Number(cache[a]?.savedAt || 0) -
+                    Number(cache[b]?.savedAt || 0)
+            )
+            .slice(0, keys.length - 300)
+            .forEach(key => {
+                delete cache[key];
+            });
+    }
+
+    writeReviewTranslationCache(cache);
+}
+
+function detectReviewLanguage(text) {
+    const value =
+        String(text || "").trim();
+
+    if (!value) {
+        return "";
+    }
+
+    if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/u.test(value)) {
+        return "ko";
+    }
+
+    if (/[ぁ-んァ-ヶー]/u.test(value)) {
+        return "ja";
+    }
+
+    if (/[A-Za-z]/.test(value)) {
+        return "en";
+    }
+
+    // 한자만 있는 짧은 일본어 리뷰 등은 확정하기 어려우므로
+    // 현재 UI 언어와 다른 언어 선택지를 모두 노출합니다.
+    return "";
+}
+
+function getReviewLanguageLabel(language) {
+    if (language === "ko") {
+        return "한국어";
+    }
+
+    if (language === "ja") {
+        return "日本語";
+    }
+
+    return "English";
+}
+
+function getReviewTranslateButtonLabel() {
+    return currentLanguage === "ja"
+        ? "翻訳"
+        : currentLanguage === "en"
+            ? "Translate"
+            : "번역";
+}
+
+function getReviewOriginalButtonLabel() {
+    return currentLanguage === "ja"
+        ? "原文を見る"
+        : currentLanguage === "en"
+            ? "View original"
+            : "원문 보기";
+}
+
+function renderReviewTranslationControls(
+    reviewId,
+    content
+) {
+    const sourceLanguage =
+        detectReviewLanguage(content);
+
+    const targets =
+        ["ko", "ja", "en"].filter(
+            language =>
+                language !== sourceLanguage
+        );
+
+    return `
+        <div
+            class="place-review-translation"
+            data-review-translation
+            data-review-source-language="${sourceLanguage}"
+        >
+            <button
+                type="button"
+                class="place-review-translate-toggle"
+                data-review-translate-toggle
+                aria-expanded="false"
+            >
+                <i class="ti ti-language"></i>
+                <span>${getReviewTranslateButtonLabel()}</span>
+                <i class="ti ti-chevron-down"></i>
+            </button>
+
+            <div
+                class="place-review-translate-menu"
+                data-review-translate-menu
+                hidden
+            >
+                ${targets
+                    .map(
+                        language => `
+                            <button
+                                type="button"
+                                class="place-review-translate-option"
+                                data-review-translate-target="${language}"
+                                data-review-id="${reviewId}"
+                            >
+                                ${getReviewLanguageLabel(language)}
+                            </button>
+                        `
+                    )
+                    .join("")}
+            </div>
+
+            <div
+                class="place-review-translated-box"
+                data-review-translated-box
+                hidden
+            >
+                <div class="place-review-translated-head">
+                    <span data-review-translated-label></span>
+
+                    <button
+                        type="button"
+                        class="place-review-original-button"
+                        data-review-original-button
+                    >
+                        ${getReviewOriginalButtonLabel()}
+                    </button>
+                </div>
+
+                <p
+                    class="place-review-translated-text"
+                    data-review-translated-text
+                ></p>
+            </div>
+        </div>
+    `;
+}
+
+async function requestReviewTranslation(
+    reviewId,
+    text,
+    targetLanguage
+) {
+    const cached =
+        getCachedReviewTranslation(
+            reviewId,
+            targetLanguage
+        );
+
+    if (cached?.translatedText) {
+        return cached;
+    }
+
+    const result =
+        await apiRequest(
+            "/api/translate",
+            {
+                method: "POST",
+                body: {
+                    text,
+                    targetLanguage
+                }
+            }
+        );
+
+    const translatedText =
+        String(
+            result?.translatedText || ""
+        ).trim();
+
+    if (!translatedText) {
+        throw new Error(
+            currentLanguage === "ja"
+                ? "翻訳結果を取得できませんでした。"
+                : currentLanguage === "en"
+                    ? "Could not get the translation."
+                    : "번역 결과를 가져오지 못했습니다."
+        );
+    }
+
+    const normalized = {
+        translatedText,
+        detectedLanguage:
+            String(
+                result?.detectedLanguage || ""
+            ).trim()
+    };
+
+    cacheReviewTranslation(
+        reviewId,
+        targetLanguage,
+        normalized.translatedText,
+        normalized.detectedLanguage
+    );
+
+    return normalized;
+}
+
+function closeReviewTranslationMenus(
+    except = null
+) {
+    document
+        .querySelectorAll(
+            "[data-review-translate-menu]"
+        )
+        .forEach(menu => {
+            if (menu === except) {
+                return;
+            }
+
+            menu.hidden = true;
+
+            menu
+                .closest(
+                    "[data-review-translation]"
+                )
+                ?.querySelector(
+                    "[data-review-translate-toggle]"
+                )
+                ?.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+        });
+}
+
+document.addEventListener(
+    "click",
+    async event => {
+        const toggle =
+            event.target.closest(
+                "[data-review-translate-toggle]"
+            );
+
+        if (toggle) {
+            event.stopPropagation();
+
+            const wrapper =
+                toggle.closest(
+                    "[data-review-translation]"
+                );
+
+            const menu =
+                wrapper?.querySelector(
+                    "[data-review-translate-menu]"
+                );
+
+            if (!menu) {
+                return;
+            }
+
+            const willOpen =
+                Boolean(menu.hidden);
+
+            closeReviewTranslationMenus(
+                willOpen ? menu : null
+            );
+
+            menu.hidden = !willOpen;
+
+            toggle.setAttribute(
+                "aria-expanded",
+                String(willOpen)
+            );
+
+            return;
+        }
+
+        const option =
+            event.target.closest(
+                "[data-review-translate-target]"
+            );
+
+        if (option) {
+            event.stopPropagation();
+
+            const reviewItem =
+                option.closest(
+                    ".place-review-item"
+                );
+
+            const wrapper =
+                option.closest(
+                    "[data-review-translation]"
+                );
+
+            const content =
+                reviewItem
+                    ?.querySelector(
+                        "[data-review-content-data]"
+                    )
+                    ?.textContent
+                    ?.trim() ||
+                reviewItem
+                    ?.querySelector(
+                        "[data-review-content]"
+                    )
+                    ?.textContent
+                    ?.trim() ||
+                "";
+
+            const reviewId =
+                Number(
+                    option.dataset.reviewId ||
+                    reviewItem?.dataset.reviewId
+                );
+
+            const targetLanguage =
+                String(
+                    option.dataset.reviewTranslateTarget ||
+                    ""
+                );
+
+            if (
+                !content ||
+                !Number.isFinite(reviewId) ||
+                !["ko", "ja", "en"].includes(
+                    targetLanguage
+                )
+            ) {
+                return;
+            }
+
+            const translatedBox =
+                wrapper?.querySelector(
+                    "[data-review-translated-box]"
+                );
+
+            const translatedTextElement =
+                wrapper?.querySelector(
+                    "[data-review-translated-text]"
+                );
+
+            const translatedLabel =
+                wrapper?.querySelector(
+                    "[data-review-translated-label]"
+                );
+
+            const menu =
+                wrapper?.querySelector(
+                    "[data-review-translate-menu]"
+                );
+
+            const toggleButton =
+                wrapper?.querySelector(
+                    "[data-review-translate-toggle]"
+                );
+
+            if (menu) {
+                menu.hidden = true;
+            }
+
+            toggleButton?.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+            option.disabled = true;
+
+            const previousText =
+                option.textContent;
+
+            option.textContent =
+                currentLanguage === "ja"
+                    ? "翻訳中..."
+                    : currentLanguage === "en"
+                        ? "Translating..."
+                        : "번역 중...";
+
+            try {
+                const result =
+                    await requestReviewTranslation(
+                        reviewId,
+                        content,
+                        targetLanguage
+                    );
+
+                if (
+                    translatedTextElement &&
+                    translatedBox
+                ) {
+                    translatedTextElement.textContent =
+                        result.translatedText;
+
+                    if (translatedLabel) {
+                        translatedLabel.textContent =
+                            `${getReviewLanguageLabel(
+                                targetLanguage
+                            )} · Google 번역`;
+                    }
+
+                    translatedBox.hidden = false;
+
+                    // 원문은 숨기지 않고 번역문을 아래에 추가해
+                    // 번역된 문장을 원문으로 오해하지 않게 합니다.
+                }
+            } catch (error) {
+                showToast(
+                    error?.message ||
+                    (
+                        currentLanguage === "ja"
+                            ? "レビューを翻訳できませんでした。"
+                            : currentLanguage === "en"
+                                ? "Could not translate the review."
+                                : "리뷰를 번역하지 못했습니다."
+                    )
+                );
+            } finally {
+                option.disabled = false;
+                option.textContent = previousText;
+            }
+
+            return;
+        }
+
+        const originalButton =
+            event.target.closest(
+                "[data-review-original-button]"
+            );
+
+        if (originalButton) {
+            event.stopPropagation();
+
+            const translatedBox =
+                originalButton
+                    .closest(
+                        "[data-review-translated-box]"
+                    );
+
+            if (translatedBox) {
+                translatedBox.hidden = true;
+            }
+
+            return;
+        }
+
+        if (
+            !event.target.closest(
+                "[data-review-translation]"
+            )
+        ) {
+            closeReviewTranslationMenus();
+        }
+    }
+);
+
 function renderReviewContent(content) {
 
     const fullContent = String(content || "");
@@ -1192,6 +1727,11 @@ async function renderPlaceReviews(placeKey) {
                             일부만 보여주고 "..." + "더보기"를 표시합니다.
                         -->
                         ${renderReviewContent(review.content)}
+
+                        ${renderReviewTranslationControls(
+                            review.reviewId,
+                            review.content
+                        )}
 
                         ${renderReviewPhotos(review.photoUrls)}
 
