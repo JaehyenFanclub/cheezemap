@@ -2969,38 +2969,7 @@ body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
     background: #fff8e5;
 }
 
-.place-review-translate-menu {
-    position: absolute;
-    z-index: 30;
-    top: calc(100% + 5px);
-    left: 0;
-    min-width: 130px;
-    padding: 5px;
-    border: 1px solid #e4dac9;
-    border-radius: 11px;
-    background: #ffffff;
-    box-shadow: 0 10px 28px rgba(45, 37, 24, 0.14);
-}
-
-.place-review-translate-option {
-    width: 100%;
-    padding: 8px 10px;
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    color: #3e372e;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    text-align: left;
-    cursor: pointer;
-}
-
-.place-review-translate-option:hover {
-    background: #fff5d8;
-}
-
-.place-review-translate-option:disabled {
+.place-review-translate-toggle:disabled {
     opacity: 0.6;
     cursor: wait;
 }
@@ -3054,20 +3023,6 @@ body.dark .place-review-translate-toggle {
 body.dark .place-review-translate-toggle:hover {
     border-color: #8f7436;
     background: #373126;
-}
-
-body.dark .place-review-translate-menu {
-    border-color: #4b463d;
-    background: #272520;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
-}
-
-body.dark .place-review-translate-option {
-    color: #eee8dc;
-}
-
-body.dark .place-review-translate-option:hover {
-    background: #393329;
 }
 
 body.dark .place-review-translated-box {

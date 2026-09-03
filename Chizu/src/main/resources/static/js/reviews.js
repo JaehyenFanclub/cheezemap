@@ -1077,6 +1077,12 @@ function getReviewLanguageLabel(language) {
     return "English";
 }
 
+function getReviewSiteLanguage() {
+    return ["ko", "ja", "en"].includes(currentLanguage)
+        ? currentLanguage
+        : "ko";
+}
+
 function getReviewTranslateButtonLabel() {
     return currentLanguage === "ja"
         ? "翻訳"
@@ -1085,12 +1091,16 @@ function getReviewTranslateButtonLabel() {
             : "번역";
 }
 
-function getReviewOriginalButtonLabel() {
+function getReviewTranslatingLabel() {
     return currentLanguage === "ja"
-        ? "原文を見る"
+        ? "翻訳中..."
         : currentLanguage === "en"
-            ? "View original"
-            : "×";
+            ? "Translating..."
+            : "번역 중...";
+}
+
+function getReviewOriginalButtonLabel() {
+    return "×";
 }
 
 function renderReviewTranslationControls(
@@ -1099,50 +1109,32 @@ function renderReviewTranslationControls(
 ) {
     const sourceLanguage =
         detectReviewLanguage(content);
+    const targetLanguage =
+        getReviewSiteLanguage();
 
-    const targets =
-        ["ko", "ja", "en"].filter(
-            language =>
-                language !== sourceLanguage
-        );
+    // 원문이 이미 사이트 언어와 같으면 번역 버튼을 숨깁니다.
+    if (
+        sourceLanguage &&
+        sourceLanguage === targetLanguage
+    ) {
+        return "";
+    }
 
     return `
         <div
             class="place-review-translation"
             data-review-translation
+            data-review-id="${reviewId}"
             data-review-source-language="${sourceLanguage}"
         >
             <button
                 type="button"
                 class="place-review-translate-toggle"
-                data-review-translate-toggle
-                aria-expanded="false"
+                data-review-translate-button
             >
                 <i class="ti ti-language"></i>
-                <span>${getReviewTranslateButtonLabel()}</span>
-                <i class="ti ti-chevron-down"></i>
+                <span data-review-translate-label>${getReviewTranslateButtonLabel()}</span>
             </button>
-
-            <div
-                class="place-review-translate-menu"
-                data-review-translate-menu
-                hidden
-            >
-                ${targets
-                    .map(
-                        language => `
-                            <button
-                                type="button"
-                                class="place-review-translate-option"
-                                data-review-translate-target="${language}"
-                                data-review-id="${reviewId}"
-                            >
-                                ${getReviewLanguageLabel(language)}
-                            </button>
-                        `
-                    )
-                    .join("")}
-            </div>
 
             <div
                 class="place-review-translated-box"
@@ -1236,91 +1228,24 @@ async function requestReviewTranslation(
     return normalized;
 }
 
-function closeReviewTranslationMenus(
-    except = null
-) {
-    document
-        .querySelectorAll(
-            "[data-review-translate-menu]"
-        )
-        .forEach(menu => {
-            if (menu === except) {
-                return;
-            }
-
-            menu.hidden = true;
-
-            menu
-                .closest(
-                    "[data-review-translation]"
-                )
-                ?.querySelector(
-                    "[data-review-translate-toggle]"
-                )
-                ?.setAttribute(
-                    "aria-expanded",
-                    "false"
-                );
-        });
-}
-
 document.addEventListener(
     "click",
     async event => {
-        const toggle =
+        const translateButton =
             event.target.closest(
-                "[data-review-translate-toggle]"
+                "[data-review-translate-button]"
             );
 
-        if (toggle) {
-            event.stopPropagation();
-
-            const wrapper =
-                toggle.closest(
-                    "[data-review-translation]"
-                );
-
-            const menu =
-                wrapper?.querySelector(
-                    "[data-review-translate-menu]"
-                );
-
-            if (!menu) {
-                return;
-            }
-
-            const willOpen =
-                Boolean(menu.hidden);
-
-            closeReviewTranslationMenus(
-                willOpen ? menu : null
-            );
-
-            menu.hidden = !willOpen;
-
-            toggle.setAttribute(
-                "aria-expanded",
-                String(willOpen)
-            );
-
-            return;
-        }
-
-        const option =
-            event.target.closest(
-                "[data-review-translate-target]"
-            );
-
-        if (option) {
+        if (translateButton) {
             event.stopPropagation();
 
             const reviewItem =
-                option.closest(
+                translateButton.closest(
                     ".place-review-item"
                 );
 
             const wrapper =
-                option.closest(
+                translateButton.closest(
                     "[data-review-translation]"
                 );
 
@@ -1341,22 +1266,16 @@ document.addEventListener(
 
             const reviewId =
                 Number(
-                    option.dataset.reviewId ||
+                    wrapper?.dataset.reviewId ||
                     reviewItem?.dataset.reviewId
                 );
 
             const targetLanguage =
-                String(
-                    option.dataset.reviewTranslateTarget ||
-                    ""
-                );
+                getReviewSiteLanguage();
 
             if (
                 !content ||
-                !Number.isFinite(reviewId) ||
-                !["ko", "ja", "en"].includes(
-                    targetLanguage
-                )
+                !Number.isFinite(reviewId)
             ) {
                 return;
             }
@@ -1376,36 +1295,21 @@ document.addEventListener(
                     "[data-review-translated-label]"
                 );
 
-            const menu =
-                wrapper?.querySelector(
-                    "[data-review-translate-menu]"
+            const label =
+                translateButton.querySelector(
+                    "[data-review-translate-label]"
                 );
 
-            const toggleButton =
-                wrapper?.querySelector(
-                    "[data-review-translate-toggle]"
-                );
+            translateButton.disabled = true;
 
-            if (menu) {
-                menu.hidden = true;
+            const previousLabel =
+                label?.textContent ||
+                getReviewTranslateButtonLabel();
+
+            if (label) {
+                label.textContent =
+                    getReviewTranslatingLabel();
             }
-
-            toggleButton?.setAttribute(
-                "aria-expanded",
-                "false"
-            );
-
-            option.disabled = true;
-
-            const previousText =
-                option.textContent;
-
-            option.textContent =
-                currentLanguage === "ja"
-                    ? "翻訳中..."
-                    : currentLanguage === "en"
-                        ? "Translating..."
-                        : "번역 중...";
 
             try {
                 const result =
@@ -1430,9 +1334,6 @@ document.addEventListener(
                     }
 
                     translatedBox.hidden = false;
-
-                    // 원문은 숨기지 않고 번역문을 아래에 추가해
-                    // 번역된 문장을 원문으로 오해하지 않게 합니다.
                 }
             } catch (error) {
                 showToast(
@@ -1446,8 +1347,11 @@ document.addEventListener(
                     )
                 );
             } finally {
-                option.disabled = false;
-                option.textContent = previousText;
+                translateButton.disabled = false;
+
+                if (label) {
+                    label.textContent = previousLabel;
+                }
             }
 
             return;
@@ -1470,16 +1374,6 @@ document.addEventListener(
             if (translatedBox) {
                 translatedBox.hidden = true;
             }
-
-            return;
-        }
-
-        if (
-            !event.target.closest(
-                "[data-review-translation]"
-            )
-        ) {
-            closeReviewTranslationMenus();
         }
     }
 );
