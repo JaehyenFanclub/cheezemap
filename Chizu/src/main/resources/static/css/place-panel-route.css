@@ -1902,372 +1902,187 @@ body.dark .place-side-panel .place-content {
 }
 
 /* =====================================================
-   mr.eum수정부분
+   MR.EUM 수정부분
    도보 / 자동차 길찾기 카드
-   대중교통과 유사한 카드 구조
-   ※ transit CSS는 건드리지 않음
 ===================================================== */
 
+/* 기본 카드 */
 .place-side-panel .simple-route-option {
     width: 100%;
     margin: 0 0 12px;
-    padding: 14px;
-
-    overflow: hidden;
-
-    box-sizing: border-box;
-
+    padding: 16px;
     border: 1px solid var(--gray-200);
     border-radius: 15px;
-
     background: var(--white);
     color: var(--text);
-
     text-align: left;
-
     cursor: pointer;
 
-    box-shadow: 0 3px 10px rgba(65, 51, 35, 0.04);
+    box-sizing: border-box;
 
     transition:
         border-color .15s ease,
         background .15s ease,
-        box-shadow .15s ease;
+        transform .15s ease;
 }
 
 
-/* mr.eum수정부분
-   마우스 오버 / 선택 상태 */
-.place-side-panel .simple-route-option:hover,
+/* 마우스를 올렸을 때 */
+.place-side-panel .simple-route-option:hover {
+    border-color: var(--yellow-dark);
+    transform: translateY(-1px);
+}
+
+
+/* 선택된 경로 */
 .place-side-panel .simple-route-option.active {
     border-color: var(--yellow-dark);
-}
-
-
-/* mr.eum수정부분
-   선택된 카드 */
-.place-side-panel .simple-route-option.active {
     background: #fff9e8;
-
-    box-shadow:
-        0 7px 18px rgba(111, 82, 31, 0.08);
 }
 
 
 /* =====================================================
-   상단 시간 + 추천
+   상단 시간 영역
 ===================================================== */
 
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-option .route-summary {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-
-    gap: 12px;
-
-    margin-bottom: 11px;
-}
-
-
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-option .route-summary-main {
+.place-side-panel .simple-route-header {
     display: flex;
     align-items: center;
-
-    gap: 7px;
-
-    min-width: 0;
+    justify-content: space-between;
 }
 
 
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-option .route-summary-main > strong {
-    flex-shrink: 0;
-
-    font-size: 18px;
-    font-weight: 800;
-
-    line-height: 1.1;
-
-    letter-spacing: -0.02em;
+/* 시간 + 아이콘 */
+.place-side-panel .simple-route-time {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 
-/* mr.eum수정부분
-   추천 / 대안 뱃지 */
-.place-side-panel .simple-route-option .route-recommend-badge {
-    display: inline-flex !important;
-
+/* 교통수단 아이콘 */
+.place-side-panel .simple-route-time > i {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
 
-    margin: 0 !important;
-    padding: 3px 7px;
+    width: 30px;
+    height: 30px;
 
-    border-radius: 999px;
+    border-radius: 9px;
 
-    color: #6a4b13 !important;
     background: var(--yellow-light);
+    color: var(--brown-dark);
 
-    font-size: 9px !important;
-    font-weight: 800;
-
-    line-height: 1.2 !important;
-
-    white-space: nowrap;
+    font-size: 16px;
 }
 
 
-/* mr.eum수정부분
-   거리 */
-.place-side-panel .simple-route-option .route-summary-time {
-    display: block !important;
-
-    margin: 1px 0 0 !important;
-
-    color: var(--gray-600) !important;
-
-    font-size: 10px !important;
-    font-weight: 600;
-
-    line-height: 1.45 !important;
-
-    text-align: right;
-
-    white-space: nowrap;
+/* 시간 */
+.place-side-panel .simple-route-time strong {
+    font-size: 18px;
+    font-weight: 800;
 }
 
 
 /* =====================================================
-   출발지 → 도착지
+   거리
 ===================================================== */
 
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-option .route-line {
-    display: grid;
+.place-side-panel .simple-route-distance {
+    margin-top: 6px;
+    margin-left: 38px;
 
-    grid-template-columns:
-        25px
-        minmax(0, 1fr)
-        18px;
+    color: var(--gray-600);
 
-    align-items: center;
-
-    gap: 8px;
-
-    min-height: 34px;
-
-    padding: 8px 9px;
-
-    border-radius: 10px;
-
-    background: rgba(246, 201, 69, 0.10);
+    font-size: 12px;
+    font-weight: 700;
 }
 
 
-/* mr.eum수정부분
-   도보 / 자동차 아이콘 */
-.place-side-panel .simple-route-option .route-mode-icon {
-    width: 25px;
-    height: 25px;
+/* =====================================================
+   출발 → 도착
+===================================================== */
 
-    display: grid;
-    place-items: center;
+.place-side-panel .simple-route-path {
+    margin-top: 16px;
+    padding: 12px;
 
-    border-radius: 8px;
+    border-radius: 11px;
 
-    color: var(--brown);
-
-    background: var(--yellow-light);
-
-    font-size: 14px;
+    background: var(--gray-50);
 }
 
 
-/* mr.eum수정부분
-   출발지 → 도착지 */
-.place-side-panel .simple-route-option .route-line-chips {
-    min-width: 0;
-
+/* 출발 / 도착 */
+.place-side-panel .simple-route-point {
     display: flex;
     align-items: center;
-
-    gap: 6px;
-
-    color: var(--text);
+    gap: 9px;
 
     font-size: 11px;
     font-weight: 700;
-
-    line-height: 1.5;
-
-    overflow-wrap: anywhere;
 }
 
 
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-option .route-line-chips em {
+/* 점 */
+.place-side-panel .simple-route-dot {
+    width: 8px;
+    height: 8px;
+
     flex-shrink: 0;
 
-    color: var(--gray-400);
+    border-radius: 50%;
 
-    font-style: normal;
+    background: var(--yellow-dark);
 }
 
 
-/* mr.eum수정부분
-   펼침 화살표 */
-.place-side-panel .simple-route-option .simple-route-chevron {
-    color: var(--gray-400);
+/* 가운데 이동 영역 */
+.place-side-panel .simple-route-line {
+    display: flex;
+    align-items: center;
+    gap: 7px;
 
-    font-size: 14px;
+    margin: 7px 0 7px 3px;
+    padding-left: 13px;
 
-    transition:
-        transform .2s ease;
+    color: var(--gray-500);
+
+    font-size: 10px;
+    font-weight: 700;
 }
 
 
-/* mr.eum수정부분
-   펼쳐졌을 때 화살표 */
-.place-side-panel
-.simple-route-option.expanded
-.simple-route-chevron {
-    transform: rotate(180deg);
+/* 가운데 교통수단 아이콘 */
+.place-side-panel .simple-route-line i {
+    font-size: 13px;
 }
 
 
 /* =====================================================
-   도보 상세 경로
+   경로 설명
 ===================================================== */
 
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-details {
-    display: none;
-
-    margin-top: 13px;
-    padding-top: 13px;
-
-    border-top: 1px solid var(--gray-200);
-
-    cursor: default;
-}
-
-
-/* mr.eum수정부분 */
-.place-side-panel
-.simple-route-option.expanded
-.simple-route-details {
-    display: block;
-}
-
-
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-detail-header {
+.place-side-panel .simple-route-description {
     display: flex;
-
     align-items: center;
-    justify-content: space-between;
+    gap: 7px;
 
-    gap: 10px;
+    margin-top: 12px;
+    padding-top: 11px;
 
-    margin-bottom: 13px;
+    border-top: 1px solid var(--gray-100);
+
+    color: var(--gray-600);
+
+    font-size: 10px;
+    font-weight: 600;
 }
 
 
-.place-side-panel
-.simple-route-detail-header strong {
-    font-size: 12px;
-    font-weight: 800;
-}
-
-
-/* =====================================================
-   대안 버튼
-===================================================== */
-
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-alternatives {
-    width: 100%;
-
-    margin-top: 2px;
-}
-
-
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-alternatives-toggle {
-    width: 100%;
-
-    min-height: 42px;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: space-between;
-
-    padding: 10px 13px;
-
-    box-sizing: border-box;
-
-    border: 1px solid var(--gray-200);
-    border-radius: 12px;
-
-    background: var(--white);
-    color: var(--text);
-
-    font-size: 11px;
-    font-weight: 800;
-
-    text-align: left;
-
-    cursor: pointer;
-
-    transition:
-        border-color .15s ease,
-        background .15s ease;
-}
-
-
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-alternatives-toggle:hover {
-    border-color: var(--yellow-dark);
-
-    background: var(--yellow-light);
-}
-
-
-/* mr.eum수정부분 */
-.place-side-panel
-.simple-route-alternatives-toggle > i {
-    color: var(--gray-400);
-
-    font-size: 14px;
-
-    transition:
-        transform .2s ease;
-}
-
-
-/* mr.eum수정부분 */
-.place-side-panel
-.simple-route-alternatives-toggle.expanded
-> i {
-    transform: rotate(180deg);
-}
-
-
-/* mr.eum수정부분 */
-.place-side-panel .simple-route-alternatives-list {
-    margin-top: 10px;
-}
-
-
-/* mr.eum수정부분
-   대안 카드 사이 간격 */
-.place-side-panel
-.simple-route-alternatives-list
-.simple-route-option {
-    margin-bottom: 10px;
+.place-side-panel .simple-route-description i {
+    font-size: 13px;
 }
 
 
@@ -2275,63 +2090,52 @@ body.dark .place-side-panel .place-content {
    다크모드
 ===================================================== */
 
-/* mr.eum수정부분 */
 body.dark .place-side-panel .simple-route-option {
     background: #2e2c27;
-
     border-color: #4a4740;
-
     color: #f5f2ea;
 }
 
 
-/* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-option.active {
+/* 다크모드 선택 카드 */
+body.dark .place-side-panel .simple-route-option.active {
     background: #3a3528;
-
     border-color: #d8a900;
 }
 
 
-/* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-option .route-line {
+/* 다크모드 내부 경로 영역 */
+body.dark .place-side-panel .simple-route-path {
     background: #25231f;
 }
 
 
-/* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-option .route-line-chips {
-    color: #f5f2ea;
-}
-
-
-/* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-details {
+/* 다크모드 설명 */
+body.dark .place-side-panel .simple-route-description {
     border-top-color: #4a4740;
+    color: #aaa59b;
 }
 
 
-/* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-alternatives-toggle {
-    background: #2e2c27;
-
-    border-color: #4a4740;
-
-    color: #f5f2ea;
+/* 다크모드 거리 */
+body.dark .place-side-panel .simple-route-distance {
+    color: #aaa59b;
 }
 
 
-/* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-alternatives-toggle:hover {
-    background: #3a3528;
+/* =====================================================
+   도보 / 자동차 아이콘 영역
+===================================================== */
 
-    border-color: #d8a900;
+body.dark .place-side-panel .walking-route-option .simple-route-time > i {
+    background: #3f3a2d;
+    color: #e8c84a;
+}
+
+
+body.dark .place-side-panel .driving-route-option .simple-route-time > i {
+    background: #343a3d;
+    color: #8fc4e8;
 }
 
 /* =====================================================
@@ -3132,4 +2936,154 @@ body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
     color: #fff;
     font-size: 8px;
     font-weight: 800;
+}
+
+
+/* =====================================================
+   리뷰 번역 UI
+===================================================== */
+
+.place-review-translation {
+    position: relative;
+    margin-top: 8px;
+}
+
+.place-review-translate-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 30px;
+    padding: 5px 9px;
+    border: 1px solid #e7dfd1;
+    border-radius: 9px;
+    background: #fffdf8;
+    color: #6d6253;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.place-review-translate-toggle:hover {
+    border-color: #e9bb45;
+    background: #fff8e5;
+}
+
+.place-review-translate-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 5px);
+    left: 0;
+    min-width: 130px;
+    padding: 5px;
+    border: 1px solid #e4dac9;
+    border-radius: 11px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(45, 37, 24, 0.14);
+}
+
+.place-review-translate-option {
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #3e372e;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.place-review-translate-option:hover {
+    background: #fff5d8;
+}
+
+.place-review-translate-option:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.place-review-translated-box {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border: 1px solid #eee5d6;
+    border-radius: 11px;
+    background: #fffaf0;
+}
+
+.place-review-translated-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+    color: #9a7a32;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.place-review-original-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #8b7454;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.place-review-translated-text {
+    margin: 0;
+    color: #3b352d;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+body.dark .place-review-translate-toggle {
+    border-color: #4b463d;
+    background: #2b2924;
+    color: #ddd4c4;
+}
+
+body.dark .place-review-translate-toggle:hover {
+    border-color: #8f7436;
+    background: #373126;
+}
+
+body.dark .place-review-translate-menu {
+    border-color: #4b463d;
+    background: #272520;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
+body.dark .place-review-translate-option {
+    color: #eee8dc;
+}
+
+body.dark .place-review-translate-option:hover {
+    background: #393329;
+}
+
+body.dark .place-review-translated-box {
+    border-color: #49443b;
+    background: #2c2923;
+}
+
+body.dark .place-review-translated-head {
+    color: #d9bd72;
+}
+
+body.dark .place-review-original-button {
+    color: #cfc3ad;
+}
+
+body.dark .place-review-translated-text {
+    color: #f1ece2;
 }
