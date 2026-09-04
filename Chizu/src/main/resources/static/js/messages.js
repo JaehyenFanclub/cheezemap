@@ -531,7 +531,7 @@ async function renderMessageCenter() {
                 const active = String(userId) === String(selectedMessageUserId);
                 return `
                     <button type="button" class="message-list-item ${active ? "active" : ""}" data-message-user-id="${userId}" data-message-nickname="${escapeGroupHtml(nickname)}">
-                        <span class="message-avatar">${escapeGroupHtml(nickname.slice(0, 1))}</span>
+                        ${renderMessageAvatar(chatter.photoUrl, nickname)}
                         <span class="message-list-copy">
                             <strong>${escapeGroupHtml(nickname)}</strong>
                             <b>${escapeGroupHtml(parsed.subject)}</b>
@@ -540,6 +540,11 @@ async function renderMessageCenter() {
                     </button>`;
             }).join("")
             : `<div class="message-list-empty"><i class="ti ti-mail-off"></i><p>아직 대화한 상대가 없습니다.</p></div>`;
+
+        const myProfile = document.getElementById("messageMyProfile");
+        if (myProfile) {
+            myProfile.innerHTML = renderMyMessageProfile();
+        }
 
         list.querySelectorAll("[data-message-user-id]").forEach(button => {
             button.addEventListener("click", () => {
@@ -564,6 +569,54 @@ function renderEmptyMessageDetail() {
         </div>`;
 }
 
+function getMessageProfilePhotoUrl(photoUrl) {
+    const raw = String(photoUrl || '').trim();
+    if (!raw) return '';
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return raw.startsWith('/') ? raw : `/${raw}`;
+}
+
+function renderMessageAvatar(photoUrl, name, extraClass = '') {
+    const safeName = escapeGroupHtml(name || '사용자');
+    const normalizedPhotoUrl = getMessageProfilePhotoUrl(photoUrl);
+
+    if (!normalizedPhotoUrl) {
+        return `<span class="message-avatar ${extraClass}"><i class="ti ti-user"></i></span>`;
+    }
+
+    return `
+        <span class="message-avatar ${extraClass}">
+            <img
+                src="${escapeGroupHtml(normalizedPhotoUrl)}"
+                alt="${safeName} 프로필"
+                onerror="this.parentElement.classList.remove('has-photo'); this.parentElement.innerHTML='<i class=&quot;ti ti-user&quot;></i>';"
+            >
+        </span>`;
+}
+
+function renderMyMessageProfile() {
+    const name =
+        currentUser?.nickname ||
+        currentUser?.userNickname ||
+        currentUser?.name ||
+        '나';
+
+    const photoUrl =
+        currentUser?.photoUrl ||
+        currentUser?.profilePhotoUrl ||
+        currentUser?.profileImageUrl ||
+        '';
+
+    return `
+        <div class="message-my-profile">
+            ${renderMessageAvatar(photoUrl, name, 'message-my-profile-avatar')}
+            <div class="message-my-profile-copy">
+                <strong>${escapeGroupHtml(name)}</strong>
+                <span>내 프로필</span>
+            </div>
+        </div>`;
+}
+
 async function openMessageConversation(userId, nickname) {
     selectedMessageUserId = Number(userId);
     selectedMessageNickname = nickname || "상대방";
@@ -576,54 +629,92 @@ async function openMessageConversation(userId, nickname) {
         const rows = await apiRequest(`/message/${selectedMessageUserId}/recept`, { auth: true });
         messageConversationCache = Array.isArray(rows) ? rows : [];
 
+        const conversationHtml = messageConversationCache.length
+            ? messageConversationCache.map(item => {
+                const parsed = splitBackendMessageContent(item.content);
+                const mine = Boolean(item.whoSend);
+                const messageId = Number(item.messageId);
+                const translationId = Number.isFinite(messageId)
+                    ? messageId
+                    : `row-${selectedMessageUserId}-${item.messageDate || ""}`;
+                const actionText = getMessageActionText();
+                const canManage = mine && Number.isFinite(messageId);
+                const sourceText = getMessageTranslationSourceText(
+                    parsed.subject,
+                    parsed.body
+                );
+
+                return `
+                    <div class="message-conversation-row ${mine ? "mine" : "theirs"}">
+                        <div
+                            class="message-conversation-bubble"
+                            ${canManage ? `data-message-bubble-id="${messageId}"` : ""}
+                            data-message-id="${escapeGroupHtml(String(translationId))}"
+                        >
+                            <strong>${escapeGroupHtml(parsed.subject)}</strong>
+                            <p data-message-body>${escapeGroupHtml(parsed.body).replaceAll("\n", "<br>")}</p>
+                            <span class="message-source-text" data-message-source-text hidden>${escapeGroupHtml(sourceText)}</span>
+                            ${renderMessageTranslationControls(
+                                translationId,
+                                parsed.subject,
+                                parsed.body
+                            )}
+                            <div class="message-bubble-footer">
+                                <small>
+                                    ${formatMessageDate(item.messageDate)}${
+                                        item.isEdited
+                                            ? (currentLanguage === "ja" ? " · 編集済み" : currentLanguage === "en" ? " · Edited" : " · 수정됨")
+                                            : ""
+                                    }
+                                </small>
+                                ${canManage ? `
+                                    <span class="message-bubble-actions">
+                                        <button type="button" class="message-mini-button" data-message-edit="${messageId}">${actionText.edit}</button>
+                                        <button type="button" class="message-mini-button danger" data-message-delete="${messageId}">${actionText.delete}</button>
+                                    </span>` : ""}
+                            </div>
+                        </div>
+                    </div>`;
+            }).join("")
+            : `<div class="message-list-empty"><p>대화 내용이 없습니다.</p></div>`;
+
         panel.innerHTML = `
             <article class="message-detail">
                 <header>
-                    <div><span>대화 상대</span><strong>${escapeGroupHtml(selectedMessageNickname)}</strong></div>
-                    <button type="button" class="place-section-link" data-conversation-reply><i class="ti ti-pencil-plus"></i> 쪽지 보내기</button>
+                    <div>
+                        <span>대화 상대</span>
+                        <strong>${escapeGroupHtml(selectedMessageNickname)}</strong>
+                    </div>
                 </header>
-                <div class="message-conversation-thread">
-                    ${messageConversationCache.length ? messageConversationCache.map(item => {
-                        const parsed = splitBackendMessageContent(item.content);
-                        const mine = Boolean(item.whoSend);
-                        const messageId = Number(item.messageId);
-                        const translationId = Number.isFinite(messageId)
-                            ? messageId
-                            : `row-${selectedMessageUserId}-${item.messageDate || ""}`;
-                        const actionText = getMessageActionText();
-                        const canManage = mine && Number.isFinite(messageId);
-                        const sourceText = getMessageTranslationSourceText(
-                            parsed.subject,
-                            parsed.body
-                        );
-                        return `
-                            <div class="message-conversation-row ${mine ? "mine" : "theirs"}">
-                                <div class="message-conversation-bubble" ${canManage ? `data-message-bubble-id="${messageId}"` : ""} data-message-id="${escapeGroupHtml(String(translationId))}">
-                                    <strong>${escapeGroupHtml(parsed.subject)}</strong>
-                                    <p data-message-body>${escapeGroupHtml(parsed.body).replaceAll("\n", "<br>")}</p>
-                                    <span class="message-source-text" data-message-source-text hidden>${escapeGroupHtml(sourceText)}</span>
-                                    ${renderMessageTranslationControls(
-                                        translationId,
-                                        parsed.subject,
-                                        parsed.body
-                                    )}
-                                    <div class="message-bubble-footer">
-                                        <small>${formatMessageDate(item.messageDate)}${item.isEdited ? (currentLanguage === "ja" ? " · 編集済み" : currentLanguage === "en" ? " · Edited" : " · 수정됨") : ""}</small>
-                                        ${canManage ? `
-                                            <span class="message-bubble-actions">
-                                                <button type="button" class="message-mini-button" data-message-edit="${messageId}">${actionText.edit}</button>
-                                                <button type="button" class="message-mini-button danger" data-message-delete="${messageId}">${actionText.delete}</button>
-                                            </span>` : ""}
-                                    </div>
-                                </div>
-                            </div>`;
-                    }).join("") : `<div class="message-list-empty"><p>대화 내용이 없습니다.</p></div>`}
+
+                <div class="message-conversation-thread" id="messageConversationThread">
+                    ${conversationHtml}
                 </div>
+
+                <form class="message-conversation-compose" id="messageConversationComposeForm">
+                    <textarea
+                        id="messageConversationBody"
+                        rows="2"
+                        maxlength="500"
+                        placeholder="메시지를 입력하세요..."
+                        aria-label="메시지 입력"
+                        required
+                    ></textarea>
+                    <button
+                        type="submit"
+                        class="message-conversation-send"
+                        aria-label="보내기"
+                        title="보내기"
+                    >
+                        <i class="ti ti-send"></i>
+                    </button>
+                </form>
             </article>`;
 
-        panel.querySelector("[data-conversation-reply]")?.addEventListener("click", () => {
-            openMessageCompose({ recipient: selectedMessageNickname });
-        });
+        panel.querySelector("#messageConversationComposeForm")?.addEventListener(
+            "submit",
+            sendConversationMessage
+        );
 
         panel.querySelectorAll("[data-message-edit]").forEach(button => {
             button.addEventListener("click", () => {
@@ -639,11 +730,62 @@ async function openMessageConversation(userId, nickname) {
             });
         });
 
+        const thread = panel.querySelector("#messageConversationThread");
+        if (thread) {
+            requestAnimationFrame(() => {
+                thread.scrollTop = thread.scrollHeight;
+            });
+        }
+
         await updateMessageBadge();
         await renderMessageCenter();
         selectedMessageUserId = Number(userId);
     } catch (error) {
         panel.innerHTML = `<div class="message-empty-state"><p>${escapeGroupHtml(error.message)}</p></div>`;
+    }
+}
+
+// mr.eum수정부분
+// 대화방 하단 입력창에서 바로 답장을 보냅니다.
+async function sendConversationMessage(event) {
+    event.preventDefault();
+
+    const bodyField = document.getElementById("messageConversationBody");
+    const body = bodyField?.value.trim();
+
+    if (!selectedMessageUserId || !body) return;
+
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+
+    if (submit) {
+        submit.disabled = true;
+    }
+
+    try {
+        await apiRequest(`/message/${selectedMessageUserId}/send`, {
+            method: "POST",
+            auth: true,
+            body: {
+                content: joinBackendMessageContent("쪽지", body)
+            }
+        });
+
+        if (bodyField) {
+            bodyField.value = "";
+        }
+
+        await openMessageConversation(
+            selectedMessageUserId,
+            selectedMessageNickname
+        );
+
+        await updateMessageBadge();
+    } catch (error) {
+        showToast(error.message);
+    } finally {
+        if (submit) {
+            submit.disabled = false;
+        }
     }
 }
 
@@ -685,12 +827,13 @@ function returnFromMessageCompose() {
 async function sendBackendMessage(event) {
     event.preventDefault();
 
+    // mr.eum수정부분
+    // 쪽지 제목 입력을 제거하고 받는 사람과 내용만 확인합니다.
     const recipient = document.getElementById("messageRecipient")?.value.trim();
-    const subject = document.getElementById("messageSubject")?.value.trim();
     const body = document.getElementById("messageBody")?.value.trim();
 
-    if (!recipient || !subject || !body) {
-        showToast("받는 사람, 제목, 내용을 모두 입력해 주세요.");
+    if (!recipient || !body) {
+        showToast("받는 사람과 내용을 모두 입력해 주세요.");
         return;
     }
 
@@ -702,7 +845,7 @@ async function sendBackendMessage(event) {
         await apiRequest(`/message/${recipientId}/send`, {
             method: "POST",
             auth: true,
-            body: { content: joinBackendMessageContent(subject, body) }
+            body: { content: joinBackendMessageContent("쪽지", body) }
         });
 
         messageComposeReturnModal = null;
