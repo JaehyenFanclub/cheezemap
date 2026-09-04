@@ -1434,15 +1434,18 @@ function renderReviewContent(content) {
 // 긴 리뷰에만 "더보기" 버튼을 보여줍니다.
 // =====================================================
 
-function updateReviewMoreButtons() {
+// =====================================================
+// mr.eum수정부분
+// 리뷰가 실제로 2줄 이상일 때만 "더보기" 표시
+// =====================================================
 
+function updateReviewMoreButtons() {
     const reviewContents =
         document.querySelectorAll(
             "[data-review-content-wrap]"
         );
 
     reviewContents.forEach(wrap => {
-
         const content =
             wrap.querySelector("[data-review-content]");
 
@@ -1453,18 +1456,64 @@ function updateReviewMoreButtons() {
             return;
         }
 
-        /*
-         * 실제 내용의 높이가 한 줄 높이보다 크면
-         * 여러 줄짜리 리뷰라고 판단합니다.
-         */
-        const isLongReview =
-            content.scrollHeight > content.clientHeight + 1;
+        // mr.eum수정부분
+        // 현재 CSS의 1줄 제한을 잠시 해제하고
+        // 실제 리뷰가 몇 줄인지 측정합니다.
+        const wasCollapsed =
+            content.classList.contains(
+                "review-content-collapsed"
+            );
 
+        content.classList.remove(
+            "review-content-collapsed"
+        );
+
+        // mr.eum수정부분
+        // 전체 리뷰가 차지하는 실제 높이
+        const fullHeight =
+            content.scrollHeight;
+
+        // mr.eum수정부분
+        // 현재 폰트의 실제 한 줄 높이
+        const computedStyle =
+            window.getComputedStyle(content);
+
+        const lineHeight =
+            parseFloat(
+                computedStyle.lineHeight
+            );
+
+        // mr.eum수정부분
+        // 한 줄 높이보다 충분히 크면
+        // 실제로 2줄 이상인 리뷰입니다.
+        const isLongReview =
+            Number.isFinite(lineHeight) &&
+            fullHeight > lineHeight + 1;
+
+        // mr.eum수정부분
+        // 다시 원래의 한 줄 상태로 복구
+        if (wasCollapsed) {
+            content.classList.add(
+                "review-content-collapsed"
+            );
+        }
+
+        // mr.eum수정부분
+        // 1줄이면 숨김
+        // 2줄 이상이면 표시
         moreButton.hidden = !isLongReview;
+
+        // mr.eum수정부분
+        // 혹시 다른 CSS가 display를 덮어쓰더라도
+        // hidden 상태를 확실하게 적용합니다.
+        moreButton.style.display =
+            isLongReview
+                ? "inline-block"
+                : "none";
     });
 }
 
-updateReviewMoreButtons();
+
 
 // mr.eum수정부분
 function renderPlaceReviewEditPhotos(item) {
@@ -1755,6 +1804,7 @@ async function renderPlaceReviews(placeKey) {
                 </article>
             `;
         }).join("");
+        updateReviewMoreButtons();
 }
 
 async function renderPlaceMenu(placeKey) {
