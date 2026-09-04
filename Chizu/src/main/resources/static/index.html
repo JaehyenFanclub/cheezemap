@@ -2185,19 +2185,36 @@
     <script src="js/groups.js"></script>
     <script src="js/reviews.js"></script>
 
+    <!-- Google Maps API 키는 /api/public/config (GOOGLE_API_KEY 환경변수)에서 로드 -->
+    <script>
+    (async function () {
+        try {
+            const response = await fetch("/api/public/config");
 
-    <!--
-        YOUR_GOOGLE_MAPS_API_KEY를
-        실제 Google Maps API 키로 교체
-    -->
+            if (!response.ok) {
+                throw new Error("Failed to load map configuration");
+            }
 
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDVHhGDijK1dZClySXTSNAQDGyVwP_FLmg&callback=initGoogleMap&loading=async&libraries=places,routes&language=ja&region=JP&v=weekly"
-        async
-        defer
-       
-       
-    ></script>
+            const config = await response.json();
+            const apiKey = String(config.googleMapsApiKey || "").trim();
+
+            if (!apiKey) {
+                console.error("Google Maps API key is not configured.");
+                return;
+            }
+
+            const script = document.createElement("script");
+            script.src =
+                `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}` +
+                "&callback=initGoogleMap&loading=async&libraries=places,routes&language=ja&region=JP&v=weekly";
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        } catch (error) {
+            console.error("Google Maps loader error:", error);
+        }
+    })();
+    </script>
 
 </body>
 </html>

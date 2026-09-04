@@ -1,0 +1,106 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/cheezemap
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./Chizu
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: GOOGLE_API_KEY,JWT_SECRET,MYSQL_ROOT_PASSWORD,MYSQL_PASSWORD,OAUTH2_GOOGLE_CLIENT_ID,OAUTH2_GOOGLE_CLIENT_SECRET,OAUTH2_GOOGLE_REDIRECT_URI,OAUTH2_NAVER_CLIENT_ID,OAUTH2_NAVER_CLIENT_SECRET,OAUTH2_NAVER_REDIRECT_URI,OAUTH2_LINE_CLIENT_ID,OAUTH2_LINE_CLIENT_SECRET,OAUTH2_LINE_REDIRECT_URI,REGISTRY_IMAGE,IMAGE_TAG
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            export REGISTRY_IMAGE=ghcr.io/${{ github.repository }}/cheezemap
+            export IMAGE_TAG=${{ github.ref_name }}
+            export GOOGLE_API_KEY='${{ secrets.GOOGLE_API_KEY }}'
+            export JWT_SECRET='${{ secrets.JWT_SECRET }}'
+            export MYSQL_ROOT_PASSWORD='${{ secrets.MYSQL_ROOT_PASSWORD }}'
+            export MYSQL_PASSWORD='${{ secrets.MYSQL_PASSWORD }}'
+            export OAUTH2_GOOGLE_CLIENT_ID='${{ secrets.OAUTH2_GOOGLE_CLIENT_ID }}'
+            export OAUTH2_GOOGLE_CLIENT_SECRET='${{ secrets.OAUTH2_GOOGLE_CLIENT_SECRET }}'
+            export OAUTH2_GOOGLE_REDIRECT_URI='${{ secrets.OAUTH2_GOOGLE_REDIRECT_URI }}'
+            export OAUTH2_NAVER_CLIENT_ID='${{ secrets.OAUTH2_NAVER_CLIENT_ID }}'
+            export OAUTH2_NAVER_CLIENT_SECRET='${{ secrets.OAUTH2_NAVER_CLIENT_SECRET }}'
+            export OAUTH2_NAVER_REDIRECT_URI='${{ secrets.OAUTH2_NAVER_REDIRECT_URI }}'
+            export OAUTH2_LINE_CLIENT_ID='${{ secrets.OAUTH2_LINE_CLIENT_ID }}'
+            export OAUTH2_LINE_CLIENT_SECRET='${{ secrets.OAUTH2_LINE_CLIENT_SECRET }}'
+            export OAUTH2_LINE_REDIRECT_URI='${{ secrets.OAUTH2_LINE_REDIRECT_URI }}'
+            docker compose -f docker-compose.prod.yml pull app
+            docker compose -f docker-compose.prod.yml up -d
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          OAUTH2_GOOGLE_CLIENT_ID: ${{ secrets.OAUTH2_GOOGLE_CLIENT_ID }}
+          OAUTH2_GOOGLE_CLIENT_SECRET: ${{ secrets.OAUTH2_GOOGLE_CLIENT_SECRET }}
+          OAUTH2_GOOGLE_REDIRECT_URI: ${{ secrets.OAUTH2_GOOGLE_REDIRECT_URI }}
+          OAUTH2_NAVER_CLIENT_ID: ${{ secrets.OAUTH2_NAVER_CLIENT_ID }}
+          OAUTH2_NAVER_CLIENT_SECRET: ${{ secrets.OAUTH2_NAVER_CLIENT_SECRET }}
+          OAUTH2_NAVER_REDIRECT_URI: ${{ secrets.OAUTH2_NAVER_REDIRECT_URI }}
+          OAUTH2_LINE_CLIENT_ID: ${{ secrets.OAUTH2_LINE_CLIENT_ID }}
+          OAUTH2_LINE_CLIENT_SECRET: ${{ secrets.OAUTH2_LINE_CLIENT_SECRET }}
+          OAUTH2_LINE_REDIRECT_URI: ${{ secrets.OAUTH2_LINE_REDIRECT_URI }}
+          REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/cheezemap
+          IMAGE_TAG: ${{ github.ref_name }}

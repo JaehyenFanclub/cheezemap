@@ -44,7 +44,7 @@ public class NavitimeRouteService {
         String apiKey = resolveApiKey();
         if (apiKey.isBlank()) {
             throw new IllegalArgumentException(
-                    "NAVITIME API 키가 설정되지 않았습니다. application.properties의 navitime.api.key를 입력해주세요."
+                    "NAVITIME API 키가 설정되지 않았습니다. .env의 NAVITIME_API_KEY를 확인해주세요."
             );
         }
 

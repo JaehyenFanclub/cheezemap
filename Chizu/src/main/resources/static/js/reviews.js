@@ -10,6 +10,51 @@ document
 
 const reviewCacheByPlace = new Map();
 let activeReviewBackendPlace = null;
+
+/* =====================================================
+   마이페이지 내 리뷰 - 장소 보기 전용 마커
+   장소 상세를 열 때 해당 장소 위치에만 임시 마커를 표시합니다.
+===================================================== */
+/* mr.eum수정부분 */
+/* 마이페이지 내 리뷰 - 장소 보기 마커
+   기존 길찾기에서 사용하는 Google Maps PinElement를 그대로 사용합니다.
+*/
+let myReviewPlaceMarker = null;
+
+function clearMyReviewPlaceMarker() {
+    if (myReviewPlaceMarker) {
+        myReviewPlaceMarker.map = null;
+    }
+
+    myReviewPlaceMarker = null;
+}
+
+async function showMyReviewPlaceMarker(position, title = "장소") {
+    if (!googleMap || !position) {
+        return;
+    }
+
+    const lat = Number(position.lat);
+    const lng = Number(position.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return;
+    }
+
+    clearMyReviewPlaceMarker();
+
+    /* mr.eum수정부분 */
+    /* 길찾기에서 실제 사용하는 동일한 마커 생성 함수를 재사용합니다. */
+    myReviewPlaceMarker =
+        await createGoogleStyleRouteMarker({
+            position: { lat, lng },
+            type: "start",
+            title,
+            zIndex: 100,
+            clickable: false
+        });
+}
+
 /* =====================================================
    MR.EUM 수정부분
    마이페이지에서 수정할 리뷰 원본 데이터를 보관합니다.
@@ -891,7 +936,7 @@ async function loadReviewsForActivePlace(
 
 
 const REVIEW_TRANSLATION_CACHE_KEY =
-    "cheeseMapReviewTranslationV2";
+    "cheeseMapReviewTranslationV1";
 
 function readReviewTranslationCache() {
     try {
@@ -923,62 +968,31 @@ function writeReviewTranslationCache(cache) {
     }
 }
 
-function hashReviewTranslationText(text) {
-    const value = String(text || "");
-    let hash = 2166136261;
-
-    for (let i = 0; i < value.length; i += 1) {
-        hash ^= value.charCodeAt(i);
-        hash = Math.imul(hash, 16777619);
-    }
-
-    return (hash >>> 0).toString(36);
-}
-
 function getReviewTranslationCacheKey(
     reviewId,
-    targetLanguage,
-    sourceText = ""
+    targetLanguage
 ) {
-    return `${reviewId}:${targetLanguage}:${hashReviewTranslationText(sourceText)}`;
+    return `${reviewId}:${targetLanguage}`;
 }
 
 function getCachedReviewTranslation(
     reviewId,
-    targetLanguage,
-    sourceText = ""
+    targetLanguage
 ) {
     const cache =
         readReviewTranslationCache();
 
-    const entry =
-        cache[
-            getReviewTranslationCacheKey(
-                reviewId,
-                targetLanguage,
-                sourceText
-            )
-        ] || null;
-
-    if (!entry?.translatedText) {
-        return null;
-    }
-
-    // 원문이 바뀌었는데 예전 해시 충돌/구버전 캐시가 있으면 쓰지 않습니다.
-    if (
-        entry.sourceText != null &&
-        String(entry.sourceText) !== String(sourceText || "")
-    ) {
-        return null;
-    }
-
-    return entry;
+    return cache[
+        getReviewTranslationCacheKey(
+            reviewId,
+            targetLanguage
+        )
+    ] || null;
 }
 
 function cacheReviewTranslation(
     reviewId,
     targetLanguage,
-    sourceText,
     translatedText,
     detectedLanguage = ""
 ) {
@@ -988,11 +1002,9 @@ function cacheReviewTranslation(
     cache[
         getReviewTranslationCacheKey(
             reviewId,
-            targetLanguage,
-            sourceText
+            targetLanguage
         )
     ] = {
-        sourceText: String(sourceText || ""),
         translatedText:
             String(translatedText || ""),
         detectedLanguage:
@@ -1017,27 +1029,6 @@ function cacheReviewTranslation(
     }
 
     writeReviewTranslationCache(cache);
-}
-
-function invalidateReviewTranslationCache(reviewId) {
-    if (reviewId == null || reviewId === "") {
-        return;
-    }
-
-    const prefix = `${reviewId}:`;
-    const cache = readReviewTranslationCache();
-    let changed = false;
-
-    Object.keys(cache).forEach(key => {
-        if (key.startsWith(prefix)) {
-            delete cache[key];
-            changed = true;
-        }
-    });
-
-    if (changed) {
-        writeReviewTranslationCache(cache);
-    }
 }
 
 function detectReviewLanguage(text) {
@@ -1077,12 +1068,6 @@ function getReviewLanguageLabel(language) {
     return "English";
 }
 
-function getReviewSiteLanguage() {
-    return ["ko", "ja", "en"].includes(currentLanguage)
-        ? currentLanguage
-        : "ko";
-}
-
 function getReviewTranslateButtonLabel() {
     return currentLanguage === "ja"
         ? "翻訳"
@@ -1091,16 +1076,12 @@ function getReviewTranslateButtonLabel() {
             : "번역";
 }
 
-function getReviewTranslatingLabel() {
-    return currentLanguage === "ja"
-        ? "翻訳中..."
-        : currentLanguage === "en"
-            ? "Translating..."
-            : "번역 중...";
-}
-
 function getReviewOriginalButtonLabel() {
-    return "×";
+    return currentLanguage === "ja"
+        ? "原文を見る"
+        : currentLanguage === "en"
+            ? "View original"
+            : "원문 보기";
 }
 
 function renderReviewTranslationControls(
@@ -1109,32 +1090,50 @@ function renderReviewTranslationControls(
 ) {
     const sourceLanguage =
         detectReviewLanguage(content);
-    const targetLanguage =
-        getReviewSiteLanguage();
 
-    // 원문이 이미 사이트 언어와 같으면 번역 버튼을 숨깁니다.
-    if (
-        sourceLanguage &&
-        sourceLanguage === targetLanguage
-    ) {
-        return "";
-    }
+    const targets =
+        ["ko", "ja", "en"].filter(
+            language =>
+                language !== sourceLanguage
+        );
 
     return `
         <div
             class="place-review-translation"
             data-review-translation
-            data-review-id="${reviewId}"
             data-review-source-language="${sourceLanguage}"
         >
             <button
                 type="button"
                 class="place-review-translate-toggle"
-                data-review-translate-button
+                data-review-translate-toggle
+                aria-expanded="false"
             >
                 <i class="ti ti-language"></i>
-                <span data-review-translate-label>${getReviewTranslateButtonLabel()}</span>
+                <span>${getReviewTranslateButtonLabel()}</span>
+                <i class="ti ti-chevron-down"></i>
             </button>
+
+            <div
+                class="place-review-translate-menu"
+                data-review-translate-menu
+                hidden
+            >
+                ${targets
+                    .map(
+                        language => `
+                            <button
+                                type="button"
+                                class="place-review-translate-option"
+                                data-review-translate-target="${language}"
+                                data-review-id="${reviewId}"
+                            >
+                                ${getReviewLanguageLabel(language)}
+                            </button>
+                        `
+                    )
+                    .join("")}
+            </div>
 
             <div
                 class="place-review-translated-box"
@@ -1167,13 +1166,10 @@ async function requestReviewTranslation(
     text,
     targetLanguage
 ) {
-    const sourceText = String(text || "").trim();
-
     const cached =
         getCachedReviewTranslation(
             reviewId,
-            targetLanguage,
-            sourceText
+            targetLanguage
         );
 
     if (cached?.translatedText) {
@@ -1186,7 +1182,7 @@ async function requestReviewTranslation(
             {
                 method: "POST",
                 body: {
-                    text: sourceText,
+                    text,
                     targetLanguage
                 }
             }
@@ -1211,16 +1207,13 @@ async function requestReviewTranslation(
         translatedText,
         detectedLanguage:
             String(
-                result?.detectedLanguage ||
-                result?.detectedSourceLanguage ||
-                ""
+                result?.detectedLanguage || ""
             ).trim()
     };
 
     cacheReviewTranslation(
         reviewId,
         targetLanguage,
-        sourceText,
         normalized.translatedText,
         normalized.detectedLanguage
     );
@@ -1228,24 +1221,91 @@ async function requestReviewTranslation(
     return normalized;
 }
 
+function closeReviewTranslationMenus(
+    except = null
+) {
+    document
+        .querySelectorAll(
+            "[data-review-translate-menu]"
+        )
+        .forEach(menu => {
+            if (menu === except) {
+                return;
+            }
+
+            menu.hidden = true;
+
+            menu
+                .closest(
+                    "[data-review-translation]"
+                )
+                ?.querySelector(
+                    "[data-review-translate-toggle]"
+                )
+                ?.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+        });
+}
+
 document.addEventListener(
     "click",
     async event => {
-        const translateButton =
+        const toggle =
             event.target.closest(
-                "[data-review-translate-button]"
+                "[data-review-translate-toggle]"
             );
 
-        if (translateButton) {
+        if (toggle) {
+            event.stopPropagation();
+
+            const wrapper =
+                toggle.closest(
+                    "[data-review-translation]"
+                );
+
+            const menu =
+                wrapper?.querySelector(
+                    "[data-review-translate-menu]"
+                );
+
+            if (!menu) {
+                return;
+            }
+
+            const willOpen =
+                Boolean(menu.hidden);
+
+            closeReviewTranslationMenus(
+                willOpen ? menu : null
+            );
+
+            menu.hidden = !willOpen;
+
+            toggle.setAttribute(
+                "aria-expanded",
+                String(willOpen)
+            );
+
+            return;
+        }
+
+        const option =
+            event.target.closest(
+                "[data-review-translate-target]"
+            );
+
+        if (option) {
             event.stopPropagation();
 
             const reviewItem =
-                translateButton.closest(
+                option.closest(
                     ".place-review-item"
                 );
 
             const wrapper =
-                translateButton.closest(
+                option.closest(
                     "[data-review-translation]"
                 );
 
@@ -1266,16 +1326,22 @@ document.addEventListener(
 
             const reviewId =
                 Number(
-                    wrapper?.dataset.reviewId ||
+                    option.dataset.reviewId ||
                     reviewItem?.dataset.reviewId
                 );
 
             const targetLanguage =
-                getReviewSiteLanguage();
+                String(
+                    option.dataset.reviewTranslateTarget ||
+                    ""
+                );
 
             if (
                 !content ||
-                !Number.isFinite(reviewId)
+                !Number.isFinite(reviewId) ||
+                !["ko", "ja", "en"].includes(
+                    targetLanguage
+                )
             ) {
                 return;
             }
@@ -1295,21 +1361,36 @@ document.addEventListener(
                     "[data-review-translated-label]"
                 );
 
-            const label =
-                translateButton.querySelector(
-                    "[data-review-translate-label]"
+            const menu =
+                wrapper?.querySelector(
+                    "[data-review-translate-menu]"
                 );
 
-            translateButton.disabled = true;
+            const toggleButton =
+                wrapper?.querySelector(
+                    "[data-review-translate-toggle]"
+                );
 
-            const previousLabel =
-                label?.textContent ||
-                getReviewTranslateButtonLabel();
-
-            if (label) {
-                label.textContent =
-                    getReviewTranslatingLabel();
+            if (menu) {
+                menu.hidden = true;
             }
+
+            toggleButton?.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+            option.disabled = true;
+
+            const previousText =
+                option.textContent;
+
+            option.textContent =
+                currentLanguage === "ja"
+                    ? "翻訳中..."
+                    : currentLanguage === "en"
+                        ? "Translating..."
+                        : "번역 중...";
 
             try {
                 const result =
@@ -1334,6 +1415,9 @@ document.addEventListener(
                     }
 
                     translatedBox.hidden = false;
+
+                    // 원문은 숨기지 않고 번역문을 아래에 추가해
+                    // 번역된 문장을 원문으로 오해하지 않게 합니다.
                 }
             } catch (error) {
                 showToast(
@@ -1347,11 +1431,8 @@ document.addEventListener(
                     )
                 );
             } finally {
-                translateButton.disabled = false;
-
-                if (label) {
-                    label.textContent = previousLabel;
-                }
+                option.disabled = false;
+                option.textContent = previousText;
             }
 
             return;
@@ -1374,6 +1455,16 @@ document.addEventListener(
             if (translatedBox) {
                 translatedBox.hidden = true;
             }
+
+            return;
+        }
+
+        if (
+            !event.target.closest(
+                "[data-review-translation]"
+            )
+        ) {
+            closeReviewTranslationMenus();
         }
     }
 );
@@ -1434,18 +1525,15 @@ function renderReviewContent(content) {
 // 긴 리뷰에만 "더보기" 버튼을 보여줍니다.
 // =====================================================
 
-// =====================================================
-// mr.eum수정부분
-// 리뷰가 실제로 2줄 이상일 때만 "더보기" 표시
-// =====================================================
-
 function updateReviewMoreButtons() {
+
     const reviewContents =
         document.querySelectorAll(
             "[data-review-content-wrap]"
         );
 
     reviewContents.forEach(wrap => {
+
         const content =
             wrap.querySelector("[data-review-content]");
 
@@ -1456,64 +1544,18 @@ function updateReviewMoreButtons() {
             return;
         }
 
-        // mr.eum수정부분
-        // 현재 CSS의 1줄 제한을 잠시 해제하고
-        // 실제 리뷰가 몇 줄인지 측정합니다.
-        const wasCollapsed =
-            content.classList.contains(
-                "review-content-collapsed"
-            );
-
-        content.classList.remove(
-            "review-content-collapsed"
-        );
-
-        // mr.eum수정부분
-        // 전체 리뷰가 차지하는 실제 높이
-        const fullHeight =
-            content.scrollHeight;
-
-        // mr.eum수정부분
-        // 현재 폰트의 실제 한 줄 높이
-        const computedStyle =
-            window.getComputedStyle(content);
-
-        const lineHeight =
-            parseFloat(
-                computedStyle.lineHeight
-            );
-
-        // mr.eum수정부분
-        // 한 줄 높이보다 충분히 크면
-        // 실제로 2줄 이상인 리뷰입니다.
+        /*
+         * 실제 내용의 높이가 한 줄 높이보다 크면
+         * 여러 줄짜리 리뷰라고 판단합니다.
+         */
         const isLongReview =
-            Number.isFinite(lineHeight) &&
-            fullHeight > lineHeight + 1;
+            content.scrollHeight > content.clientHeight + 1;
 
-        // mr.eum수정부분
-        // 다시 원래의 한 줄 상태로 복구
-        if (wasCollapsed) {
-            content.classList.add(
-                "review-content-collapsed"
-            );
-        }
-
-        // mr.eum수정부분
-        // 1줄이면 숨김
-        // 2줄 이상이면 표시
         moreButton.hidden = !isLongReview;
-
-        // mr.eum수정부분
-        // 혹시 다른 CSS가 display를 덮어쓰더라도
-        // hidden 상태를 확실하게 적용합니다.
-        moreButton.style.display =
-            isLongReview
-                ? "inline-block"
-                : "none";
     });
 }
 
-
+updateReviewMoreButtons();
 
 // mr.eum수정부분
 function renderPlaceReviewEditPhotos(item) {
@@ -1703,7 +1745,7 @@ async function renderPlaceReviews(placeKey) {
                                             class="place-review-edit-toggle"
                                             data-review-delete
                                         >
-                                            ${translate("place.reviewDelete")}
+                                            삭제
                                         </button>
                                     `
                                     : `
@@ -1804,7 +1846,6 @@ async function renderPlaceReviews(placeKey) {
                 </article>
             `;
         }).join("");
-        updateReviewMoreButtons();
 }
 
 async function renderPlaceMenu(placeKey) {
@@ -2672,8 +2713,6 @@ document
                         }
                     );
 
-                    invalidateReviewTranslationCache(reviewId);
-
                     reviewCacheByPlace.delete(
                         String(
                             activeReviewBackendPlace.placeId
@@ -2717,7 +2756,7 @@ document
 
                 if (
                     !window.confirm(
-                        translate("place.reviewDeleteConfirm")
+                        "이 리뷰를 삭제할까요?"
                     )
                 ) {
                     return;
@@ -2732,8 +2771,6 @@ document
                             auth: true
                         }
                     );
-
-                    invalidateReviewTranslationCache(reviewId);
 
                     reviewCacheByPlace.delete(
                         String(
@@ -2750,7 +2787,7 @@ document
                     ).catch(console.error);
 
                     showToast(
-                        translate("place.reviewDeleteDone")
+                        "리뷰가 삭제되었습니다."
                     );
 
                 } catch (error) {
@@ -2824,10 +2861,74 @@ document
 async function openMyReviewPlace(placeId) {
     closeModal(mypageModal);
 
+    /* 이전에 마이페이지에서 열었던 장소 마커를 먼저 제거합니다. */
+    clearMyReviewPlaceMarker();
+
     if (
         typeof openBackendPlaceById === "function"
     ) {
         await openBackendPlaceById(placeId);
+
+        /*
+           openBackendPlaceById()가 장소 상세를 연 뒤
+           selectedGooglePoi에 실제 Google 장소 좌표가 들어오면
+           그 좌표를 우선 사용합니다.
+        */
+        const selectedPosition =
+            selectedGooglePoi?.position;
+
+        let position =
+            selectedPosition &&
+            Number.isFinite(Number(selectedPosition.lat)) &&
+            Number.isFinite(Number(selectedPosition.lng))
+                ? {
+                    lat: Number(selectedPosition.lat),
+                    lng: Number(selectedPosition.lng)
+                }
+                : null;
+
+        /* selectedGooglePoi에 좌표가 없으면 백엔드 좌표를 한 번 더 사용합니다. */
+        let backendPlace = null;
+
+        if (!position && typeof getBackendPlaceById === "function") {
+            try {
+                backendPlace = await getBackendPlaceById(placeId);
+
+                const backendPosition = {
+                    lat: Number(backendPlace?.placeLatitude),
+                    lng: Number(backendPlace?.placeLongitude)
+                };
+
+                if (
+                    Number.isFinite(backendPosition.lat) &&
+                    Number.isFinite(backendPosition.lng)
+                ) {
+                    position = backendPosition;
+                }
+            } catch (error) {
+                console.warn(
+                    "마이페이지 리뷰 장소 좌표 조회 실패:",
+                    error
+                );
+            }
+        }
+
+        if (position) {
+            /* mr.eum수정부분 */
+            await showMyReviewPlaceMarker(
+                position,
+                selectedGooglePoi?.name ||
+                backendPlace?.placeName ||
+                "장소"
+            );
+
+            googleMap?.panTo(position);
+
+            if ((googleMap?.getZoom() || 0) < 15) {
+                googleMap?.setZoom(15);
+            }
+        }
+
         return;
     }
 
@@ -2855,8 +2956,29 @@ async function openMyReviewPlace(placeId) {
             Number.isFinite(position.lng)
                 ? position
                 : null,
-            backendPlace.placeName || ""
+            backendPlace.placeName || "",
+            {
+                focusMap: true,
+                focusZoom: 15
+            }
         );
+    }
+
+    if (
+        Number.isFinite(position.lat) &&
+        Number.isFinite(position.lng)
+    ) {
+        /* mr.eum수정부분 */
+        await showMyReviewPlaceMarker(
+            position,
+            backendPlace.placeName || "장소"
+        );
+
+        googleMap?.panTo(position);
+
+        if ((googleMap?.getZoom() || 0) < 15) {
+            googleMap?.setZoom(15);
+        }
     }
 }
 
@@ -3400,14 +3522,14 @@ async function renderMyReviews(
                                 type="button"
                                 data-my-server-review-edit
                             >
-                                ${translate("place.reviewEdit")}
+                                수정
                             </button>
 
                             <button
                                 type="button"
                                 data-my-server-review-delete
                             >
-                                ${translate("place.reviewDelete")}
+                                삭제
                             </button>
                         </div>
                     </div>
@@ -4337,7 +4459,6 @@ async function saveMyPageReviewEdit() {
             { method: "PUT", auth: true, body: form }
         );
 
-        invalidateReviewTranslationCache(target.review.reviewId);
         reviewCacheByPlace.delete(String(target.placeId));
         invalidateMyReviewsPageCache();
         closeMyPageReviewEditModal();
@@ -4565,8 +4686,6 @@ document
                         }
                     );
 
-                    invalidateReviewTranslationCache(reviewId);
-
                     reviewCacheByPlace.delete(
                         String(placeId)
                     );
@@ -4614,7 +4733,7 @@ document
             ) {
                 if (
                     !window.confirm(
-                        translate("place.reviewDeleteConfirm")
+                        "이 리뷰를 삭제할까요?"
                     )
                 ) {
                     return;
@@ -4654,8 +4773,6 @@ document
                         }
                     );
 
-                    invalidateReviewTranslationCache(reviewId);
-
                     if (
                         activeReviewBackendPlace &&
                         Number(
@@ -4670,7 +4787,7 @@ document
                     }
 
                     showToast(
-                        translate("place.reviewDeleteDone")
+                        "리뷰가 삭제되었습니다."
                     );
                 } catch (error) {
                     console.error(
