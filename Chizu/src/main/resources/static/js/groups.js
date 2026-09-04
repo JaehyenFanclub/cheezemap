@@ -1103,6 +1103,22 @@ function toInputDate(value) {
     return String(value).replace(" ", "T").slice(0, 16);
 }
 
+// datetime-local에는 UTC(toISOString)가 아니라
+// 브라우저의 실제 로컬 시간을 그대로 넣어야 합니다.
+// 한국/일본 환경에서는 현재 UTC+9 시간이 그대로 표시됩니다.
+function getLocalDateTimeInputValue(date = new Date()) {
+    const pad = value =>
+        String(value).padStart(2, "0");
+
+    return (
+        `${date.getFullYear()}-` +
+        `${pad(date.getMonth() + 1)}-` +
+        `${pad(date.getDate())}T` +
+        `${pad(date.getHours())}:` +
+        `${pad(date.getMinutes())}`
+    );
+}
+
 async function hydrateGroup(raw) {
     const placeBackendIds = []
         .concat(raw.placeIds ?? raw.placeId ?? [])
@@ -2245,9 +2261,7 @@ async function openGroupForm(
             toInputDate(
                 group?.groupDate
             ) ||
-            new Date()
-                .toISOString()
-                .slice(0, 16);
+            getLocalDateTimeInputValue();
     }
 
     if (memo) {
@@ -2640,9 +2654,7 @@ async function submitSharedGroup(event) {
                         document
                             .getElementById("sharedGroupDate")
                             ?.value ||
-                        new Date()
-                            .toISOString()
-                            .slice(0, 16)
+                        getLocalDateTimeInputValue()
                     ),
                     groupMemo:
                         document

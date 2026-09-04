@@ -635,12 +635,10 @@ function renderRouteResults(
             const names = getRoutePlaceNames(route);
 
             const durationText =
-                route?.localizedValues?.duration
-                || formatRouteDuration(route?.duration);
+                getRouteDurationText(route);
 
             const distanceText =
-                route?.localizedValues?.distance
-                || formatRouteDistance(route?.distanceMeters);
+                getRouteDistanceText(route);
 
             // mr.eum수정부분
             // 자동차 경로에만 통행료 정보를 표시합니다.
@@ -682,7 +680,12 @@ function renderRouteResults(
             // mr.eum수정부분
             // 모든 경로 카드에서 동일한 출발 시각을 표시하고 경로별 도착 시각만 다르게 표시합니다.
             const routeTimeText =
-                `${formatRouteClockTime(cardStartTime)} → ${formatRouteClockTime(routeEndTime)}`;
+                isTransit &&
+                route?.__navitime &&
+                route?.navitimeFromTime &&
+                route?.navitimeToTime
+                    ? `${navitimeClockText(route.navitimeFromTime)} → ${navitimeClockText(route.navitimeToTime)}`
+                    : `${formatRouteClockTime(cardStartTime)} → ${formatRouteClockTime(routeEndTime)}`;
             const routeLabel = isRecommended
                 ? rt(
                     "추천",
@@ -701,14 +704,16 @@ function renderRouteResults(
             const transitTransferCount = isTransit ? getGoogleTransitTransferCount(route) : 0;
             const transitFareText = isTransit ? getGoogleTransitFareText(route) : "";
 
+            const transitLineSummary =
+                isTransit &&
+                route?.__navitime
+                    ? getNavitimeTransitLineSummary(route)
+                    : "";
+
             const lineText = isWalking
-                ? rt(
-                    `${names.start} → ${names.end}`,
-                    `${names.start} → ${names.end}`,
-                    `${names.start} → ${names.end}`
-                )
+                ? `${names.start} → ${names.end}`
                 : isTransit
-                    ? (transitStepDetails.join(" → ") || rt("대중교통 경로", "公共交通ルート", "Transit route"))
+                    ? `${names.start} → ${names.end}`
                     : rt("자동차 경로", "自動車ルート", "Driving route");
 
             // mr.eum수정부분
@@ -716,9 +721,15 @@ function renderRouteResults(
             const details = isWalking
                 ? renderWalkingStepDetails(route)
                 : isTransit
-                    ? (transitStepDetails.length
-                        ? `<div class="transit-route-details"><div class="transit-detail-timeline">${transitStepDetails.map(item => `<div class="transit-detail-leg"><span class="transit-ride-meta">${escapeWalkingText(item)}</span></div>`).join("")}</div></div>`
-                        : "")
+                    ? (
+                        route?.__navitime
+                            ? renderNavitimeTransitDetails(route)
+                            : (
+                                transitStepDetails.length
+                                    ? `<div class="transit-route-details"><div class="transit-detail-timeline">${transitStepDetails.map(item => `<div class="transit-detail-leg"><span class="transit-ride-meta">${escapeWalkingText(item)}</span></div>`).join("")}</div></div>`
+                                    : ""
+                            )
+                    )
                     : renderDrivingStepDetails(route);
 
             return `
@@ -769,9 +780,20 @@ function renderRouteResults(
                         </span>
 
                         <div class="route-line-chips">
-                            <span>
+                            <span class="route-line-primary">
                                 ${escapeWalkingText(lineText)}
                             </span>
+
+                            ${
+                                isTransit &&
+                                transitLineSummary
+                                    ? `
+                                        <small class="route-line-secondary">
+                                            ${escapeWalkingText(transitLineSummary)}
+                                        </small>
+                                    `
+                                    : ""
+                            }
                         </div>
 
                         <i
@@ -807,7 +829,7 @@ function renderRouteResults(
                             </div>
                         ` : ""}
 
-                        ${transitFareText ? `
+                        ${transitFareText && !route?.__navitime ? `
                             <div class="transit-fare">
                                 <span class="transit-fare-label">${escapeWalkingText(rt("교통비", "運賃", "Fare"))}</span>
                                 <strong class="transit-fare-price">${escapeWalkingText(transitFareText)}</strong>
@@ -843,6 +865,159 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
     }
 
     clearRenderedRoute();
+
+    // NAVITIME TRANSIT은 shape=true 응답의 GeoJSON을 직접 Google Map 위에 그립니다.
+    if (
+        route?.__navitime &&
+        Array.isArray(route?.navitimeShapeSegments) &&
+        route.navitimeShapeSegments.length
+    ) {
+        const bounds =
+            new google.maps.LatLngBounds();
+
+        const lines = [];
+
+        route.navitimeShapeSegments.forEach(
+            (segment, index) => {
+                const path =
+                    Array.isArray(segment?.path)
+                        ? segment.path
+                        : [];
+
+                if (path.length < 2) {
+                    return;
+                }
+
+                path.forEach(
+                    point =>
+                        bounds.extend(point)
+                );
+
+                const isWalk =
+                    segment?.way === "walk";
+
+                if (isWalk) {
+                    const walkLine =
+                        new google.maps.Polyline({
+                            map:
+                                googleMap,
+                            path,
+                            strokeOpacity:
+                                0,
+                            strokeWeight:
+                                0,
+                            zIndex:
+                                11,
+                            icons: [{
+                                icon: {
+                                    path:
+                                        google.maps.SymbolPath.CIRCLE,
+                                    fillColor:
+                                        "#4285F4",
+                                    fillOpacity:
+                                        1,
+                                    strokeColor:
+                                        "#FFFFFF",
+                                    strokeOpacity:
+                                        0.95,
+                                    strokeWeight:
+                                        1,
+                                    scale:
+                                        NAVITIME_WALK_DOT_SCALE
+                                },
+                                offset:
+                                    "0",
+                                repeat:
+                                    NAVITIME_WALK_DOT_REPEAT
+                            }]
+                        });
+
+                    lines.push(
+                        walkLine
+                    );
+
+                    return;
+                }
+
+                // NAVITIME shape_color=railway_line에서 내려온
+                // inline.color를 실제 대중교통 노선색으로 사용합니다.
+                const lineColor =
+                    normalizeNavitimeColor(
+                        segment?.color,
+                        "#5B8DEF"
+                    );
+
+                // 확대/축소와 무관하게 화면상 굵기가 일정해 보이도록
+                // NAVITIME 응답의 width/outline은 사용하지 않고,
+                // 실제 노선색 + 고정 px 굵기 한 줄만 그립니다.
+                const routeLine =
+                    new google.maps.Polyline({
+                        map:
+                            googleMap,
+                        path,
+                        strokeColor:
+                            lineColor,
+                        strokeOpacity:
+                            1,
+                        strokeWeight:
+                            NAVITIME_ROUTE_STROKE_WEIGHT,
+                        zIndex:
+                            20 + index
+                    });
+
+                lines.push(
+                    routeLine
+                );
+            }
+        );
+
+        // Google Maps Polyline strokeWeight는 CSS px 기준이므로
+        // 줌 레벨이 바뀌어도 별도 스케일 계산을 하지 않습니다.
+        routePolylines =
+            lines;
+
+        const startPoint =
+            route?.path?.[0] ||
+            route?.navitimeShapeSegments?.[0]?.path?.[0];
+
+        if (startPoint) {
+            const startMarker =
+                await createGoogleStyleRouteMarker({
+                    position:
+                        startPoint,
+                    type:
+                        "start",
+                    title:
+                        rt(
+                            "출발지",
+                            "出発地",
+                            "Origin"
+                        ),
+                    zIndex:
+                        40,
+                    clickable:
+                        false
+                });
+
+            if (startMarker) {
+                routeMarkers.push(
+                    startMarker
+                );
+            }
+        }
+
+        if (
+            fitViewport &&
+            !bounds.isEmpty()
+        ) {
+            googleMap.fitBounds(
+                bounds,
+                70
+            );
+        }
+
+        return;
+    }
 
     /*
         길찾기 경로는 Google Maps에 가까운 단순한 블루 계열로 통일한다.
@@ -1020,6 +1195,1714 @@ async function selectRoute(index) {
    대중교통도 Google Routes API 사용
 ===================================================== */
 
+
+/* =====================================================
+   NAVITIME 대중교통 설정
+   - WALKING / DRIVING은 기존 Google 유지
+   - TRANSIT만 NAVITIME /route_transit 사용
+   - 아래 endpoint / apiKey만 발급값에 맞게 입력
+===================================================== */
+
+const NAVITIME_ROUTE_STROKE_WEIGHT = 6;
+const NAVITIME_WALK_DOT_SCALE = 3.6;
+const NAVITIME_WALK_DOT_REPEAT = "13px";
+
+const NAVITIME_TRANSIT_CONFIG = {
+    endpoint:
+        "https://navitime-route-totalnavi.p.rapidapi.com/route_transit",
+
+    // RapidAPI의 X-RapidAPI-Key 값을 여기에 넣으세요.
+    apiKey:
+        "96cd9d8512msh98fc1f6e9f54dd6p1fa3c6jsn78dc7efbfba2",
+
+    host:
+        "navitime-route-totalnavi.p.rapidapi.com"
+};
+
+function getNavitimeLanguage() {
+    return currentLanguage === "ko"
+        ? "ko"
+        : currentLanguage === "en"
+            ? "en"
+            : "ja";
+}
+
+function getNavitimePoint(location) {
+    const normalized =
+        normalizeGoogleRouteLocation(
+            location
+        );
+
+    const lat =
+        Number(
+            normalized?.lat ??
+            normalized?.latitude
+        );
+
+    const lon =
+        Number(
+            normalized?.lng ??
+            normalized?.lon ??
+            normalized?.longitude
+        );
+
+    if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon)
+    ) {
+        return "";
+    }
+
+    return `${lat},${lon}`;
+}
+
+function getNavitimeStartTime(date = new Date()) {
+    const pad = value =>
+        String(value).padStart(2, "0");
+
+    return (
+        `${date.getFullYear()}-` +
+        `${pad(date.getMonth() + 1)}-` +
+        `${pad(date.getDate())}T` +
+        `${pad(date.getHours())}:` +
+        `${pad(date.getMinutes())}:00`
+    );
+}
+
+function getNavitimeFareText(route) {
+    const moveSummary =
+        route?.summary?.move ||
+        {};
+
+    const referenceFare =
+        moveSummary?.reference_fare ||
+        route?.summary?.reference_fare ||
+        route?.reference_fare ||
+        {};
+
+    const icFare =
+        Number(
+            referenceFare?.lowest_total_ic
+        );
+
+    const ticketFare =
+        Number(
+            referenceFare?.lowest_total_ticket
+        );
+
+    // reference_fare가 없는 응답도 있으므로 summary.move.fare의
+    // IC(unit_48) / 일반(unit_0) 운임을 fallback으로 사용합니다.
+    const fare =
+        moveSummary?.fare ||
+        {};
+
+    const summaryIcFare =
+        Number(fare?.unit_48);
+
+    const summaryTicketFare =
+        Number(fare?.unit_0);
+
+    const amount =
+        Number.isFinite(icFare)
+            ? icFare
+            : Number.isFinite(ticketFare)
+                ? ticketFare
+                : Number.isFinite(summaryIcFare)
+                    ? summaryIcFare
+                    : Number.isFinite(summaryTicketFare)
+                        ? summaryTicketFare
+                        : null;
+
+    return Number.isFinite(amount)
+        ? `${Math.round(amount).toLocaleString()}円`
+        : "";
+}
+
+
+function navitimeClockText(value) {
+    const raw = String(value || "").trim();
+
+    if (!raw) {
+        return "";
+    }
+
+    const match =
+        raw.match(/T(\d{2}):(\d{2})/);
+
+    if (match) {
+        return `${match[1]}:${match[2]}`;
+    }
+
+    return raw;
+}
+
+function navitimeDistanceText(distance) {
+    const meters =
+        Number(distance);
+
+    if (
+        !Number.isFinite(meters) ||
+        meters <= 0
+    ) {
+        return "";
+    }
+
+    return meters >= 1000
+        ? `${(meters / 1000).toFixed(1)} km`
+        : `${Math.round(meters)} m`;
+}
+
+function navitimeDurationText(minutes) {
+    const value =
+        Number(minutes);
+
+    if (
+        !Number.isFinite(value) ||
+        value <= 0
+    ) {
+        return "";
+    }
+
+    return rt(
+        `${Math.round(value)}분`,
+        `${Math.round(value)}分`,
+        `${Math.round(value)} min`
+    );
+}
+
+function navitimeFareAmountText(value) {
+    const amount =
+        Number(value);
+
+    return Number.isFinite(amount)
+        ? `${Math.round(amount).toLocaleString()}円`
+        : "";
+}
+
+function getNavitimeNumbering(point, direction = "departure") {
+    const numbering =
+        point?.numbering?.[direction];
+
+    if (
+        !Array.isArray(numbering) ||
+        !numbering.length
+    ) {
+        return "";
+    }
+
+    const item =
+        numbering[0] || {};
+
+    return [
+        item?.symbol,
+        item?.number
+    ]
+        .filter(Boolean)
+        .join("");
+}
+
+function getNavitimePointCoord(point) {
+    const lat =
+        Number(point?.coord?.lat);
+
+    const lng =
+        Number(point?.coord?.lon);
+
+    if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng)
+    ) {
+        return null;
+    }
+
+    return {
+        lat,
+        lng
+    };
+}
+
+
+function normalizeNavitimeColor(
+    value,
+    fallback = "#5B8DEF"
+) {
+    const raw =
+        String(value || "")
+            .trim();
+
+    if (!raw) {
+        return fallback;
+    }
+
+    if (/^#[0-9a-f]{6}$/i.test(raw)) {
+        return raw;
+    }
+
+    if (/^[0-9a-f]{6}$/i.test(raw)) {
+        return `#${raw}`;
+    }
+
+    if (/^rgb\(/i.test(raw)) {
+        return raw;
+    }
+
+    return fallback;
+}
+
+
+function getNavitimeShapeSegments(shapes) {
+    const features =
+        Array.isArray(shapes?.features)
+            ? shapes.features
+            : [];
+
+    return features
+        .map(feature => {
+            const geometry =
+                feature?.geometry || {};
+
+            const coordinates =
+                Array.isArray(
+                    geometry?.coordinates
+                )
+                    ? geometry.coordinates
+                    : [];
+
+            const path =
+                coordinates
+                    .map(coord => {
+                        if (
+                            !Array.isArray(coord) ||
+                            coord.length < 2
+                        ) {
+                            return null;
+                        }
+
+                        const lng =
+                            Number(coord[0]);
+
+                        const lat =
+                            Number(coord[1]);
+
+                        return (
+                            Number.isFinite(lat) &&
+                            Number.isFinite(lng)
+                        )
+                            ? { lat, lng }
+                            : null;
+                    })
+                    .filter(Boolean);
+
+            const properties =
+                feature?.properties || {};
+
+            const inline =
+                properties?.inline || {};
+
+            const outline =
+                properties?.outline || {};
+
+            return {
+                path,
+                way:
+                    String(
+                        properties?.ways || ""
+                    ).toLowerCase(),
+                transportType:
+                    String(
+                        properties?.transport_type ||
+                        ""
+                    ),
+                color:
+                    normalizeNavitimeColor(
+                        inline?.color,
+                        "#5B8DEF"
+                    ),
+                opacity:
+                    Number(
+                        inline?.opacity
+                    ),
+                width:
+                    Number(
+                        inline?.width
+                    ),
+                outlineColor:
+                    normalizeNavitimeColor(
+                        outline?.color,
+                        "#FFFFFF"
+                    ),
+                outlineOpacity:
+                    Number(
+                        outline?.opacity
+                    ),
+                outlineWidth:
+                    Number(
+                        outline?.width
+                    )
+            };
+        })
+        .filter(
+            segment =>
+                segment.path.length >= 2
+        );
+}
+
+function getNavitimeFallbackPath(sections) {
+    return (Array.isArray(sections) ? sections : [])
+        .filter(
+            section =>
+                String(section?.type || "").toLowerCase() === "point"
+        )
+        .map(getNavitimePointCoord)
+        .filter(Boolean);
+}
+
+function getNavitimeMoveIcon(move) {
+    const value =
+        String(move || "").toLowerCase();
+
+    if (value.includes("walk")) {
+        return "ti-walk";
+    }
+
+    if (
+        value.includes("bus") ||
+        value.includes("shuttle")
+    ) {
+        return "ti-bus";
+    }
+
+    if (
+        value.includes("air") ||
+        value.includes("plane")
+    ) {
+        return "ti-plane";
+    }
+
+    return "ti-train";
+}
+
+function getNavitimeMoveLabel(section) {
+    const move =
+        String(section?.move || "").toLowerCase();
+
+    if (move.includes("walk")) {
+        return rt("도보", "徒歩", "Walk");
+    }
+
+    return (
+        section?.lineName ||
+        section?.companyName ||
+        rt("대중교통", "公共交通", "Transit")
+    );
+}
+
+
+function getNavitimeTransitLineSummary(route) {
+    const sections =
+        Array.isArray(route?.navitimeSections)
+            ? route.navitimeSections
+            : [];
+
+    const labels = [];
+
+    sections.forEach(section => {
+        const move =
+            String(section?.move || "")
+                .toLowerCase();
+
+        // 상단 요약에서는 도보를 완전히 제외합니다.
+        if (move.includes("walk")) {
+            return;
+        }
+
+        const label =
+            String(
+                section?.lineName ||
+                section?.companyName ||
+                ""
+            ).trim();
+
+        if (
+            label &&
+            !labels.includes(label)
+        ) {
+            labels.push(label);
+        }
+    });
+
+    return labels.join(" → ");
+}
+
+
+function getNavitimeSectionFareDisplay(
+    section
+) {
+    const move =
+        String(
+            section?.move || ""
+        ).toLowerCase();
+
+    // 도보에는 요금을 표시하지 않습니다.
+    if (move.includes("walk")) {
+        return "";
+    }
+
+    const fare =
+        Number(
+            section?.fare
+        );
+
+    if (
+        !Number.isFinite(fare) ||
+        fare <= 0
+    ) {
+        return "";
+    }
+
+    /*
+        NAVITIME fare_break는 금액이 아니라
+        "이 section에서 운임을 계산/출력하는가"를 나타내는 boolean입니다.
+
+        unit_48 = IC 카드 운임
+        unit_0  = 일반 운임
+
+        true일 때만 해당 section의 transport.fare를 표시합니다.
+    */
+    const shouldShowFare =
+        section?.fareBreakIc === true ||
+        section?.fareBreakTicket === true;
+
+    if (!shouldShowFare) {
+        return "";
+    }
+
+    return `${Math.round(fare).toLocaleString()}円`;
+}
+
+function renderNavitimeTransitDetails(route) {
+    const sections =
+        Array.isArray(route?.navitimeSections)
+            ? route.navitimeSections
+            : [];
+
+    if (!sections.length) {
+        return "";
+    }
+
+    const totalFare =
+        getGoogleTransitFareText(route);
+
+    const departureTime =
+        navitimeClockText(
+            route?.navitimeFromTime
+        );
+
+    const arrivalTime =
+        navitimeClockText(
+            route?.navitimeToTime
+        );
+
+    const rows =
+        sections.map((section, index) => {
+            const nextSection =
+                sections[index + 1] || null;
+
+            const nextPlatform =
+                String(
+                    nextSection?.fromPlatform || ""
+                ).trim();
+
+            const moveValue =
+                String(
+                    section?.move || ""
+                ).toLowerCase();
+
+            const isWalk =
+                moveValue.includes("walk");
+
+            const duration =
+                navitimeDurationText(
+                    section?.time
+                );
+
+            const distance =
+                navitimeDistanceText(
+                    section?.distance
+                );
+
+            const departure =
+                navitimeClockText(
+                    section?.fromTime
+                );
+
+            const arrival =
+                navitimeClockText(
+                    section?.toTime
+                );
+
+            const fromName =
+                section?.fromName ||
+                rt("출발지", "出発地", "Origin");
+
+            const toName =
+                section?.toName ||
+                rt("도착지", "目的地", "Destination");
+
+            const fromAssist =
+                getNavitimeStationAssistInfo({
+                    platform:
+                        section?.fromPlatform,
+                    gateway:
+                        section?.fromGateway,
+                    numbering:
+                        section?.fromNumbering
+                });
+
+            const toAssist =
+                getNavitimeStationAssistInfo({
+                    platform:
+                        section?.toPlatform,
+                    gateway:
+                        section?.toGateway,
+                    numbering:
+                        section?.toNumbering
+                });
+
+            const fareText =
+                getNavitimeSectionFareDisplay(
+                    section
+                );
+
+            const lineColor =
+                normalizeNavitimeColor(
+                    section?.transportColor,
+                    "#5B8DEF"
+                );
+
+            if (isWalk) {
+                return `
+                    <div class="navitime-step walk-step">
+                        <div class="navitime-step-time">
+                            ${escapeWalkingText(departure)}
+                        </div>
+
+                        <div class="navitime-step-line">
+                            <span class="navitime-step-dot walk">
+                                <i class="ti ti-walk"></i>
+                            </span>
+                            ${
+                                index < sections.length - 1
+                                    ? `<span class="navitime-step-connector walk"></span>`
+                                    : ""
+                            }
+                        </div>
+
+                        <div class="navitime-step-content">
+                            <strong class="navitime-step-place">
+                                ${escapeWalkingText(fromName)}
+                            </strong>
+
+                            <div class="navitime-walk-summary">
+                                <i class="ti ti-walk"></i>
+                                <span>${escapeWalkingText(
+                                    rt("도보", "徒歩", "Walk")
+                                )}</span>
+                                ${duration ? `<span>${escapeWalkingText(duration)}</span>` : ""}
+                                ${distance ? `<span>${escapeWalkingText(distance)}</span>` : ""}
+                            </div>
+
+                            <div class="navitime-arrival">
+                                <span>${escapeWalkingText(arrival)}</span>
+                                <strong>${escapeWalkingText(toName)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const lineName =
+                getNavitimeMoveLabel(
+                    section
+                );
+
+            return `
+                <div class="navitime-step transit-step">
+                    <div class="navitime-step-time">
+                        ${escapeWalkingText(departure)}
+                    </div>
+
+                    <div class="navitime-step-line">
+                        <span
+                            class="navitime-step-dot transit"
+                            style="--navitime-line-color:${escapeWalkingText(lineColor)}"
+                        >
+                            <i class="ti ${getNavitimeMoveIcon(section?.move)}"></i>
+                        </span>
+
+                        ${
+                            index < sections.length - 1
+                                ? `
+                                    <span
+                                        class="navitime-step-connector transit"
+                                        style="--navitime-line-color:${escapeWalkingText(lineColor)}"
+                                    ></span>
+                                `
+                                : ""
+                        }
+                    </div>
+
+                    <div class="navitime-step-content">
+                        <div class="navitime-station-row">
+                            <strong>${escapeWalkingText(fromName)}</strong>
+                            ${
+                                fromAssist
+                                    ? `
+                                        <span class="navitime-station-assist ${fromAssist.type}">
+                                            <small>${escapeWalkingText(fromAssist.label)}</small>
+                                            <b>${escapeWalkingText(fromAssist.text)}</b>
+                                        </span>
+                                    `
+                                    : ""
+                            }
+                        </div>
+
+                        <div
+                            class="navitime-line-card"
+                            style="--navitime-line-color:${escapeWalkingText(lineColor)}"
+                        >
+                            <span class="navitime-line-swatch"></span>
+
+                            <div class="navitime-line-main">
+                                <strong>${escapeWalkingText(lineName)}</strong>
+
+                                ${
+                                    section?.destinationName
+                                        ? `<span>${escapeWalkingText(
+                                            rt(
+                                                `${section.destinationName} 방면`,
+                                                `${section.destinationName}方面`,
+                                                `Toward ${section.destinationName}`
+                                            )
+                                        )}</span>`
+                                        : ""
+                                }
+
+                                ${
+                                    section?.companyName
+                                        ? `<small>${escapeWalkingText(section.companyName)}</small>`
+                                        : ""
+                                }
+                            </div>
+
+                            <div class="navitime-line-meta">
+                                ${duration ? `<span>${escapeWalkingText(duration)}</span>` : ""}
+                                ${fareText ? `<b>${escapeWalkingText(fareText)}</b>` : ""}
+                            </div>
+                        </div>
+
+                        <div class="navitime-arrival">
+                            <span>${escapeWalkingText(arrival)}</span>
+                            <strong>${escapeWalkingText(toName)}</strong>
+                            ${
+                                toAssist
+                                    ? `
+                                        <span class="navitime-station-assist ${toAssist.type}">
+                                            <small>${escapeWalkingText(toAssist.label)}</small>
+                                            <b>${escapeWalkingText(toAssist.text)}</b>
+                                        </span>
+                                    `
+                                    : ""
+                            }
+                        </div>
+
+                        ${
+                            section?.nextTransit
+                                ? `
+                                    <div class="navitime-transfer-row">
+                                        <i class="ti ti-arrows-exchange"></i>
+                                        <span>${escapeWalkingText(
+                                            nextPlatform
+                                                ? rt(
+                                                    `환승 · ${nextPlatform}`,
+                                                    `乗換 · ${nextPlatform}`,
+                                                    `Transfer · ${nextPlatform}`
+                                                )
+                                                : rt(
+                                                    "환승",
+                                                    "乗換",
+                                                    "Transfer"
+                                                )
+                                        )}</span>
+                                    </div>
+                                `
+                                : ""
+                        }
+                    </div>
+                </div>
+            `;
+        })
+        .join("");
+
+    return `
+        <div class="cheese-transit-detail googlelike navitime-refined">
+            <div class="navitime-route-head">
+                <strong>${escapeWalkingText(departureTime || "-")}</strong>
+                <span>→</span>
+                <strong>${escapeWalkingText(arrivalTime || "-")}</strong>
+
+                ${
+                    Number(route?.transferCount) >= 0
+                        ? `
+                            <small>${escapeWalkingText(
+                                rt(
+                                    `환승 ${route.transferCount}회`,
+                                    `乗換 ${route.transferCount}回`,
+                                    `${route.transferCount} transfer${Number(route.transferCount) === 1 ? "" : "s"}`
+                                )
+                            )}</small>
+                        `
+                        : ""
+                }
+            </div>
+
+            <div class="navitime-route-steps">
+                ${rows}
+            </div>
+
+            ${totalFare ? `
+                <div class="transit-fare total-only">
+                    <span class="transit-fare-label">
+                        ${escapeWalkingText(
+                            rt(
+                                "총 교통비",
+                                "合計運賃",
+                                "Total fare"
+                            )
+                        )}
+                    </span>
+
+                    <strong class="transit-fare-price">
+                        ${escapeWalkingText(totalFare)}
+                    </strong>
+                </div>
+            ` : ""}
+        </div>
+    `;
+}
+
+
+const NAVITIME_TRANSLATION_CACHE_KEY =
+    "cheeseMapNavitimeTranslationV1";
+
+function getNavitimeTranslationTargetLanguage() {
+    return currentLanguage === "ko"
+        ? "ko"
+        : currentLanguage === "en"
+            ? "en"
+            : "ja";
+}
+
+function readNavitimeTranslationCache() {
+    try {
+        const value =
+            JSON.parse(
+                localStorage.getItem(
+                    NAVITIME_TRANSLATION_CACHE_KEY
+                ) || "{}"
+            );
+
+        return value &&
+            typeof value === "object"
+                ? value
+                : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function writeNavitimeTranslationCache(cache) {
+    try {
+        localStorage.setItem(
+            NAVITIME_TRANSLATION_CACHE_KEY,
+            JSON.stringify(cache || {})
+        );
+    } catch (error) {
+        console.debug(
+            "NAVITIME 번역 캐시 저장 실패:",
+            error
+        );
+    }
+}
+
+function getNavitimeTranslationCacheKey(
+    text,
+    targetLanguage
+) {
+    return `${targetLanguage}:${String(text || "").trim()}`;
+}
+
+async function translateNavitimeText(
+    text,
+    targetLanguage
+) {
+    const original =
+        String(text || "").trim();
+
+    if (
+        !original ||
+        targetLanguage === "ja"
+    ) {
+        return original;
+    }
+
+    const cache =
+        readNavitimeTranslationCache();
+
+    const cacheKey =
+        getNavitimeTranslationCacheKey(
+            original,
+            targetLanguage
+        );
+
+    if (
+        typeof cache[cacheKey] === "string" &&
+        cache[cacheKey].trim()
+    ) {
+        return cache[cacheKey].trim();
+    }
+
+    try {
+        const result =
+            await apiRequest(
+                "/api/translate",
+                {
+                    method: "POST",
+                    body: {
+                        text: original,
+                        targetLanguage
+                    }
+                }
+            );
+
+        const translatedText =
+            String(
+                result?.translatedText || ""
+            ).trim();
+
+        if (!translatedText) {
+            return original;
+        }
+
+        cache[cacheKey] =
+            translatedText;
+
+        // 포트폴리오용 캐시가 너무 커지지 않게 최근 600개까지만 유지
+        const keys =
+            Object.keys(cache);
+
+        if (keys.length > 600) {
+            keys
+                .slice(
+                    0,
+                    keys.length - 600
+                )
+                .forEach(key => {
+                    delete cache[key];
+                });
+        }
+
+        writeNavitimeTranslationCache(
+            cache
+        );
+
+        return translatedText;
+    } catch (error) {
+        console.warn(
+            "NAVITIME 경로명 번역 실패:",
+            original,
+            error
+        );
+
+        // 번역 API 실패 시 원문으로 계속 렌더링
+        return original;
+    }
+}
+
+function getRouteInputLabel(
+    type
+) {
+    const id =
+        type === "start"
+            ? "startPoint"
+            : "endPoint";
+
+    return String(
+        document
+            .getElementById(id)
+            ?.value || ""
+    ).trim();
+}
+
+function replaceNavitimeEndpointName(
+    value,
+    type
+) {
+    const raw =
+        String(value || "").trim();
+
+    const lower =
+        raw.toLowerCase();
+
+    if (
+        type === "start" &&
+        (
+            lower === "start" ||
+            lower === "origin"
+        )
+    ) {
+        return (
+            getRouteInputLabel("start") ||
+            rt("출발지", "出発地", "Origin")
+        );
+    }
+
+    if (
+        type === "goal" &&
+        (
+            lower === "goal" ||
+            lower === "destination"
+        )
+    ) {
+        return (
+            getRouteInputLabel("goal") ||
+            rt("도착지", "目的地", "Destination")
+        );
+    }
+
+    return raw;
+}
+
+async function localizeNavitimeRoutes(
+    routes
+) {
+    const targetLanguage =
+        getNavitimeTranslationTargetLanguage();
+
+    if (
+        targetLanguage === "ja" ||
+        !Array.isArray(routes)
+    ) {
+        // 일본어 UI에서는 NAVITIME 원문 그대로 사용
+        return routes;
+    }
+
+    for (const route of routes) {
+        if (!route?.__navitime) {
+            continue;
+        }
+
+        const sections =
+            Array.isArray(route.navitimeSections)
+                ? route.navitimeSections
+                : [];
+
+        for (
+            let index = 0;
+            index < sections.length;
+            index += 1
+        ) {
+            const section =
+                sections[index];
+
+            const isFirst =
+                index === 0;
+
+            const isLast =
+                index === sections.length - 1;
+
+            const rawFromName =
+                replaceNavitimeEndpointName(
+                    section?.fromName,
+                    isFirst
+                        ? "start"
+                        : ""
+                );
+
+            const rawToName =
+                replaceNavitimeEndpointName(
+                    section?.toName,
+                    isLast
+                        ? "goal"
+                        : ""
+                );
+
+            const [
+                fromName,
+                toName,
+                lineName,
+                companyName,
+                destinationName,
+                fromPlatform,
+                toPlatform,
+                fromGateway,
+                toGateway
+            ] =
+                await Promise.all([
+                    translateNavitimeText(
+                        rawFromName,
+                        targetLanguage
+                    ),
+                    translateNavitimeText(
+                        rawToName,
+                        targetLanguage
+                    ),
+                    translateNavitimeText(
+                        section?.lineName,
+                        targetLanguage
+                    ),
+                    translateNavitimeText(
+                        section?.companyName,
+                        targetLanguage
+                    ),
+                    translateNavitimeText(
+                        section?.destinationName,
+                        targetLanguage
+                    ),
+                    translateNavitimeText(
+                        section?.fromPlatform,
+                        targetLanguage
+                    ),
+                    translateNavitimeText(
+                        section?.toPlatform,
+                        targetLanguage
+                    ),
+                    translateNavitimeText(
+                        section?.fromGateway,
+                        targetLanguage
+                    ),
+                    translateNavitimeText(
+                        section?.toGateway,
+                        targetLanguage
+                    )
+                ]);
+
+            section.fromName =
+                fromName;
+
+            section.toName =
+                toName;
+
+            section.lineName =
+                lineName;
+
+            section.companyName =
+                companyName;
+
+            section.destinationName =
+                destinationName;
+
+            section.fromPlatform =
+                fromPlatform;
+
+            section.toPlatform =
+                toPlatform;
+
+            section.fromGateway =
+                fromGateway;
+
+            section.toGateway =
+                toGateway;
+        }
+
+        // 요약 텍스트용 transitDetails도 번역 후 다시 동기화
+        route.transitDetails =
+            sections.map(section => ({
+                lineName:
+                    section.lineName ||
+                    (
+                        String(
+                            section?.move || ""
+                        ).toLowerCase().includes("walk")
+                            ? rt("도보", "徒歩", "Walk")
+                            : rt("대중교통", "公共交通", "Transit")
+                    ),
+                fromName:
+                    section.fromName,
+                toName:
+                    section.toName,
+                fromPlatform:
+                    section.fromPlatform,
+                toPlatform:
+                    section.toPlatform,
+                fromGateway:
+                    section.fromGateway,
+                toGateway:
+                    section.toGateway,
+                fromNumbering:
+                    section.fromNumbering,
+                toNumbering:
+                    section.toNumbering,
+                move:
+                    section.move,
+                fromTime:
+                    section.fromTime,
+                toTime:
+                    section.toTime,
+                time:
+                    section.time,
+                distance:
+                    section.distance,
+                fare:
+                    section.fare,
+                fareBreakIc:
+                    section.fareBreakIc,
+                fareBreakTicket:
+                    section.fareBreakTicket,
+                transportColor:
+                    section.transportColor,
+                nextTransit:
+                    section.nextTransit,
+                companyName:
+                    section.companyName,
+                destinationName:
+                    section.destinationName
+            }));
+    }
+
+    return routes;
+}
+
+
+
+function getNavitimePointPlatform(
+    point,
+    type = "start"
+) {
+    const value =
+        type === "goal"
+            ? point?.goal_platform
+            : point?.start_platform;
+
+    return String(value || "").trim();
+}
+
+function getNavitimePointGateway(point) {
+    return String(
+        point?.gateway || ""
+    ).trim();
+}
+
+function getNavitimeStationAssistInfo({
+    platform = "",
+    gateway = "",
+    numbering = ""
+} = {}) {
+    const normalizedPlatform =
+        String(platform || "").trim();
+
+    const normalizedGateway =
+        String(gateway || "").trim();
+
+    const normalizedNumbering =
+        String(numbering || "").trim();
+
+    if (normalizedPlatform) {
+        return {
+            type: "platform",
+            text: normalizedPlatform,
+            label: rt(
+                "승강장",
+                "ホーム",
+                "Platform"
+            )
+        };
+    }
+
+    if (normalizedGateway) {
+        return {
+            type: "gateway",
+            text: normalizedGateway,
+            label: rt(
+                "출구",
+                "出口",
+                "Exit"
+            )
+        };
+    }
+
+    if (normalizedNumbering) {
+        return {
+            type: "numbering",
+            text: normalizedNumbering,
+            label: rt(
+                "역 번호",
+                "駅番号",
+                "Station No."
+            )
+        };
+    }
+
+    return null;
+}
+
+
+function normalizeNavitimeTransitRoute(route) {
+    const summary =
+        route?.summary || {};
+
+    const moveSummary =
+        summary?.move || {};
+
+    const sections =
+        Array.isArray(route?.sections)
+            ? route.sections
+            : [];
+
+    const navitimeSections = [];
+
+    sections.forEach((section, index) => {
+        if (
+            String(section?.type || "").toLowerCase() !== "move"
+        ) {
+            return;
+        }
+
+        const previousPoint =
+            sections[index - 1]?.type === "point"
+                ? sections[index - 1]
+                : null;
+
+        const nextPoint =
+            sections[index + 1]?.type === "point"
+                ? sections[index + 1]
+                : null;
+
+        const transport =
+            section?.transport || {};
+
+        const lineName =
+            String(
+                transport?.self_name ||
+                section?.line_name ||
+                transport?.type ||
+                ""
+            ).trim();
+
+        const move =
+            String(
+                section?.move || ""
+            ).trim();
+
+        const fromName =
+            String(
+                previousPoint?.name || ""
+            ).trim();
+
+        const toName =
+            String(
+                nextPoint?.name || ""
+            ).trim();
+
+        const sectionFare =
+            Number(
+                transport?.fare?.unit_48 ??
+                transport?.fare?.unit_0
+            );
+
+        const fareBreak =
+            transport?.fare_break || {};
+
+        const fareBreakIc =
+            fareBreak?.unit_48 === true;
+
+        const fareBreakTicket =
+            fareBreak?.unit_0 === true;
+
+        const transportColor =
+            normalizeNavitimeColor(
+                transport?.color,
+                "#5B8DEF"
+            );
+
+        navitimeSections.push({
+            move,
+            lineName,
+            fromName,
+            toName,
+            fromTime:
+                String(section?.from_time || ""),
+            toTime:
+                String(section?.to_time || ""),
+            time:
+                Number(section?.time || 0),
+            distance:
+                Number(section?.distance || 0),
+            nextTransit:
+                Boolean(section?.next_transit),
+
+            // transport.fare는 누적/구간 표현이 섞일 수 있으므로
+            // 화면에서는 fare_break를 우선 사용하고 0엔은 숨깁니다.
+            fare:
+                Number.isFinite(sectionFare)
+                    ? sectionFare
+                    : null,
+
+            fareBreakIc,
+            fareBreakTicket,
+
+            transportColor,
+
+            companyName:
+                String(
+                    transport?.company?.name || ""
+                ).trim(),
+            destinationName:
+                String(
+                    transport?.destination?.name || ""
+                ).trim(),
+            fromPlatform:
+                getNavitimePointPlatform(
+                    previousPoint,
+                    "start"
+                ),
+            toPlatform:
+                getNavitimePointPlatform(
+                    nextPoint,
+                    "goal"
+                ),
+            fromGateway:
+                getNavitimePointGateway(
+                    previousPoint
+                ),
+            toGateway:
+                getNavitimePointGateway(
+                    nextPoint
+                ),
+            fromNumbering:
+                getNavitimeNumbering(
+                    previousPoint,
+                    "departure"
+                ),
+            toNumbering:
+                getNavitimeNumbering(
+                    nextPoint,
+                    "arrival"
+                ),
+            fromCoord:
+                getNavitimePointCoord(
+                    previousPoint
+                ),
+            toCoord:
+                getNavitimePointCoord(
+                    nextPoint
+                ),
+            raw:
+                section
+        });
+    });
+
+    const durationMinutes =
+        Number(moveSummary?.time);
+
+    const distanceMeters =
+        Number(moveSummary?.distance);
+
+    const transferCount =
+        Number(moveSummary?.transit_count);
+
+    const walkDistance =
+        Number(moveSummary?.walk_distance);
+
+    const navitimeShapeSegments =
+        getNavitimeShapeSegments(
+            route?.shapes
+        );
+
+    const fallbackPath =
+        getNavitimeFallbackPath(
+            sections
+        );
+
+    const navitimePath =
+        navitimeShapeSegments.length
+            ? navitimeShapeSegments.flatMap(
+                segment => segment.path
+            )
+            : fallbackPath;
+
+    return {
+        __navitime: true,
+        rawNavitimeRoute: route,
+
+        // 상세 렌더용 NAVITIME 원본 기반 구간
+        navitimeSections,
+
+        transitDetails:
+            navitimeSections.map(section => ({
+                lineName:
+                    section.lineName ||
+                    (
+                        section.move === "walk"
+                            ? rt("도보", "徒歩", "Walk")
+                            : rt("대중교통", "公共交通", "Transit")
+                    ),
+                fromName:
+                    section.fromName,
+                toName:
+                    section.toName,
+                fromPlatform:
+                    section.fromPlatform,
+                toPlatform:
+                    section.toPlatform,
+                fromGateway:
+                    section.fromGateway,
+                toGateway:
+                    section.toGateway,
+                fromNumbering:
+                    section.fromNumbering,
+                toNumbering:
+                    section.toNumbering,
+                move:
+                    section.move,
+                fromTime:
+                    section.fromTime,
+                toTime:
+                    section.toTime,
+                time:
+                    section.time,
+                distance:
+                    section.distance,
+                fare:
+                    section.fare,
+                fareBreakIc:
+                    section.fareBreakIc,
+                fareBreakTicket:
+                    section.fareBreakTicket,
+                transportColor:
+                    section.transportColor,
+                nextTransit:
+                    section.nextTransit,
+                companyName:
+                    section.companyName,
+                destinationName:
+                    section.destinationName
+            })),
+
+        transferCount:
+            Number.isFinite(transferCount)
+                ? transferCount
+                : 0,
+
+        durationMillis:
+            Number.isFinite(durationMinutes)
+                ? durationMinutes * 60 * 1000
+                : 0,
+
+        distanceMeters:
+            Number.isFinite(distanceMeters)
+                ? distanceMeters
+                : 0,
+
+        navitimeFromTime:
+            String(moveSummary?.from_time || ""),
+
+        navitimeToTime:
+            String(moveSummary?.to_time || ""),
+
+        walkDistance:
+            Number.isFinite(walkDistance)
+                ? walkDistance
+                : 0,
+
+        localizedValues: {
+            duration:
+                Number.isFinite(durationMinutes)
+                    ? rt(
+                        `${durationMinutes}분`,
+                        `${durationMinutes}分`,
+                        `${durationMinutes} min`
+                    )
+                    : "",
+
+            distance:
+                Number.isFinite(distanceMeters)
+                    ? (
+                        distanceMeters >= 1000
+                            ? `${(distanceMeters / 1000).toFixed(1)} km`
+                            : `${Math.round(distanceMeters)} m`
+                    )
+                    : "",
+
+            transitFare:
+                getNavitimeFareText(route)
+        },
+
+        navitimeShapeSegments,
+        path:
+            navitimePath,
+        legs: [],
+        routeLabels: [],
+        viewport: null,
+        shapes:
+            route?.shapes || null
+    };
+}
+
+async function fetchNavitimeTransitRoutes(
+    origin,
+    destination
+) {
+    const endpoint =
+        String(
+            NAVITIME_TRANSIT_CONFIG.endpoint ||
+            ""
+        ).trim();
+
+    if (!endpoint) {
+        throw new Error(
+            currentLanguage === "ko"
+                ? "NAVITIME API endpoint를 설정해주세요."
+                : currentLanguage === "ja"
+                    ? "NAVITIME API endpointを設定してください。"
+                    : "Set the NAVITIME API endpoint."
+        );
+    }
+
+    const start =
+        getNavitimePoint(origin);
+
+    const goal =
+        getNavitimePoint(destination);
+
+    if (!start || !goal) {
+        throw new Error(
+            currentLanguage === "ko"
+                ? "대중교통 출발지/도착지 좌표가 올바르지 않습니다."
+                : currentLanguage === "ja"
+                    ? "公共交通の出発地/目的地の座標が正しくありません。"
+                    : "Transit origin/destination coordinates are invalid."
+        );
+    }
+
+    const url =
+        new URL(
+            endpoint,
+            window.location.origin
+        );
+
+    url.searchParams.set("start", start);
+    url.searchParams.set("goal", goal);
+    url.searchParams.set("datum", "wgs84");
+    url.searchParams.set("term", "1440");
+    url.searchParams.set("limit", "5");
+    url.searchParams.set(
+        "start_time",
+        getNavitimeStartTime()
+    );
+    url.searchParams.set(
+        "coord_unit",
+        "degree"
+    );
+
+    // 지도에 실제 NAVITIME 경로를 그리기 위한 GeoJSON 형상
+    url.searchParams.set("shape", "true");
+    url.searchParams.set(
+        "shape_color",
+        "railway_line"
+    );
+
+    const apiKey =
+        String(
+            NAVITIME_TRANSIT_CONFIG.apiKey ||
+            ""
+        ).trim();
+
+    if (
+        !apiKey ||
+        apiKey === "YOUR_RAPIDAPI_KEY"
+    ) {
+        throw new Error(
+            currentLanguage === "ko"
+                ? "NAVITIME RapidAPI 키를 설정해주세요."
+                : currentLanguage === "ja"
+                    ? "NAVITIME RapidAPIキーを設定してください。"
+                    : "Set the NAVITIME RapidAPI key."
+        );
+    }
+
+    const headers = {
+        "Content-Type":
+            "application/json",
+        "x-rapidapi-host":
+            NAVITIME_TRANSIT_CONFIG.host,
+        "x-rapidapi-key":
+            apiKey
+    };
+
+    console.log(
+        "========== NAVITIME TRANSIT 요청 =========="
+    );
+    console.log(
+        "url =",
+        url.toString()
+    );
+
+    const response =
+        await fetch(
+            url.toString(),
+            {
+                method: "GET",
+                headers
+            }
+        );
+
+    const responseText =
+        await response.text();
+
+    if (!response.ok) {
+        console.error(
+            "NAVITIME TRANSIT 오류 =",
+            response.status,
+            responseText
+        );
+
+        throw new Error(
+            `NAVITIME TRANSIT ${response.status}`
+        );
+    }
+
+    let data = {};
+
+    try {
+        data =
+            responseText
+                ? JSON.parse(responseText)
+                : {};
+    } catch (error) {
+        console.error(
+            "NAVITIME 응답 JSON 파싱 실패:",
+            responseText
+        );
+        throw error;
+    }
+
+    console.log(
+        "========== NAVITIME TRANSIT 응답 =========="
+    );
+    console.log(data);
+
+    const items =
+        Array.isArray(data?.items)
+            ? data.items
+            : [];
+
+    return items.map(
+        normalizeNavitimeTransitRoute
+    );
+}
+
+
 function routeLocale() {
     return currentLanguage === "ko" ? "ko-KR" : currentLanguage === "en" ? "en-US" : "ja-JP";
 }
@@ -1030,31 +2913,81 @@ function rt(ko, ja, en) {
 // mr.eum수정부분
 // Google Routes API의 TRANSIT 운임을 화면 표시용 문자열로 변환합니다.
 function getGoogleTransitFareText(route) {
-    // mr.eum수정부분
-    // Routes API의 transitFare와 DirectionsService의 fare를 모두 지원합니다.
+    if (route?.__navitime) {
+        const fare =
+            route?.localizedValues?.transitFare;
+
+        return typeof fare === "string"
+            ? fare
+            : "";
+    }
+
     const fare =
         route?.transitFare ||
         route?.travelAdvisory?.transitFare ||
         route?.localizedValues?.transitFare ||
         route?.fare;
+
     if (!fare) return "";
 
-    const currencyCode = fare?.currencyCode || fare?.currency || "";
-    let amount = null;
-    if (fare?.units !== undefined || fare?.nanos !== undefined) {
-        amount = Number(fare.units || 0) + Number(fare.nanos || 0) / 1e9;
-    } else if (fare?.value !== undefined) {
-        amount = Number(fare.value);
+    if (
+        typeof fare === "string" &&
+        fare.trim()
+    ) {
+        return fare.trim();
     }
-    if (!Number.isFinite(amount)) return "";
 
-    if (currencyCode === "JPY") return `${Math.round(amount).toLocaleString()}円`;
-    if (!currencyCode) return amount.toLocaleString();
+    if (
+        typeof fare?.text === "string" &&
+        fare.text.trim()
+    ) {
+        return fare.text.trim();
+    }
+
+    const currencyCode =
+        fare?.currencyCode ||
+        fare?.currency ||
+        "";
+
+    let amount = null;
+
+    if (
+        fare?.units !== undefined ||
+        fare?.nanos !== undefined
+    ) {
+        amount =
+            Number(fare.units || 0) +
+            Number(fare.nanos || 0) / 1e9;
+    } else if (
+        fare?.value !== undefined
+    ) {
+        amount =
+            Number(fare.value);
+    }
+
+    if (!Number.isFinite(amount)) {
+        return "";
+    }
+
+    if (currencyCode === "JPY") {
+        return `${Math.round(amount).toLocaleString()}円`;
+    }
+
+    if (!currencyCode) {
+        return amount.toLocaleString();
+    }
 
     try {
         return new Intl.NumberFormat(
-            currentLanguage === "ko" ? "ko-KR" : currentLanguage === "ja" ? "ja-JP" : "en-US",
-            { style: "currency", currency: currencyCode }
+            currentLanguage === "ko"
+                ? "ko-KR"
+                : currentLanguage === "ja"
+                    ? "ja-JP"
+                    : "en-US",
+            {
+                style: "currency",
+                currency: currencyCode
+            }
         ).format(amount);
     } catch (error) {
         return `${currencyCode} ${amount.toLocaleString()}`;
@@ -1064,6 +2997,49 @@ function getGoogleTransitFareText(route) {
 // mr.eum수정부분
 // Google TRANSIT 단계별 대중교통 정보를 추출합니다.
 function getGoogleTransitStepDetails(route) {
+    if (
+        route?.__navitime &&
+        Array.isArray(route?.transitDetails)
+    ) {
+        return route.transitDetails
+            .map(detail => {
+                const isWalk =
+                    String(detail?.move || "") === "walk";
+
+                const lineName =
+                    isWalk
+                        ? rt("도보", "徒歩", "Walk")
+                        : (
+                            detail?.lineName ||
+                            rt("대중교통", "公共交通", "Transit")
+                        );
+
+                const placeText =
+                    detail?.fromName &&
+                    detail?.toName
+                        ? `${detail.fromName} → ${detail.toName}`
+                        : "";
+
+                const timeText =
+                    Number(detail?.time) > 0
+                        ? rt(
+                            `${detail.time}분`,
+                            `${detail.time}分`,
+                            `${detail.time} min`
+                        )
+                        : "";
+
+                return [
+                    lineName,
+                    placeText,
+                    timeText
+                ]
+                    .filter(Boolean)
+                    .join(" · ");
+            })
+            .filter(Boolean);
+    }
+
     const details = [];
 
     // mr.eum수정부분
@@ -1124,6 +3100,17 @@ function getGoogleTransitStepDetails(route) {
 // mr.eum수정부분
 // Google TRANSIT의 환승 횟수를 단계 정보에서 계산합니다.
 function getGoogleTransitTransferCount(route) {
+    if (
+        route?.__navitime &&
+        Number.isFinite(
+            Number(route?.transferCount)
+        )
+    ) {
+        return Number(
+            route.transferCount
+        );
+    }
+
     let transitStepCount = 0;
 
     // mr.eum수정부분
@@ -1550,8 +3537,8 @@ async function findRoute() {
         // 모드별로 필요한 필드만 보낸다. TRANSIT에는 자동차용 옵션을 섞지 않는다.
         // mr.eum수정부분
         // 이동수단별로 Google에 허용되는 요청 옵션만 전달합니다.
-        // Google Routes API의 Transit은 일본 파트너를 지원하지 않으므로
-        // 일본 대중교통은 아래에서 Google DirectionsService를 사용합니다.
+        // WALKING / DRIVING은 Google Routes API를 사용하고
+        // TRANSIT만 NAVITIME Route(totalnavi)를 사용합니다.
         const baseRequest = {
             origin: normalizeGoogleRouteLocation(origin),
             destination: normalizeGoogleRouteLocation(destination),
@@ -1571,59 +3558,83 @@ async function findRoute() {
         };
 
         // mr.eum수정부분
-        // Google Routes API는 일본 Transit 파트너를 지원하지 않으므로
-        // 도쿄의 대중교통은 Google Maps JavaScript DirectionsService로 검색합니다.
+        // 대중교통은 NAVITIME Route(totalnavi) / route_transit로 검색합니다.
         if (travelMode === "TRANSIT") {
-            const directionsService =
-                new google.maps.DirectionsService();
+            const transitSearchStartedAt =
+                new Date();
 
-            const transitResult =
-                await directionsService.route({
-                    origin: baseRequest.origin,
-                    destination: baseRequest.destination,
-                    travelMode: google.maps.TravelMode.TRANSIT,
-                    provideRouteAlternatives: true,
-                    language: routeLocale()
-                });
+            try {
+                const transitRoutes =
+                    await fetchNavitimeTransitRoutes(
+                        origin,
+                        destination
+                    );
 
-            const transitRoutes =
-                Array.isArray(transitResult?.routes)
-                    ? transitResult.routes
-                    : [];
+                if (!transitRoutes.length) {
+                    showToast(
+                        currentLanguage === "ko"
+                            ? "NAVITIME에서 대중교통 경로를 찾지 못했습니다."
+                            : currentLanguage === "ja"
+                                ? "NAVITIMEで公共交通ルートが見つかりませんでした。"
+                                : "NAVITIME returned no transit route."
+                    );
 
-            if (!transitRoutes.length) {
-                console.error(
-                    "========== MR.EUM Google TRANSIT 결과 없음 =========="
+                    return [];
+                }
+
+                // RapidAPI 마켓의 NAVITIME route_transit는 lang 파라미터를
+                // 지원하지 않으므로, 현재 사이트 언어가 ko/en이면
+                // Cloud Translation API로 역/노선/방면/회사명을 번역합니다.
+                await localizeNavitimeRoutes(
+                    transitRoutes
                 );
-                console.dir(transitResult, { depth: null });
+
+                computedRoutes =
+                    transitRoutes;
+
+                // 첫 번째 추천 경로를 지도에 즉시 표시합니다.
+                await drawRoute(
+                    computedRoutes[0],
+                    true,
+                    travelMode
+                );
+
+                renderRouteResults(
+                    computedRoutes,
+                    transitSearchStartedAt
+                );
+
+                mapRouteSelectionMode = false;
+                mapRouteSelectionStep = 0;
+
+                showToast(
+                    currentLanguage === "ko"
+                        ? "NAVITIME 대중교통 경로를 표시했습니다."
+                        : currentLanguage === "ja"
+                            ? "NAVITIMEの公共交通ルートを表示しました。"
+                            : "NAVITIME transit routes displayed."
+                );
+
+                return computedRoutes;
+            } catch (error) {
+                console.error(
+                    "NAVITIME TRANSIT 실패:",
+                    error
+                );
+
+                showToast(
+                    error?.message ||
+                    (
+                        currentLanguage === "ko"
+                            ? "NAVITIME 대중교통 경로를 불러오지 못했습니다."
+                            : currentLanguage === "ja"
+                                ? "NAVITIMEの公共交通ルートを取得できませんでした。"
+                                : "Could not load NAVITIME transit routes."
+                    )
+                );
+
                 return [];
             }
-
-            computedRoutes = transitRoutes;
-
-            await drawRoute(
-                computedRoutes[0],
-                true,
-                travelMode
-            );
-
-            renderRouteResults(
-                computedRoutes,
-                new Date()
-            );
-
-            mapRouteSelectionMode = false;
-            mapRouteSelectionStep = 0;
-
-            showToast(
-                currentLanguage === "ko"
-                    ? "Google 대중교통 경로를 표시했습니다."
-                    : currentLanguage === "ja"
-                        ? "Googleの公共交通ルートを表示しました。"
-                        : "Google transit routes displayed."
-            );
-
-            return computedRoutes;
         }
 
         const routeSearchStartedAt = new Date();
