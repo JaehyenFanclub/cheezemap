@@ -23,8 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SocialLoginService {
 
-    private static final LocalDate DEFAULT_BIRTH = LocalDate.of(2000, 1, 1);
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -41,7 +39,7 @@ public class SocialLoginService {
         validateAttributes(attributes);
 
         User user = userRepository
-                .findByProviderAndProviderId(attributes.provider(), attributes.providerId())
+                .findByProviderAndProviderIdAndDeletedFalse(attributes.provider(), attributes.providerId())
                 .map(existing -> syncSocialProfile(existing, attributes))
                 .orElseGet(() -> createOrLinkUser(attributes));
 
@@ -101,7 +99,7 @@ public class SocialLoginService {
     }
 
     private User createOrLinkUser(OAuth2Attributes attributes) {
-        userRepository.findByEmail(attributes.email()).ifPresent(existing -> {
+        userRepository.findByEmailAndDeletedFalse(attributes.email()).ifPresent(existing -> {
             if (existing.getProvider() != attributes.provider()) {
                 throw new IllegalArgumentException(
                         "이미 가입된 이메일입니다. 기존 로그인 방식을 이용해주세요."
@@ -127,13 +125,7 @@ public class SocialLoginService {
     }
 
     private LocalDate resolveBirth(OAuth2Attributes attributes) {
-        if (attributes.birth() != null) {
-            return attributes.birth();
-        }
-        if (attributes.provider() == SocialProvider.LINE) {
-            return null;
-        }
-        return DEFAULT_BIRTH;
+        return attributes.birth();
     }
 
     private String resolveUniqueNickname(OAuth2Attributes attributes) {
@@ -147,7 +139,7 @@ public class SocialLoginService {
         String nickname = base;
         int suffix = 1;
 
-        while (userRepository.existsByUserNickname(nickname)) {
+        while (userRepository.existsByUserNicknameAndDeletedFalse(nickname)) {
             nickname = base + suffix++;
         }
 
@@ -177,7 +169,7 @@ public class SocialLoginService {
         if (oauthPhone == null || oauthPhone.isBlank()) {
             return null;
         }
-        if (userRepository.existsByPhone(oauthPhone)) {
+        if (userRepository.existsByPhoneAndDeletedFalse(oauthPhone)) {
             return null;
         }
         return oauthPhone;
@@ -188,7 +180,7 @@ public class SocialLoginService {
         if (oauthPhone == null || oauthPhone.isBlank()) {
         return user.getPhone();
     }
-        if (oauthPhone.equals(user.getPhone()) || !userRepository.existsByPhone(oauthPhone)) {
+        if (oauthPhone.equals(user.getPhone()) || !userRepository.existsByPhoneAndDeletedFalse(oauthPhone)) {
             return oauthPhone;
         }
         return user.getPhone();

@@ -98,6 +98,7 @@
 .group-list {
     display: grid;
     gap: 8px;
+    padding: 3px;
     overflow-y: auto;
 }
 
@@ -115,13 +116,13 @@
     transition:
         border-color 0.16s ease,
         background 0.16s ease,
-        transform 0.16s ease;
+        box-shadow 0.16s ease;
 }
 
 .group-list-item:hover {
     border-color: var(--line);
     background: #ffffff;
-    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(237, 194, 82, 0.08);
 }
 
 .group-list-item.active {
@@ -163,15 +164,108 @@
 }
 
 .group-list-count {
-    min-width: 24px;
+    min-width: 34px;
     height: 24px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    color: var(--gray-600);
-    background: rgba(255, 255, 255, 0.72);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 7px;
+    border: 1px solid rgba(166, 119, 22, 0.14);
+    border-radius: 999px;
+    color: var(--cheese-brown);
+    background: rgba(255, 255, 255, 0.82);
     font-size: 10px;
     font-weight: 800;
+    line-height: 1;
+}
+
+.group-list-count i {
+    font-size: 11px;
+}
+
+.group-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 0 0 18px;
+}
+
+.group-detail-meta-chip {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--gray-700);
+    background: #fbfaf7;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.group-detail-meta-chip i {
+    color: var(--cheese-brown);
+    font-size: 13px;
+}
+
+.group-members-section {
+    margin: 0 0 20px;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fbfaf7;
+}
+
+.group-members-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.group-members-heading strong {
+    color: var(--text);
+    font-size: 12px;
+}
+
+.group-members-heading span {
+    color: var(--gray-500);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.group-members-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.group-member-chip {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 9px 6px 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--gray-700);
+    background: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.group-member-avatar {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--cheese-brown);
+    background: var(--cheese-soft);
 }
 
 .group-share-save-open {
@@ -581,6 +675,39 @@ body.dark .group-place-option {
 
 body.dark .group-list-item.active {
     background: #4a4029;
+}
+
+body.dark .group-list-count {
+    border-color: rgba(255, 215, 104, 0.28);
+    color: #fff1b8;
+    background: #3c382f;
+}
+
+body.dark .group-list-item.active .group-list-count {
+    border-color: rgba(255, 215, 104, 0.42);
+    color: #fff5cf;
+    background: #5a4d2d;
+}
+
+body.dark .group-detail-meta-chip,
+body.dark .group-members-section {
+    border-color: #4a463d;
+    color: #e8e2d4;
+    background: #292722;
+}
+
+body.dark .group-member-chip {
+    border-color: #4a463d;
+    color: #e8e2d4;
+    background: #34312b;
+}
+
+body.dark .group-members-heading strong {
+    color: #f3efe6;
+}
+
+body.dark .group-members-heading span {
+    color: #b8b0a2;
 }
 
 body.dark .group-list-icon,
@@ -1345,6 +1472,45 @@ body.dark .message-detail-panel,
 body.dark .message-tabs,
 body.dark .message-compose-modal {
     background: #292722;
+}
+
+body.dark .message-compose-modal {
+    border-color: #4d4538;
+}
+
+body.dark .message-compose-modal h2 {
+    color: #f5f2e9;
+}
+
+body.dark .message-compose-modal label {
+    color: #e6ddcf;
+}
+
+body.dark .message-compose-modal input,
+body.dark .message-compose-modal select,
+body.dark .message-compose-modal textarea {
+    border-color: #4b463c;
+    color: #f5f2e9;
+    background: #312e28;
+}
+
+body.dark .message-compose-modal input::placeholder,
+body.dark .message-compose-modal textarea::placeholder {
+    color: #aaa69b;
+    opacity: 1;
+}
+
+body.dark .message-compose-modal input:focus,
+body.dark .message-compose-modal select:focus,
+body.dark .message-compose-modal textarea:focus {
+    border-color: #dfa818;
+    box-shadow: 0 0 0 4px rgba(246, 201, 69, 0.18);
+}
+
+body.dark .message-compose-modal .secondary-button {
+    border-color: #514b40;
+    color: #e4ddd2;
+    background: #34312b;
 }
 
 body.dark .group-message-header {
@@ -2742,6 +2908,30 @@ body.dark .group-create-place-detail-icon {
     background: #fffdf7;
 }
 
+.message-translation {
+    margin-top: 8px;
+    margin-bottom: 2px;
+}
+
+.message-conversation-bubble .place-review-translate-toggle {
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.message-conversation-bubble .place-review-translated-box {
+    margin-top: 8px;
+}
+
+.message-conversation-row.mine .place-review-translated-box {
+    border-color: #efd98a;
+    background: #fffbeb;
+}
+
+.message-source-text {
+    display: none;
+}
+
 .message-inline-edit {
     display: grid;
     gap: 10px;
@@ -2805,6 +2995,22 @@ body.dark .message-mini-button {
     color: var(--text);
     border-color: var(--gray-200);
     background: var(--gray-50);
+}
+
+body.dark .message-conversation-row.mine .place-review-translated-box {
+    border-color: rgba(246, 201, 69, 0.35);
+    background: rgba(246, 201, 69, 0.08);
+}
+
+body.dark .message-conversation-bubble .place-review-translate-toggle {
+    border-color: #4b463d;
+    background: #2b2924;
+    color: #ddd4c4;
+}
+
+body.dark .message-conversation-bubble .place-review-translate-toggle:hover {
+    border-color: #8f7436;
+    background: #373126;
 }
 
 
@@ -3165,6 +3371,42 @@ body.dark .group-place-option.selected {
     transform: translateY(-1px);
 }
 
+.message-detail [data-conversation-reply] {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 6px 9px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    color: var(--brown-dark) !important;
+    background: var(--yellow-light) !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+}
+
+.message-detail [data-conversation-reply]:hover {
+    border-color: transparent !important;
+    background: #ffe9a5 !important;
+    transform: none;
+}
+
+body.dark .message-detail [data-conversation-reply] {
+    border-color: #5d574b !important;
+    color: #eee7db !important;
+    background: #34312b !important;
+}
+
+body.dark .message-detail [data-conversation-reply]:hover {
+    border-color: #d6ad43 !important;
+    color: #fff5d4 !important;
+    background: #403b31 !important;
+}
+
 /* 기존 상단 탭은 사이드바 제목으로 대체 */
 .message-tabs {
     display: none !important;
@@ -3299,6 +3541,23 @@ body.dark .group-place-option.selected {
     padding: 26px 28px !important;
     background: #ffffff !important;
 }
+/* mr.eum수정부분 */
+/* 대화 상세 영역 전체를 입력창까지 세로로 사용 */
+.message-detail {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* mr.eum수정부분 */
+/* 메시지 영역만 남은 공간을 사용하고 입력창은 최하단으로 이동 */
+.message-conversation-thread {
+    flex: 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+}
 
 .message-empty-state {
     min-height: 430px !important;
@@ -3429,3 +3688,226 @@ body.dark .message-empty-icon {
     }
 }
 
+/* mr.eum수정부분 */
+/* 대화목록 프로필 이미지를 원형 영역에 맞게 표시 */
+.message-avatar {
+    overflow: hidden !important;
+}
+
+.message-avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    object-fit: cover !important;
+    border-radius: inherit !important;
+}
+
+/* mr.eum수정부분 */
+/* 대화방 하단 바로 답장할 수 있는 입력창 */
+.message-conversation-compose {
+    display: flex !important;
+    align-items: flex-end !important;
+    gap: 10px !important;
+    margin-top: auto !important;
+    padding-top: 14px !important;
+    border-top: 1px solid var(--line) !important;
+}
+
+.message-conversation-compose textarea {
+    flex: 1 !important;
+    min-height: 46px !important;
+    max-height: 120px !important;
+    resize: vertical !important;
+    box-sizing: border-box !important;
+    padding: 13px 15px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 15px !important;
+    color: var(--text) !important;
+    background: var(--surface, #fffdf7) !important;
+    font: inherit !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    outline: none !important;
+}
+
+.message-conversation-compose textarea:focus {
+    border-color: #dca91e !important;
+    box-shadow: 0 0 0 3px rgba(246, 201, 69, .14) !important;
+}
+
+.message-conversation-send {
+    width: 46px !important;
+    height: 46px !important;
+    flex: 0 0 46px !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 1px solid #d49a17 !important;
+    border-radius: 14px !important;
+    color: #4b341d !important;
+    background: var(--yellow) !important;
+    cursor: pointer !important;
+}
+
+.message-conversation-send:hover {
+    background: #ffd75c !important;
+    transform: translateY(-1px) !important;
+}
+
+/* mr.eum수정부분 */
+/* 다크모드 대화 입력창 */
+body.dark .message-conversation-compose {
+    border-color: rgba(255,255,255,.10) !important;
+}
+
+body.dark .message-conversation-compose textarea {
+    border-color: #4b463c !important;
+    color: #f2eee4 !important;
+    background: #24221e !important;
+}
+
+body.dark .message-conversation-compose textarea::placeholder {
+    color: #8f8a80 !important;
+}
+
+/* mr.eum수정부분 */
+/* 대화 상세 영역을 입력창과 함께 세로로 배치 */
+.message-detail {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* mr.eum수정부분 */
+/* 메시지 목록이 남은 공간을 차지하도록 설정 */
+.message-conversation-thread {
+    flex: 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+}
+
+/* =====================================================
+   쪽지함 최종 UI 정리
+   - 대화 메시지는 위, 입력창은 항상 아래
+   - 왼쪽 대화목록 하단에 내 프로필 표시
+   - 프로필 사진이 없거나 로딩 실패 시 기본 프로필 아이콘 사용
+===================================================== */
+.message-list-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+.message-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    align-content: start !important;
+    padding-right: 2px;
+}
+
+.message-my-profile-wrap {
+    flex: 0 0 auto;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e8dfcf;
+}
+
+.message-my-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 11px;
+    border: 1px solid #e8dfcf;
+    border-radius: 14px;
+    background: #fffefb;
+}
+
+.message-my-profile-avatar {
+    flex: 0 0 42px;
+}
+
+.message-my-profile-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.message-my-profile-copy strong {
+    overflow: hidden;
+    color: #3e3024;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.message-my-profile-copy span {
+    color: #9b9081;
+    font-size: 10px;
+}
+
+.message-avatar > i {
+    font-size: 19px;
+    line-height: 1;
+}
+
+.message-avatar.has-photo {
+    background: transparent !important;
+}
+
+.message-detail-panel {
+    overflow: hidden !important;
+    min-height: 0 !important;
+}
+
+.message-detail {
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.message-conversation-thread {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    margin-top: 18px !important;
+    padding: 4px 6px 14px 2px !important;
+}
+
+.message-conversation-compose {
+    flex: 0 0 auto !important;
+    margin-top: 0 !important;
+}
+
+body.dark .message-my-profile-wrap {
+    border-color: rgba(255,255,255,.10) !important;
+}
+
+body.dark .message-my-profile {
+    border-color: #4b463c !important;
+    background: #302e29 !important;
+}
+
+body.dark .message-my-profile-copy strong {
+    color: #f2eee4 !important;
+}
+
+body.dark .message-my-profile-copy span {
+    color: #a8a296 !important;
+}
+
+@media (max-width: 720px) {
+    .message-list-panel {
+        overflow: hidden !important;
+    }
+
+    .message-my-profile-wrap {
+        margin-top: 10px;
+        padding-top: 10px;
+    }
+}

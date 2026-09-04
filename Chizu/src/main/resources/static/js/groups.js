@@ -1121,13 +1121,27 @@ async function hydrateGroup(raw) {
             console.warn("그룹 장소 로드 실패:", backendId, error);
         }
     }
+    const rawCloneCount = Number(
+        raw.cloneCount ??
+        raw.shareCount ??
+        raw.importCount ??
+        0
+    );
+
     return {
         groupId: raw.groupId,
         groupDate: raw.groupDate,
         groupMemo: raw.groupMemo || "",
         groupName: raw.groupName,
         placeIds,
-        placeBackendIds
+        placeBackendIds,
+
+        // 백에서 cloneCount를 내려주면 실제 "가져가기 횟수"를 표시합니다.
+        // 아직 필드가 없거나 값이 없으면 0회로 표시합니다.
+        cloneCount:
+            Number.isFinite(rawCloneCount) && rawCloneCount >= 0
+                ? rawCloneCount
+                : 0
     };
 }
 
@@ -1227,7 +1241,14 @@ async function renderGroupManager() {
         <button type="button" class="group-list-item ${String(group.groupId) === String(selectedGroupId) ? "active" : ""}" data-group-id="${group.groupId}">
             <span class="group-list-icon"><i class="ti ti-users-group"></i></span>
             <span class="group-list-copy"><strong>${escapeGroupHtml(group.groupName)}</strong><small>${formatGroupDate(group.groupDate)}</small></span>
-            <span class="group-list-count">${(group.placeIds || []).length}</span>
+            <span
+                class="group-list-count"
+                title="저장된 장소 ${(group.placeIds || []).length}곳"
+                aria-label="저장된 장소 ${(group.placeIds || []).length}곳"
+            >
+                <i class="ti ti-map-pin"></i>
+                <span>${(group.placeIds || []).length}</span>
+            </span>
         </button>`).join("");
 
     groupList.querySelectorAll("[data-group-id]").forEach(button => {
@@ -1255,6 +1276,8 @@ function renderSelectedGroup() {
     if (!group) return renderEmptyGroupDetail();
 
     const groupPlaces = getGroupPlaces(group);
+    const cloneCount = Number(group.cloneCount) || 0;
+
     panel.innerHTML = `
         <div class="group-detail-header">
             <div>
@@ -1268,6 +1291,17 @@ function renderSelectedGroup() {
                 <button type="button" class="danger" data-group-action="delete"><i class="ti ti-trash"></i>삭제</button>
             </div>
         </div>
+
+        <div class="group-detail-meta">
+            <span
+                class="group-detail-meta-chip group-clone-count"
+                title="다른 사용자가 이 그룹을 가져간 횟수"
+            >
+                <i class="ti ti-download"></i>
+                가져가기 ${cloneCount}회
+            </span>
+        </div>
+
         <div class="group-place-summary"><strong>저장된 장소</strong><span>${groupPlaces.length}곳</span></div>
         <div class="group-place-list">
             ${groupPlaces.length ? groupPlaces.map(({ placeKey, place, backendPlaceId }) => {
@@ -2525,10 +2559,24 @@ async function deleteGroup(groupId) {
 
 async function shareGroup(group) {
     try {
-        await apiRequest(`/group/${group.groupId}/share`, { auth: true });
-        const url = new URL(window.location.href);
-        url.searchParams.set("sharedGroup", group.groupId);
-        await navigator.clipboard.writeText(url.toString());
+        // 백의 share API 호출은 그대로 수행하되,
+        // 복사되는 링크 형식은 백 라우트와 동일하게
+        // 반드시 /group/{groupId} 로 고정합니다.
+        await apiRequest(
+            `/group/${group.groupId}/share`,
+            { auth: true }
+        );
+
+        const groupId = Number(group?.groupId);
+
+        if (!Number.isFinite(groupId) || groupId <= 0) {
+            throw new Error("올바른 그룹 ID가 없습니다.");
+        }
+
+        const shareUrl =
+            `${window.location.origin}/group/${groupId}`;
+
+        await navigator.clipboard.writeText(shareUrl);
         showToast("공유 링크를 복사했습니다.");
     } catch (error) {
         showToast(error.message);
@@ -2537,32 +2585,94 @@ async function shareGroup(group) {
 
 async function submitSharedGroup(event) {
     event.preventDefault();
-    const sharedUrl = document.getElementById("sharedGroupUrl")?.value.trim();
-    if (!sharedUrl) return;
+
+    // async/await 이후에는 event.currentTarget이 null이 될 수 있으므로
+    // submit 시점의 form 참조를 미리 보관합니다.
+    const form = event.currentTarget;
+
+    const sharedUrl =
+        document
+            .getElementById("sharedGroupUrl")
+            ?.value
+            .trim();
+
+    if (!sharedUrl) {
+        return;
+    }
+
     let groupId;
-    try {
-        const url = new URL(sharedUrl);
-        groupId = url.searchParams.get("sharedGroup") || url.pathname.match(/\/group\/(\d+)/)?.[1];
-    } catch { return showToast("올바른 공유 링크를 입력해 주세요."); }
-    if (!groupId) return showToast("그룹 ID를 찾을 수 없습니다.");
 
     try {
-        const original = await apiRequest(`/group/${groupId}`, { auth: true });
-        await apiRequest(`/group/${groupId}/clone`, {
-            method: "POST",
-            auth: true,
-            body: {
-                groupDate: toBackendDate(document.getElementById("sharedGroupDate")?.value || new Date().toISOString().slice(0,16)),
-                groupMemo: document.getElementById("sharedGroupMemo")?.value.trim() || original.groupMemo,
-                groupName: document.getElementById("sharedGroupName")?.value.trim() || original.groupName
+        const url = new URL(
+            sharedUrl,
+            window.location.origin
+        );
+
+        // 백에서 내려주는 공유 URL 형식:
+        // http://host/group/{groupId}
+        groupId =
+            url.pathname.match(
+                /\/group\/(\d+)\/?$/
+            )?.[1];
+    } catch {
+        return showToast(
+            "올바른 공유 링크를 입력해 주세요."
+        );
+    }
+
+    if (!groupId || !/^\d+$/.test(String(groupId))) {
+        return showToast(
+            "그룹 ID를 찾을 수 없습니다."
+        );
+    }
+
+    try {
+        // 원본 그룹 GET은 제거합니다.
+        // 현재 백의 clone API가 원본 그룹을 직접 조회하고,
+        // groupName/groupMemo가 빈 문자열이면 원본 값을 그대로 복사합니다.
+        await apiRequest(
+            `/group/${groupId}/clone`,
+            {
+                method: "POST",
+                auth: true,
+                body: {
+                    groupDate: toBackendDate(
+                        document
+                            .getElementById("sharedGroupDate")
+                            ?.value ||
+                        new Date()
+                            .toISOString()
+                            .slice(0, 16)
+                    ),
+                    groupMemo:
+                        document
+                            .getElementById("sharedGroupMemo")
+                            ?.value
+                            .trim() || "",
+                    groupName:
+                        document
+                            .getElementById("sharedGroupName")
+                            ?.value
+                            .trim() || ""
+                }
             }
-        });
+        );
+
         closeModal(sharedGroupModal);
         openModal(groupModal);
-        event.currentTarget.reset();
+
+        if (form && typeof form.reset === "function") {
+            form.reset();
+        }
+
         await renderGroupManager();
-        showToast("공유 그룹을 내 그룹으로 저장했습니다.");
-    } catch (error) { showToast(error.message); }
+
+        showToast(
+            "공유 그룹을 내 그룹으로 저장했습니다."
+        );
+    } catch (error) {
+        showToast(error.message);
+    }
 }
 
 document.getElementById("openGroupCreateButton")?.addEventListener("click", () => openGroupForm());
@@ -2666,9 +2776,3 @@ document
         "click",
         savePlaceToSelectedGroup
     );
-
-const sharedGroupIdFromUrl = new URLSearchParams(window.location.search).get("sharedGroup");
-if (sharedGroupIdFromUrl) {
-    const input = document.getElementById("sharedGroupUrl");
-    if (input) input.value = window.location.href;
-}

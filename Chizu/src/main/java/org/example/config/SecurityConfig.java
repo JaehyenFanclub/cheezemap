@@ -31,9 +31,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter
-    ) throws Exception {
-
-        http
+    ) {
+        try {
+            http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -58,6 +58,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/index.html",
+                                "/signup",
+                                "/profile-edit",
+                                "/complete-profile",
                                 "/*.html",
                                 "/css/**",
                                 "/js/**",
@@ -101,6 +104,18 @@ public class SecurityConfig {
                                 "/api/places/**"
                         ).permitAll()
 
+                        // 리뷰 번역 (공개)
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/translate"
+                        ).permitAll()
+
+                        // NAVITIME 대중교통 경로 (공개)
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/route/transit"
+                        ).permitAll()
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/public/**"
@@ -128,7 +143,10 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class
                 );
 
-        return http.build();
+            return http.build();
+        } catch (Exception e) {
+            throw new IllegalStateException("SecurityFilterChain 구성에 실패했습니다.", e);
+        }
     }
 
 

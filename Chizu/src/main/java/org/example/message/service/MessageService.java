@@ -8,6 +8,7 @@ import org.example.config.TokenBlacklist;
 import org.example.message.dto.*;
 import org.example.message.entity.Message;
 import org.example.message.repository.MessageRepository;
+import org.example.user.service.UserDisplayNames;
 import org.example.user.entity.User;
 import org.example.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -80,8 +81,10 @@ public class MessageService {
                 throw new IllegalArgumentException("대화내용이 없습니다.");
             }
             Message message = messages.get(messages.size() - 1);
+            User chatter = userRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
             result.add(new GetChatterResponse(
-                    userRepository.getById(id).getUserNickname(),
+                    UserDisplayNames.nickname(chatter),
                     message.getContent(),
                     message.getMessageDate(),
                     id
@@ -132,7 +135,7 @@ public class MessageService {
     }
 
     public Long findUser(String nickName){
-        return userRepository.findByUserNickname(nickName)
+        return userRepository.findByUserNicknameAndDeletedFalse(nickName)
                 .map(User::getId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 닉네임을 가진 유저가 없습니다."));
     }

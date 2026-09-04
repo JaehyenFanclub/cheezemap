@@ -26,6 +26,12 @@ public record MyPageResponse(
         Boolean sex,
 
         @Schema(description = "프로필 사진 경로 (null이면 기본 이미지 사용)", example = "/userImg/uuid.jpg")
-        String photoUrl
+        String photoUrl,
+
+        @Schema(description = "가입 방식", example = "GOOGLE")
+        String provider,
+
+        @Schema(description = "소셜 가입 후 필수 프로필 입력 완료 여부", example = "true")
+        boolean profileComplete
 ) {
 }

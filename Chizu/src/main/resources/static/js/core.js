@@ -77,6 +77,9 @@ const translations = {
         "place.reviewEdit": "수정",
         "place.reviewEditSave": "수정 완료",
         "place.reviewEditCancel": "취소",
+        "place.reviewDelete": "삭제",
+        "place.reviewDeleteConfirm": "이 리뷰를 삭제할까요?",
+        "place.reviewDeleteDone": "리뷰가 삭제되었습니다.",
 
         "review.writeTitle": "리뷰 작성",
         "review.ratingLabel": "별점을 선택해주세요",
@@ -223,6 +226,9 @@ const translations = {
         "place.reviewEdit": "Edit",
         "place.reviewEditSave": "Save changes",
         "place.reviewEditCancel": "Cancel",
+        "place.reviewDelete": "Delete",
+        "place.reviewDeleteConfirm": "Delete this review?",
+        "place.reviewDeleteDone": "Review deleted.",
         "review.writeTitle": "Write a review",
         "review.ratingLabel": "Choose a rating",
         "review.ratingHelp": "Choose a rating.",
@@ -370,6 +376,9 @@ const translations = {
         "place.reviewEdit": "編集",
         "place.reviewEditSave": "編集を保存",
         "place.reviewEditCancel": "キャンセル",
+        "place.reviewDelete": "削除",
+        "place.reviewDeleteConfirm": "このレビューを削除しますか？",
+        "place.reviewDeleteDone": "レビューを削除しました。",
 
         "review.writeTitle": "レビューを書く",
         "review.ratingLabel": "評価を選択してください",
@@ -1345,6 +1354,16 @@ function applyLanguage(language) {
     renderRecommendedPlaces();
     updatePlaceCard(selectedPlaceKey);
     updateHeaderAuthState();
+
+    // Google POI가 열려 있으면 현재 선택 언어(ko/ja/en)의
+    // Google 공식 장소명/주소/카테고리 표시명으로 즉시 갱신합니다.
+    // map.js의 로컬 캐시가 있으면 API를 다시 호출하지 않습니다.
+    if (
+        typeof refreshCurrentGooglePoiLanguage ===
+        "function"
+    ) {
+        refreshCurrentGooglePoiLanguage();
+    }
 
     // 역 투명 클릭 영역의 제목도 현재 언어로 다시 생성합니다.
     if (googleMap) {

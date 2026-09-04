@@ -555,7 +555,7 @@
                 ></div>
 
 
-                <!-- 지도 위 카테고리 필터 -->
+                <!-- 지도 위 카테고리 필터
 
                 <div class="top-filter-bar">
 
@@ -627,7 +627,7 @@
                             교통
                         </span>
                     </button>
-                </div>
+                </div> -->
 
 
                 <!-- 현재 지역 -->
@@ -1013,10 +1013,7 @@
                         </p>
                     </div>
 
-                    <p class="transit-data-credit">
-                        <span>대중교통 경로:</span>
-                        <a href="https://transitous.org/sources/" target="_blank" rel="noopener noreferrer">Transitous 데이터 출처</a>
-                    </p>
+                    
                 </section>
                     </div>
                 </section>
@@ -1212,7 +1209,7 @@
 
 
             <a
-                href="signup.html"
+                href="/signup"
                 class="text-button signup-page-link"
                 id="openSignupButton"
                 data-i18n="auth.goSignup"
@@ -1261,7 +1258,7 @@
                         </h2>
 
                         <a
-                            href="profile-edit.html"
+                            href="/profile-edit"
                             class="mypage-edit-button"
                         >
                             <i class="ti ti-edit"></i>
@@ -1321,6 +1318,159 @@
         </div>
     </div>
 
+    <!-- =====================================================
+     MR.EUM 수정부분
+     마이페이지 리뷰 수정 전용 모달
+
+     기존 마이페이지 카드 안에서 수정창을 펼치는 방식이 아니라
+     화면 중앙에 별도의 수정 모달을 띄웁니다.
+===================================================== -->
+
+<div
+    class="modal-backdrop mypage-review-edit-modal"
+    id="mypageReviewEditModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="mypageReviewEditTitle"
+    hidden
+>
+    <div class="modal mypage-review-edit-modal-box">
+
+        <!-- 닫기 버튼 -->
+        <button
+            type="button"
+            class="modal-close"
+            id="mypageReviewEditCloseButton"
+            aria-label="닫기"
+        >
+            ×
+        </button>
+
+        <!-- 제목 -->
+        <div class="mypage-review-edit-header">
+
+            <span class="mypage-review-edit-label">
+                리뷰 수정
+            </span>
+
+            <h2 id="mypageReviewEditTitle">
+                리뷰 수정
+            </h2>
+
+            <p
+                class="mypage-review-edit-place"
+                id="mypageReviewEditPlace"
+            ></p>
+
+        </div>
+
+        <!-- 별점 -->
+        <div class="mypage-review-edit-section">
+
+            <label class="mypage-review-edit-section-title">
+                별점
+            </label>
+
+            <div
+                class="place-review-edit-stars mypage-review-edit-stars"
+                id="mypageReviewEditStars"
+            >
+                <button type="button" data-mypage-edit-rating="1">☆</button>
+                <button type="button" data-mypage-edit-rating="2">☆</button>
+                <button type="button" data-mypage-edit-rating="3">☆</button>
+                <button type="button" data-mypage-edit-rating="4">☆</button>
+                <button type="button" data-mypage-edit-rating="5">☆</button>
+            </div>
+
+        </div>
+
+        <!-- 리뷰 내용 -->
+        <div class="mypage-review-edit-section">
+
+            <label
+                for="mypageReviewEditContent"
+                class="mypage-review-edit-section-title"
+            >
+                리뷰 내용
+            </label>
+
+            <textarea
+                id="mypageReviewEditContent"
+                class="mypage-review-edit-textarea"
+                maxlength="500"
+                placeholder="리뷰 내용을 입력해주세요."
+            ></textarea>
+
+        </div>
+
+        <!-- 사진 -->
+        <div class="mypage-review-edit-section">
+
+            <div class="mypage-review-edit-photo-title-row">
+
+                <label class="mypage-review-edit-section-title">
+                    사진
+                </label>
+
+                <span
+                    class="mypage-review-edit-photo-count"
+                    id="mypageReviewEditPhotoCount"
+                >
+                    0장
+                </span>
+
+            </div>
+
+            <!-- 기존 사진 + 새로 추가한 사진 -->
+            <div
+                class="mypage-review-edit-photos"
+                id="mypageReviewEditPhotos"
+            ></div>
+
+            <!-- 실제 파일 선택 -->
+            <input
+                type="file"
+                id="mypageReviewEditPhotoInput"
+                accept="image/*"
+                multiple
+                hidden
+            >
+
+            <!-- 사진 추가 버튼 -->
+            <button
+                type="button"
+                class="mypage-review-edit-add-photo"
+                id="mypageReviewEditAddPhotoButton"
+            >
+                <i class="ti ti-photo-plus"></i>
+                사진 추가
+            </button>
+
+        </div>
+
+        <!-- 하단 버튼 -->
+        <div class="mypage-review-edit-actions">
+
+            <button
+                type="button"
+                class="mypage-review-edit-cancel"
+                id="mypageReviewEditCancelButton"
+            >
+                취소
+            </button>
+
+            <button
+                type="button"
+                class="mypage-review-edit-save"
+                id="mypageReviewEditSaveButton"
+            >
+                수정 완료
+            </button>
+
+        </div>
+
+    </div>
+</div>
 
 
     <!-- =============================================
@@ -1795,6 +1945,8 @@
                     <span id="messageSentCount" hidden>0</span>
 
                     <div class="message-list" id="messageList"></div>
+
+                    <div class="message-my-profile-wrap" id="messageMyProfile"></div>
                 </section>
 
                 <section class="message-detail-panel" id="messageDetailPanel">
@@ -1844,16 +1996,6 @@
                     >
                 </label>
 
-                <label>
-                    제목 <em>*</em>
-                    <input
-                        type="text"
-                        id="messageSubject"
-                        maxlength="50"
-                        placeholder="쪽지 제목을 입력하세요"
-                        required
-                    >
-                </label>
 
                 <label>
                     내용 <em>*</em>
