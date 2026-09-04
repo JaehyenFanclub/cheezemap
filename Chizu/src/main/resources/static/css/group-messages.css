@@ -3541,6 +3541,23 @@ body.dark .message-detail [data-conversation-reply]:hover {
     padding: 26px 28px !important;
     background: #ffffff !important;
 }
+/* mr.eum수정부분 */
+/* 대화 상세 영역 전체를 입력창까지 세로로 사용 */
+.message-detail {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* mr.eum수정부분 */
+/* 메시지 영역만 남은 공간을 사용하고 입력창은 최하단으로 이동 */
+.message-conversation-thread {
+    flex: 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+}
 
 .message-empty-state {
     min-height: 430px !important;
@@ -3671,3 +3688,226 @@ body.dark .message-empty-icon {
     }
 }
 
+/* mr.eum수정부분 */
+/* 대화목록 프로필 이미지를 원형 영역에 맞게 표시 */
+.message-avatar {
+    overflow: hidden !important;
+}
+
+.message-avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    object-fit: cover !important;
+    border-radius: inherit !important;
+}
+
+/* mr.eum수정부분 */
+/* 대화방 하단 바로 답장할 수 있는 입력창 */
+.message-conversation-compose {
+    display: flex !important;
+    align-items: flex-end !important;
+    gap: 10px !important;
+    margin-top: auto !important;
+    padding-top: 14px !important;
+    border-top: 1px solid var(--line) !important;
+}
+
+.message-conversation-compose textarea {
+    flex: 1 !important;
+    min-height: 46px !important;
+    max-height: 120px !important;
+    resize: vertical !important;
+    box-sizing: border-box !important;
+    padding: 13px 15px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 15px !important;
+    color: var(--text) !important;
+    background: var(--surface, #fffdf7) !important;
+    font: inherit !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    outline: none !important;
+}
+
+.message-conversation-compose textarea:focus {
+    border-color: #dca91e !important;
+    box-shadow: 0 0 0 3px rgba(246, 201, 69, .14) !important;
+}
+
+.message-conversation-send {
+    width: 46px !important;
+    height: 46px !important;
+    flex: 0 0 46px !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 1px solid #d49a17 !important;
+    border-radius: 14px !important;
+    color: #4b341d !important;
+    background: var(--yellow) !important;
+    cursor: pointer !important;
+}
+
+.message-conversation-send:hover {
+    background: #ffd75c !important;
+    transform: translateY(-1px) !important;
+}
+
+/* mr.eum수정부분 */
+/* 다크모드 대화 입력창 */
+body.dark .message-conversation-compose {
+    border-color: rgba(255,255,255,.10) !important;
+}
+
+body.dark .message-conversation-compose textarea {
+    border-color: #4b463c !important;
+    color: #f2eee4 !important;
+    background: #24221e !important;
+}
+
+body.dark .message-conversation-compose textarea::placeholder {
+    color: #8f8a80 !important;
+}
+
+/* mr.eum수정부분 */
+/* 대화 상세 영역을 입력창과 함께 세로로 배치 */
+.message-detail {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* mr.eum수정부분 */
+/* 메시지 목록이 남은 공간을 차지하도록 설정 */
+.message-conversation-thread {
+    flex: 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+}
+
+/* =====================================================
+   쪽지함 최종 UI 정리
+   - 대화 메시지는 위, 입력창은 항상 아래
+   - 왼쪽 대화목록 하단에 내 프로필 표시
+   - 프로필 사진이 없거나 로딩 실패 시 기본 프로필 아이콘 사용
+===================================================== */
+.message-list-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+.message-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    align-content: start !important;
+    padding-right: 2px;
+}
+
+.message-my-profile-wrap {
+    flex: 0 0 auto;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e8dfcf;
+}
+
+.message-my-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 11px;
+    border: 1px solid #e8dfcf;
+    border-radius: 14px;
+    background: #fffefb;
+}
+
+.message-my-profile-avatar {
+    flex: 0 0 42px;
+}
+
+.message-my-profile-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.message-my-profile-copy strong {
+    overflow: hidden;
+    color: #3e3024;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.message-my-profile-copy span {
+    color: #9b9081;
+    font-size: 10px;
+}
+
+.message-avatar > i {
+    font-size: 19px;
+    line-height: 1;
+}
+
+.message-avatar.has-photo {
+    background: transparent !important;
+}
+
+.message-detail-panel {
+    overflow: hidden !important;
+    min-height: 0 !important;
+}
+
+.message-detail {
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.message-conversation-thread {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    margin-top: 18px !important;
+    padding: 4px 6px 14px 2px !important;
+}
+
+.message-conversation-compose {
+    flex: 0 0 auto !important;
+    margin-top: 0 !important;
+}
+
+body.dark .message-my-profile-wrap {
+    border-color: rgba(255,255,255,.10) !important;
+}
+
+body.dark .message-my-profile {
+    border-color: #4b463c !important;
+    background: #302e29 !important;
+}
+
+body.dark .message-my-profile-copy strong {
+    color: #f2eee4 !important;
+}
+
+body.dark .message-my-profile-copy span {
+    color: #a8a296 !important;
+}
+
+@media (max-width: 720px) {
+    .message-list-panel {
+        overflow: hidden !important;
+    }
+
+    .message-my-profile-wrap {
+        margin-top: 10px;
+        padding-top: 10px;
+    }
+}

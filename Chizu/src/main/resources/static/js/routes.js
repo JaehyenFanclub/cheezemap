@@ -1,5 +1,5 @@
     /* =====================================================
-   길찾기 - Google Routes API
+   길찾기 - 대중교통: NAVITIME / 도보·자동차: Google Routes
 ===================================================== */
 
 function getSelectedTravelMode() {
@@ -50,10 +50,13 @@ async function geocodeRouteLocation(value) {
     if (
         value &&
         typeof value === "object" &&
-        Number.isFinite(value.lat) &&
-        Number.isFinite(value.lng)
+        Number.isFinite(Number(value.lat)) &&
+        Number.isFinite(Number(value.lng))
     ) {
-        return value;
+        return {
+            lat: Number(value.lat),
+            lng: Number(value.lng)
+        };
     }
 
     const text = String(value || "").trim();
@@ -63,11 +66,469 @@ async function geocodeRouteLocation(value) {
     }
 
     /*
-        별도 지오코딩 API를 사용하지 않는다.
-        Google Routes API는 origin / destination에 주소 문자열을 직접
-        받을 수 있고 내부에서 경로 계산용 위치로 해석한다.
+        NAVITIME은 위경도 좌표가 필요하므로 Google Geocoder로 변환한다.
+        도보/자동차(Google Routes)도 좌표를 그대로 사용할 수 있다.
     */
-    return text;
+    if (typeof google === "undefined" || !google.maps?.Geocoder) {
+        throw new Error("GEOCODE_UNAVAILABLE");
+    }
+
+    const geocoder = new google.maps.Geocoder();
+    const query = /japan|日本|東京都|東京|都|道|府|県/i.test(text)
+        ? text
+        : `${text}, Japan`;
+
+    const response = await geocoder.geocode({
+        address: query,
+        region: "jp",
+        language: routeLocale()
+    });
+
+    const location = response?.results?.[0]?.geometry?.location;
+    if (!location) {
+        throw new Error("GEOCODE_NOT_FOUND");
+    }
+
+    return {
+        lat: location.lat(),
+        lng: location.lng()
+    };
+}
+
+function toNavitimeCoord(value) {
+    if (
+        value &&
+        typeof value === "object" &&
+        Number.isFinite(Number(value.lat)) &&
+        Number.isFinite(Number(value.lng))
+    ) {
+        return `${Number(value.lat)},${Number(value.lng)}`;
+    }
+    throw new Error("GEOCODE_NOT_FOUND");
+}
+
+function formatNavitimeStartTime(date = new Date()) {
+    const tokyo = new Date(
+        date.toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
+    );
+    const pad = n => String(n).padStart(2, "0");
+    return [
+        tokyo.getFullYear(),
+        "-",
+        pad(tokyo.getMonth() + 1),
+        "-",
+        pad(tokyo.getDate()),
+        "T",
+        pad(tokyo.getHours()),
+        ":",
+        pad(tokyo.getMinutes()),
+        ":",
+        pad(tokyo.getSeconds())
+    ].join("");
+}
+
+function coordsToLatLngPath(coordinates) {
+    const path = [];
+    const pushCoord = coord => {
+        if (!Array.isArray(coord) || coord.length < 2) return;
+        const lng = Number(coord[0]);
+        const lat = Number(coord[1]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        path.push({ lat, lng });
+    };
+
+    if (!Array.isArray(coordinates)) return path;
+
+    // LineString: [[lng,lat], ...]
+    if (coordinates.length && !Array.isArray(coordinates[0]?.[0])) {
+        coordinates.forEach(pushCoord);
+        return path;
+    }
+
+    // MultiLineString: [[[lng,lat], ...], ...]
+    coordinates.forEach(line => {
+        (line || []).forEach(pushCoord);
+    });
+    return path;
+}
+
+function extractCoordFromNavitimeSection(section) {
+    const lat = Number(section?.coord?.lat);
+    const lng = Number(section?.coord?.lon ?? section?.coord?.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+}
+
+function haversineMeters(a, b) {
+    if (!a || !b) return Infinity;
+    const toRad = deg => (deg * Math.PI) / 180;
+    const earthRadius = 6371000;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * earthRadius * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function createNavitimeWalkBridge(from, to) {
+    return {
+        path: [from, to],
+        isWalk: true,
+        color: "#4285F4",
+        outlineColor: "#FFFFFF",
+        transportType: "",
+        isBridge: true
+    };
+}
+
+function extractNavitimeEndpoint(pointLike) {
+    const lat = Number(pointLike?.coord?.lat ?? pointLike?.lat);
+    const lng = Number(
+        pointLike?.coord?.lon ??
+        pointLike?.coord?.lng ??
+        pointLike?.lon ??
+        pointLike?.lng
+    );
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+}
+
+function extractNavitimeWalkSegmentsFromSections(item) {
+    const sections = Array.isArray(item?.sections) ? item.sections : [];
+    const segments = [];
+
+    for (let i = 0; i < sections.length; i += 1) {
+        const section = sections[i];
+        if (String(section?.type || "").toLowerCase() !== "move") continue;
+        if (String(section?.move || "").toLowerCase() !== "walk") continue;
+
+        const from = extractCoordFromNavitimeSection(sections[i - 1]);
+        const to = extractCoordFromNavitimeSection(sections[i + 1]);
+        if (!from || !to) continue;
+
+        segments.push({
+            path: [from, to],
+            isWalk: true,
+            color: "#4285F4",
+            outlineColor: "#FFFFFF",
+            transportType: ""
+        });
+    }
+
+    return segments;
+}
+
+/*
+    NAVITIME 철도 shape는 역·출구·환승 지점에서 끊기는 경우가 많다.
+    끊긴 구간은 도보 점선으로 이어 출발지~지하철~도착지가 이어지게 한다.
+*/
+function bridgeNavitimePathGaps(segments, item) {
+    const GAP_METERS = 18;
+    const source = Array.isArray(segments) ? segments.filter(Boolean) : [];
+    if (!source.length) return [];
+
+    const bridged = [];
+    const startPoint =
+        extractNavitimeEndpoint(item?.summary?.start) ||
+        extractCoordFromNavitimeSection(
+            (item?.sections || []).find(section => section?.type === "point")
+        );
+    const goalPoint =
+        extractNavitimeEndpoint(item?.summary?.goal) ||
+        extractCoordFromNavitimeSection(
+            [...(item?.sections || [])].reverse().find(section => section?.type === "point")
+        );
+
+    const firstPoint = source[0]?.path?.[0];
+    if (
+        startPoint &&
+        firstPoint &&
+        haversineMeters(startPoint, firstPoint) > GAP_METERS
+    ) {
+        bridged.push(createNavitimeWalkBridge(startPoint, firstPoint));
+    }
+
+    source.forEach((segment, index) => {
+        if (index > 0) {
+            const prevPath = source[index - 1]?.path || [];
+            const currPath = segment?.path || [];
+            const prevEnd = prevPath[prevPath.length - 1];
+            const currStart = currPath[0];
+            if (
+                prevEnd &&
+                currStart &&
+                haversineMeters(prevEnd, currStart) > GAP_METERS
+            ) {
+                bridged.push(createNavitimeWalkBridge(prevEnd, currStart));
+            }
+        }
+        bridged.push(segment);
+    });
+
+    const lastPath = source[source.length - 1]?.path || [];
+    const lastPoint = lastPath[lastPath.length - 1];
+    if (
+        goalPoint &&
+        lastPoint &&
+        haversineMeters(lastPoint, goalPoint) > GAP_METERS
+    ) {
+        bridged.push(createNavitimeWalkBridge(lastPoint, goalPoint));
+    }
+
+    return bridged;
+}
+
+function extractNavitimePathSegments(item) {
+    const features = item?.shapes?.features || [];
+    const segments = [];
+
+    for (const feature of features) {
+        const geometry = feature?.geometry;
+        if (!geometry) continue;
+
+        const path = coordsToLatLngPath(geometry.coordinates);
+        if (path.length < 2) continue;
+
+        const properties = feature?.properties || {};
+        const ways = String(properties.ways || "").toLowerCase();
+        const inline = properties.inline || {};
+        const outline = properties.outline || {};
+        const lineStyle = String(inline.line_style || "").toLowerCase();
+        const transportType = String(properties.transport_type || "").toLowerCase();
+
+        // walk: 실제 도보 / auxiliary: 출발·도착 연결 보조선
+        // transport_type이 있는 철도 구간은 실선으로 유지한다.
+        const isWalk =
+            ways === "walk" ||
+            (lineStyle === "auxiliary" && !transportType && ways !== "transport");
+
+        segments.push({
+            path,
+            isWalk,
+            color: isWalk
+                ? "#4285F4"
+                : String(inline.color || properties.color || "#4285F4"),
+            outlineColor: isWalk
+                ? "#FFFFFF"
+                : String(outline.color || "#FFFFFF"),
+            transportType
+        });
+    }
+
+    const hasWalkShape = segments.some(segment => segment.isWalk);
+    if (!hasWalkShape) {
+        // shape에 도보가 없으면 sections의 walk 구간으로 최소한의 도보선을 보완한다.
+        segments.push(...extractNavitimeWalkSegmentsFromSections(item));
+    }
+
+    if (!segments.length) {
+        // shape가 없으면 구간 좌표로 단일 선 구성
+        const fallbackPath = [];
+        for (const section of item?.sections || []) {
+            const point = extractCoordFromNavitimeSection(section);
+            if (point) fallbackPath.push(point);
+        }
+
+        if (fallbackPath.length >= 2) {
+            return [{
+                path: fallbackPath,
+                isWalk: false,
+                color: "#4285F4",
+                outlineColor: "#FFFFFF",
+                transportType: ""
+            }];
+        }
+
+        return [];
+    }
+
+    return bridgeNavitimePathGaps(segments, item);
+}
+
+function extractNavitimePath(item) {
+    return extractNavitimePathSegments(item).flatMap(segment => segment.path);
+}
+
+function getNavitimeTotalFareYen(item) {
+    const move = item?.summary?.move || {};
+    const reference = move.reference_fare || {};
+
+    if (Number.isFinite(Number(reference.lowest_total_ic))) {
+        return Number(reference.lowest_total_ic);
+    }
+    if (Number.isFinite(Number(reference.lowest_total_ticket))) {
+        return Number(reference.lowest_total_ticket);
+    }
+
+    const fare = move.fare || {};
+    if (Number.isFinite(Number(fare.unit_48))) return Number(fare.unit_48);
+    if (Number.isFinite(Number(fare.unit_0))) return Number(fare.unit_0);
+
+    return null;
+}
+
+function isNavitimeTransitMove(section) {
+    if (String(section?.type || "").toLowerCase() !== "move") return false;
+    const moveType = String(section?.move || "").toLowerCase();
+    if (!moveType || moveType === "walk") return false;
+    return Boolean(section?.transport || section?.line_name);
+}
+
+function getNavitimeSectionName(section) {
+    const name = String(section?.name || "").trim();
+    if (!name || name === "start" || name === "goal") {
+        return "";
+    }
+    return name;
+}
+
+function getNavitimeLineDisplayName(section) {
+    const transport = section?.transport || {};
+    const selfName = String(transport.self_name || "").trim();
+    if (selfName) return selfName;
+
+    const lineName = String(
+        section?.line_name ||
+        transport.name ||
+        transport.links?.[0]?.name ||
+        ""
+    ).trim();
+
+    if (lineName) return lineName;
+    return rt("대중교통", "公共交通", "Transit");
+}
+
+function buildNavitimeTransitStepDetails(item) {
+    const sections = Array.isArray(item?.sections) ? item.sections : [];
+    const details = [];
+    const steps = [];
+
+    for (let i = 0; i < sections.length; i += 1) {
+        const section = sections[i];
+        if (!isNavitimeTransitMove(section)) continue;
+
+        const transport = section.transport || {};
+        const link = Array.isArray(transport.links) ? transport.links[0] : null;
+        const prevPoint = sections[i - 1]?.type === "point" ? sections[i - 1] : null;
+        const nextPoint = sections[i + 1]?.type === "point" ? sections[i + 1] : null;
+
+        const fromName =
+            getNavitimeSectionName(prevPoint) ||
+            String(link?.from?.name || "").trim() ||
+            rt("승차", "乗車", "Board");
+
+        const toName =
+            getNavitimeSectionName(nextPoint) ||
+            String(link?.to?.name || "").trim() ||
+            rt("하차", "降車", "Alight");
+
+        const lineName = getNavitimeLineDisplayName(section);
+        const headsign = String(
+            transport.destination?.name ||
+            link?.destination?.name ||
+            ""
+        ).trim();
+        const trainType = String(transport.type || "").trim();
+
+        const parts = [
+            lineName,
+            trainType && trainType !== lineName ? trainType : "",
+            headsign ? rt(`${headsign}행`, `${headsign}行`, `to ${headsign}`) : "",
+            `${fromName} → ${toName}`
+        ].filter(Boolean);
+
+        details.push(parts.join(" · "));
+
+        steps.push({
+            travelMode: "TRANSIT",
+            transitDetails: {
+                headsign: `${fromName} → ${toName}`,
+                line: {
+                    name: lineName,
+                    shortName: trainType || link?.name || "",
+                    vehicle: {
+                        name: String(section.move || "transit")
+                    }
+                }
+            }
+        });
+    }
+
+    return { details, steps };
+}
+
+function normalizeNavitimeRoute(item) {
+    const move = item?.summary?.move || {};
+    const timeMinutes = Number(move.time) || 0;
+    const distanceMeters = Number(move.distance) || 0;
+    const fareYen = getNavitimeTotalFareYen(item);
+    const transferCount = Number(move.transit_count);
+    const pathSegments = extractNavitimePathSegments(item);
+    const path = pathSegments.flatMap(segment => segment.path);
+    const { details, steps } = buildNavitimeTransitStepDetails(item);
+
+    const durationText = timeMinutes > 0
+        ? (currentLanguage === "ko"
+            ? `${timeMinutes}분`
+            : currentLanguage === "ja"
+                ? `${timeMinutes}分`
+                : `${timeMinutes} min`)
+        : "-";
+
+    const distanceText = distanceMeters >= 1000
+        ? `${(distanceMeters / 1000).toFixed(1)} km`
+        : distanceMeters > 0
+            ? `${Math.round(distanceMeters)} m`
+            : "-";
+
+    return {
+        provider: "navitime",
+        path,
+        pathSegments,
+        durationMillis: timeMinutes * 60_000,
+        distanceMeters,
+        transitTransferCount: Number.isFinite(transferCount)
+            ? Math.max(0, transferCount)
+            : Math.max(0, steps.length - 1),
+        transitStepDetails: details,
+        fare: Number.isFinite(fareYen)
+            ? { value: fareYen, currency: "JPY" }
+            : null,
+        localizedValues: {
+            duration: durationText,
+            distance: distanceText
+        },
+        legs: [
+            {
+                steps,
+                durationMillis: timeMinutes * 60_000,
+                localizedValues: {
+                    duration: durationText,
+                    distance: distanceText
+                }
+            }
+        ],
+        navitimeItem: item
+    };
+}
+
+async function fetchNavitimeTransitRoutes(origin, destination) {
+    const start = toNavitimeCoord(origin);
+    const goal = toNavitimeCoord(destination);
+    const startTime = formatNavitimeStartTime(new Date());
+
+    const query = new URLSearchParams({
+        start,
+        goal,
+        startTime
+    });
+
+    const data = await apiRequest(`/api/route/transit?${query.toString()}`);
+    const items = Array.isArray(data?.items) ? data.items : [];
+    return items.map(normalizeNavitimeRoute);
 }
 
 
@@ -699,7 +1160,7 @@ function renderRouteResults(
                 );
 
             // mr.eum수정부분
-            // Google TRANSIT 경로에서는 실제 노선명과 환승 횟수를 표시합니다.
+            // NAVITIME TRANSIT 경로에서는 실제 노선명과 환승 횟수를 표시합니다.
             const transitStepDetails = isTransit ? getGoogleTransitStepDetails(route) : [];
             const transitTransferCount = isTransit ? getGoogleTransitTransferCount(route) : 0;
             const transitFareText = isTransit ? getGoogleTransitFareText(route) : "";
@@ -721,6 +1182,7 @@ function renderRouteResults(
             const details = isWalking
                 ? renderWalkingStepDetails(route)
                 : isTransit
+<<<<<<< HEAD
                     ? (
                         route?.__navitime
                             ? renderNavitimeTransitDetails(route)
@@ -730,6 +1192,11 @@ function renderRouteResults(
                                     : ""
                             )
                     )
+=======
+                    ? (transitStepDetails.length
+                        ? `<div class="transit-route-details"><div class="transit-detail-timeline">${transitStepDetails.map((item, stepIndex) => `<div class="transit-detail-leg"><span class="transit-ride-meta">${escapeWalkingText(item)}</span>${stepIndex < transitStepDetails.length - 1 ? `<span class="transit-transfer-hint">${escapeWalkingText(rt("환승", "乗換", "Transfer"))}</span>` : ""}</div>`).join("")}</div></div>`
+                        : "")
+>>>>>>> 0119ed4f96786e0ae7155a7232c3593ebe38634c
                     : renderDrivingStepDetails(route);
 
             return `
@@ -866,6 +1333,7 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
 
     clearRenderedRoute();
 
+<<<<<<< HEAD
     // NAVITIME TRANSIT은 shape=true 응답의 GeoJSON을 직접 Google Map 위에 그립니다.
     if (
         route?.__navitime &&
@@ -1026,7 +1494,15 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
     */
     const path = Array.isArray(route.path)
         ? route.path.filter(Boolean)
+=======
+    const pathSegments = Array.isArray(route.pathSegments)
+        ? route.pathSegments.filter(segment => Array.isArray(segment?.path) && segment.path.length >= 2)
+>>>>>>> 0119ed4f96786e0ae7155a7232c3593ebe38634c
         : [];
+
+    const path = pathSegments.length
+        ? pathSegments.flatMap(segment => segment.path)
+        : (Array.isArray(route.path) ? route.path.filter(Boolean) : []);
 
     if (!path.length) {
         console.warn("Routes API 경로 path가 비어 있습니다.", route);
@@ -1034,22 +1510,56 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
     }
 
     const isWalking = travelMode === "WALKING";
+    const polylines = [];
 
-    const haloLine = !isWalking
-        ? new google.maps.Polyline({
-            map: googleMap,
-            path,
-            strokeColor: "#FFFFFF",
-            strokeOpacity: 0.92,
-            strokeWeight: 8,
-            zIndex: 9
-        })
-        : null;
+    // NAVITIME: 도보 점선 + 철도 노선색(야마노테=초록 등)으로 구간별 표시
+    if (pathSegments.length && (travelMode === "TRANSIT" || route.provider === "navitime")) {
+        pathSegments.forEach(segment => {
+            if (segment.isWalk) {
+                // 도보 모드와 동일한 파란 점선으로 표시한다.
+                polylines.push(new google.maps.Polyline({
+                    map: googleMap,
+                    path: segment.path,
+                    strokeOpacity: 0,
+                    strokeWeight: 0,
+                    zIndex: 12,
+                    icons: [{
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            fillColor: "#4285F4",
+                            fillOpacity: 1,
+                            strokeColor: "#FFFFFF",
+                            strokeOpacity: 0.95,
+                            strokeWeight: 1,
+                            scale: 4.6
+                        },
+                        offset: "0",
+                        repeat: "14px"
+                    }]
+                }));
+                return;
+            }
 
-    let routeLine;
+            polylines.push(new google.maps.Polyline({
+                map: googleMap,
+                path: segment.path,
+                strokeColor: "#FFFFFF",
+                strokeOpacity: 0.95,
+                strokeWeight: 9,
+                zIndex: 9
+            }));
 
-    if (isWalking) {
-        routeLine = new google.maps.Polyline({
+            polylines.push(new google.maps.Polyline({
+                map: googleMap,
+                path: segment.path,
+                strokeColor: segment.color || "#4285F4",
+                strokeOpacity: 1,
+                strokeWeight: 5,
+                zIndex: 10
+            }));
+        });
+    } else if (isWalking) {
+        polylines.push(new google.maps.Polyline({
             map: googleMap,
             path,
             strokeOpacity: 0,
@@ -1068,19 +1578,28 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
                 offset: "0",
                 repeat: "14px"
             }]
-        });
+        }));
     } else {
-        routeLine = new google.maps.Polyline({
+        polylines.push(new google.maps.Polyline({
+            map: googleMap,
+            path,
+            strokeColor: "#FFFFFF",
+            strokeOpacity: 0.92,
+            strokeWeight: 8,
+            zIndex: 9
+        }));
+
+        polylines.push(new google.maps.Polyline({
             map: googleMap,
             path,
             strokeColor: "#4285F4",
             strokeOpacity: 1,
             strokeWeight: 5,
             zIndex: 10
-        });
+        }));
     }
 
-    routePolylines = haloLine ? [haloLine, routeLine] : [routeLine];
+    routePolylines = polylines;
 
     /*
         최종 경로에서도 출발지에만 CHEESE MAP 로고 마커를 표시합니다.
@@ -1192,7 +1711,7 @@ async function selectRoute(index) {
 
 
 /* =====================================================
-   대중교통도 Google Routes API 사용
+   대중교통 - NAVITIME Route API
 ===================================================== */
 
 
@@ -2910,9 +3429,9 @@ function rt(ko, ja, en) {
     return currentLanguage === "ko" ? ko : currentLanguage === "en" ? en : ja;
 }
 
-// mr.eum수정부분
-// Google Routes API의 TRANSIT 운임을 화면 표시용 문자열로 변환합니다.
+// NAVITIME / Google 대중교통 운임을 화면 표시용 문자열로 변환합니다.
 function getGoogleTransitFareText(route) {
+<<<<<<< HEAD
     if (route?.__navitime) {
         const fare =
             route?.localizedValues?.transitFare;
@@ -2922,6 +3441,9 @@ function getGoogleTransitFareText(route) {
             : "";
     }
 
+=======
+    // Routes API의 transitFare, DirectionsService fare, NAVITIME fare를 모두 지원합니다.
+>>>>>>> 0119ed4f96786e0ae7155a7232c3593ebe38634c
     const fare =
         route?.transitFare ||
         route?.travelAdvisory?.transitFare ||
@@ -2930,6 +3452,7 @@ function getGoogleTransitFareText(route) {
 
     if (!fare) return "";
 
+<<<<<<< HEAD
     if (
         typeof fare === "string" &&
         fare.trim()
@@ -2989,14 +3512,35 @@ function getGoogleTransitFareText(route) {
                 currency: currencyCode
             }
         ).format(amount);
+=======
+    const currencyCode = fare?.currencyCode || fare?.currency || "";
+    let rawAmount = NaN;
+    if (fare?.units !== undefined || fare?.nanos !== undefined) {
+        rawAmount = Number(fare.units || 0) + Number(fare.nanos || 0) / 1e9;
+    } else if (fare?.value !== undefined) {
+        rawAmount = Number(fare.value);
+    }
+    if (!Number.isFinite(rawAmount)) return "";
+
+    const fareAmount = rawAmount;
+
+    if (currencyCode === "JPY") return `${Math.round(fareAmount).toLocaleString()}円`;
+    if (!currencyCode) return fareAmount.toLocaleString();
+
+    try {
+        return new Intl.NumberFormat(
+            currentLanguage === "ko" ? "ko-KR" : currentLanguage === "ja" ? "ja-JP" : "en-US",
+            { style: "currency", currency: currencyCode }
+        ).format(fareAmount);
+>>>>>>> 0119ed4f96786e0ae7155a7232c3593ebe38634c
     } catch (error) {
-        return `${currencyCode} ${amount.toLocaleString()}`;
+        return `${currencyCode} ${fareAmount.toLocaleString()}`;
     }
 }
 
-// mr.eum수정부분
-// Google TRANSIT 단계별 대중교통 정보를 추출합니다.
+// Google / NAVITIME TRANSIT 단계별 대중교통 정보를 추출합니다.
 function getGoogleTransitStepDetails(route) {
+<<<<<<< HEAD
     if (
         route?.__navitime &&
         Array.isArray(route?.transitDetails)
@@ -3038,12 +3582,14 @@ function getGoogleTransitStepDetails(route) {
                     .join(" · ");
             })
             .filter(Boolean);
+=======
+    if (Array.isArray(route?.transitStepDetails) && route.transitStepDetails.length) {
+        return route.transitStepDetails;
+>>>>>>> 0119ed4f96786e0ae7155a7232c3593ebe38634c
     }
 
     const details = [];
 
-    // mr.eum수정부분
-    // Google Routes API와 DirectionsService의 TRANSIT 응답 구조를 모두 지원합니다.
     for (const leg of route?.legs || []) {
         for (const step of leg?.steps || []) {
             const transit =
@@ -3097,9 +3643,9 @@ function getGoogleTransitStepDetails(route) {
 }
 
 
-// mr.eum수정부분
-// Google TRANSIT의 환승 횟수를 단계 정보에서 계산합니다.
+// Google / NAVITIME TRANSIT의 환승 횟수를 계산합니다.
 function getGoogleTransitTransferCount(route) {
+<<<<<<< HEAD
     if (
         route?.__navitime &&
         Number.isFinite(
@@ -3109,12 +3655,14 @@ function getGoogleTransitTransferCount(route) {
         return Number(
             route.transferCount
         );
+=======
+    if (Number.isFinite(Number(route?.transitTransferCount))) {
+        return Math.max(0, Number(route.transitTransferCount));
+>>>>>>> 0119ed4f96786e0ae7155a7232c3593ebe38634c
     }
 
     let transitStepCount = 0;
 
-    // mr.eum수정부분
-    // Google Routes API와 DirectionsService의 TRANSIT 단계를 함께 계산합니다.
     for (const leg of route?.legs || []) {
         for (const step of leg?.steps || []) {
             if (step?.transitDetails || step?.transit_details) {
@@ -3527,6 +4075,7 @@ async function findRoute() {
         const travelMode =
             getSelectedTravelMode();
 
+<<<<<<< HEAD
         
         if (!RouteClass) {
             const { Route } = await google.maps.importLibrary("routes");
@@ -3635,7 +4184,89 @@ async function findRoute() {
 
                 return [];
             }
+=======
+        // 일본 대중교통은 NAVITIME Route(totalnavi)를 사용합니다.
+        if (travelMode === "TRANSIT") {
+            const originCoord =
+                typeof origin === "object"
+                    ? origin
+                    : await geocodeRouteLocation(origin);
+            const destinationCoord =
+                typeof destination === "object"
+                    ? destination
+                    : await geocodeRouteLocation(destination);
+
+            const transitRoutes =
+                await fetchNavitimeTransitRoutes(
+                    originCoord,
+                    destinationCoord
+                );
+
+            if (!transitRoutes.length) {
+                console.error(
+                    "========== NAVITIME TRANSIT 결과 없음 =========="
+                );
+                showToast(
+                    rt(
+                        "대중교통 경로를 찾지 못했습니다.",
+                        "公共交通ルートが見つかりませんでした。",
+                        "No transit routes found."
+                    )
+                );
+                return [];
+            }
+
+            computedRoutes = transitRoutes;
+
+            await drawRoute(
+                computedRoutes[0],
+                true,
+                travelMode
+            );
+
+            renderRouteResults(
+                computedRoutes,
+                new Date()
+            );
+
+            mapRouteSelectionMode = false;
+            mapRouteSelectionStep = 0;
+
+            showToast(
+                currentLanguage === "ko"
+                    ? "NAVITIME 대중교통 경로를 표시했습니다."
+                    : currentLanguage === "ja"
+                        ? "NAVITIMEの公共交通ルートを表示しました。"
+                        : "NAVITIME transit routes displayed."
+            );
+
+            return computedRoutes;
+>>>>>>> 0119ed4f96786e0ae7155a7232c3593ebe38634c
         }
+
+        if (!RouteClass) {
+            const { Route } = await google.maps.importLibrary("routes");
+            RouteClass = Route;
+        }
+
+        // Google Route.computeRoutes: 도보/자동차만 사용합니다.
+        const baseRequest = {
+            origin: normalizeGoogleRouteLocation(origin),
+            destination: normalizeGoogleRouteLocation(destination),
+            travelMode,
+            language: routeLocale(),
+            units: google.maps.UnitSystem.METRIC,
+            computeAlternativeRoutes: true,
+            fields: [
+                "path",
+                "viewport",
+                "legs",
+                "routeLabels",
+                "localizedValues",
+                "durationMillis",
+                "travelAdvisory"
+            ]
+        };
 
         const routeSearchStartedAt = new Date();
 
@@ -3706,11 +4337,7 @@ async function findRoute() {
         mapRouteSelectionStep = 0;
 
         showToast(
-            travelMode === "TRANSIT"
-                ? (currentLanguage === "ko"
-                    ? "Google 대중교통 경로를 표시했습니다."
-                    : "Googleの公共交通ルートを表示しました。")
-                : (rt("경로를 표시했습니다.", "ルートを表示しました.", "Route displayed."))
+            rt("경로를 표시했습니다.", "ルートを表示しました.", "Route displayed.")
         );
     } catch (error) {
         const rawStatus =
