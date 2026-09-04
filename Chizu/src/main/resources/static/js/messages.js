@@ -27,13 +27,17 @@ function formatMessageDate(value) {
 
 function splitBackendMessageContent(content) {
     const text = String(content || "");
+    // 예전 형식: [제목] ...\n\n본문 — 읽을 때만 호환
     const match = text.match(/^\[제목\]\s*(.*?)\n\n([\s\S]*)$/);
-    if (!match) return { subject: "쪽지", body: text };
-    return { subject: match[1] || "쪽지", body: match[2] || "" };
+    if (!match) return { subject: "", body: text };
+    return { subject: match[1] || "", body: match[2] || "" };
 }
 
-function joinBackendMessageContent(subject, body) {
-    return `[제목] ${String(subject || "쪽지").trim()}\n\n${String(body || "").trim()}`;
+function getMessagePreviewText(parsed) {
+    const body = String(parsed?.body || "").trim();
+    const subject = String(parsed?.subject || "").trim();
+    if (body) return body.split("\n")[0];
+    return subject || "쪽지";
 }
 
 /* =====================================================
@@ -466,7 +470,7 @@ function startInlineMessageEdit(messageId, bubble) {
                     method: "PUT",
                     auth: true,
                     body: {
-                        content: joinBackendMessageContent("쪽지", body)
+                        content: body
                     }
                 });
 
@@ -570,7 +574,7 @@ async function renderMessageCenter() {
                         ${renderMessageAvatar(chatter.photoUrl, nickname)}
                         <span class="message-list-copy">
                             <strong>${escapeGroupHtml(nickname)}</strong>
-                            <b>${escapeGroupHtml(parsed.subject)}</b>
+                            <b>${escapeGroupHtml(getMessagePreviewText(parsed))}</b>
                             <small>${formatMessageDate(chatter.lastMessage)}</small>
                         </span>
                     </button>`;
@@ -687,7 +691,7 @@ async function openMessageConversation(userId, nickname) {
                             ${canManage ? `data-message-bubble-id="${messageId}"` : ""}
                             data-message-id="${escapeGroupHtml(String(translationId))}"
                         >
-                            <strong>${escapeGroupHtml(parsed.subject)}</strong>
+                            ${parsed.subject ? `<strong>${escapeGroupHtml(parsed.subject)}</strong>` : ""}
                             <p data-message-body>${escapeGroupHtml(parsed.body).replaceAll("\n", "<br>")}</p>
                             <span class="message-source-text" data-message-source-text hidden>${escapeGroupHtml(sourceText)}</span>
                             ${renderMessageTranslationControls(
@@ -802,7 +806,7 @@ async function sendConversationMessage(event) {
             method: "POST",
             auth: true,
             body: {
-                content: joinBackendMessageContent("쪽지", body)
+                content: body
             }
         });
 
@@ -881,7 +885,7 @@ async function sendBackendMessage(event) {
         await apiRequest(`/message/${recipientId}/send`, {
             method: "POST",
             auth: true,
-            body: { content: joinBackendMessageContent("쪽지", body) }
+            body: { content: body }
         });
 
         messageComposeReturnModal = null;
