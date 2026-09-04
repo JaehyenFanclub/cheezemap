@@ -23,11 +23,11 @@ public class NavitimeRouteController {
     @GetMapping("/transit")
     public Map<String, Object> searchTransit(
             @Parameter(description = "출발지 lat,lng", example = "35.681236,139.767125")
-            @RequestParam String start,
+            @RequestParam("start") String start,
             @Parameter(description = "도착지 lat,lng", example = "35.658034,139.701636")
-            @RequestParam String goal,
+            @RequestParam("goal") String goal,
             @Parameter(description = "출발 시각 YYYY-MM-DDTHH:mm:ss")
-            @RequestParam(required = false) String startTime
+            @RequestParam(value = "startTime", required = false) String startTime
     ) {
         return navitimeRouteService.searchTransit(start, goal, startTime);
     }
