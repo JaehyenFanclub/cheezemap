@@ -1736,9 +1736,9 @@ function renderNavitimeTransitDetails(route) {
                 ).toLowerCase();
 
             const nextPlatform =
-                String(
-                    nextSection?.fromPlatform || ""
-                ).trim();
+                normalizeNavitimePlatformText(
+                    nextSection?.fromPlatform
+                );
 
             const moveValue =
                 String(
@@ -1777,12 +1777,13 @@ function renderNavitimeTransitDetails(route) {
                 rt("도착지", "目的地", "Destination");
 
             /*
-                NAVITIME gateway는 역 출입구명이라
-                이동 흐름으로 입구/출구를 구분합니다.
+                실제 이동에 도움되는 정보만 표시합니다.
 
-                도보 → 대중교통 : 입구
-                대중교통 → 도보 : 출구
-                대중교통 → 대중교통 : 출입구는 숨기고 승강장 우선
+                - M08 / JA11 같은 역 번호는 표시하지 않음
+                - start_platform / goal_platform이 있으면 플랫폼 표시
+                - 도보 -> 대중교통 진입 시 gateway를 입구로 표시
+                - 대중교통 -> 도보 이탈 시 gateway를 출구로 표시
+                - 환승 중에는 입구/출구를 표시하지 않고 플랫폼만 표시
             */
             const fromGatewayRole =
                 previousMove.includes("walk") ||
@@ -1796,8 +1797,8 @@ function renderNavitimeTransitDetails(route) {
                     ? "exit"
                     : "";
 
-            const fromAssist =
-                getNavitimeStationAssistInfo({
+            const fromAssistItems =
+                createNavitimeStationAssistItems({
                     platform:
                         section?.fromPlatform,
 
@@ -1806,15 +1807,12 @@ function renderNavitimeTransitDetails(route) {
                             ? section?.fromGateway
                             : "",
 
-                    numbering:
-                        section?.fromNumbering,
-
                     gatewayRole:
                         fromGatewayRole
                 });
 
-            const toAssist =
-                getNavitimeStationAssistInfo({
+            const toAssistItems =
+                createNavitimeStationAssistItems({
                     platform:
                         section?.toPlatform,
 
@@ -1822,9 +1820,6 @@ function renderNavitimeTransitDetails(route) {
                         toGatewayRole
                             ? section?.toGateway
                             : "",
-
-                    numbering:
-                        section?.toNumbering,
 
                     gatewayRole:
                         toGatewayRole
@@ -1917,11 +1912,15 @@ function renderNavitimeTransitDetails(route) {
                         <div class="navitime-station-row">
                             <strong>${escapeWalkingText(fromName)}</strong>
                             ${
-                                fromAssist
+                                fromAssistItems.length
                                     ? `
-                                        <span class="navitime-station-assist ${fromAssist.type}">
-                                            <small>${escapeWalkingText(fromAssist.label)}</small>
-                                            <b>${escapeWalkingText(fromAssist.text)}</b>
+                                        <span class="navitime-station-assist-group">
+                                            ${fromAssistItems.map(item => `
+                                                <span class="navitime-station-assist ${item.type}">
+                                                    <small>${escapeWalkingText(item.label)}</small>
+                                                    <b>${escapeWalkingText(item.text)}</b>
+                                                </span>
+                                            `).join("")}
                                         </span>
                                     `
                                     : ""
@@ -1966,11 +1965,15 @@ function renderNavitimeTransitDetails(route) {
                             <span>${escapeWalkingText(arrival)}</span>
                             <strong>${escapeWalkingText(toName)}</strong>
                             ${
-                                toAssist
+                                toAssistItems.length
                                     ? `
-                                        <span class="navitime-station-assist ${toAssist.type}">
-                                            <small>${escapeWalkingText(toAssist.label)}</small>
-                                            <b>${escapeWalkingText(toAssist.text)}</b>
+                                        <span class="navitime-station-assist-group">
+                                            ${toAssistItems.map(item => `
+                                                <span class="navitime-station-assist ${item.type}">
+                                                    <small>${escapeWalkingText(item.label)}</small>
+                                                    <b>${escapeWalkingText(item.text)}</b>
+                                                </span>
+                                            `).join("")}
                                         </span>
                                     `
                                     : ""
@@ -1985,7 +1988,7 @@ function renderNavitimeTransitDetails(route) {
                                         <span>${escapeWalkingText(
                                             nextPlatform
                                                 ? rt(
-                                                    `환승 · ${nextPlatform} 승강장`,
+                                                    `환승 · 플랫폼 ${nextPlatform}`,
                                                     `乗換 · ${nextPlatform}ホーム`,
                                                     `Transfer · Platform ${nextPlatform}`
                                                 )
@@ -2303,11 +2306,7 @@ async function localizeNavitimeRoutes(
                 toName,
                 lineName,
                 companyName,
-                destinationName,
-                fromPlatform,
-                toPlatform,
-                fromGateway,
-                toGateway
+                destinationName
             ] =
                 await Promise.all([
                     translateNavitimeText(
@@ -2329,22 +2328,6 @@ async function localizeNavitimeRoutes(
                     translateNavitimeText(
                         section?.destinationName,
                         targetLanguage
-                    ),
-                    translateNavitimeText(
-                        section?.fromPlatform,
-                        targetLanguage
-                    ),
-                    translateNavitimeText(
-                        section?.toPlatform,
-                        targetLanguage
-                    ),
-                    translateNavitimeText(
-                        section?.fromGateway,
-                        targetLanguage
-                    ),
-                    translateNavitimeText(
-                        section?.toGateway,
-                        targetLanguage
                     )
                 ]);
 
@@ -2363,17 +2346,6 @@ async function localizeNavitimeRoutes(
             section.destinationName =
                 destinationName;
 
-            section.fromPlatform =
-                fromPlatform;
-
-            section.toPlatform =
-                toPlatform;
-
-            section.fromGateway =
-                fromGateway;
-
-            section.toGateway =
-                toGateway;
         }
 
         // 요약 텍스트용 transitDetails도 번역 후 다시 동기화
@@ -2454,55 +2426,165 @@ function getNavitimePointGateway(point) {
     ).trim();
 }
 
-function getNavitimeStationAssistInfo({
-    platform = "",
-    gateway = "",
-    numbering = "",
-    gatewayRole = ""
-} = {}) {
-    const normalizedPlatform =
-        String(platform || "").trim();
 
-    const normalizedGateway =
-        String(gateway || "").trim();
+/*
+    플랫폼명은 번역 API에 태우지 않고 직접 정리합니다.
 
-    const normalizedNumbering =
-        String(numbering || "").trim();
+    예)
+    1番線   -> 1번
+    3番ホーム -> 3번
+    1・2番線 -> 1·2번
+    1-2     -> 1-2
+*/
+function normalizeNavitimePlatformText(value) {
+    const raw =
+        String(value || "").trim();
 
-    // 승강장 정보가 있으면 출입구보다 항상 우선합니다.
-    if (normalizedPlatform) {
-        return {
-            type: "platform",
-            text: normalizedPlatform,
-            label: rt(
-                "승강장",
-                "ホーム",
-                "Platform"
-            )
-        };
+    if (!raw) {
+        return "";
     }
 
-    if (normalizedGateway) {
-        const role =
-            String(gatewayRole || "")
-                .toLowerCase();
+    let text = raw
+        .replace(/\s+/g, " ")
+        .replace(/ホーム$/u, "")
+        .replace(/番線$/u, "번")
+        .replace(/番$/u, "번")
+        .trim();
 
+    return text;
+}
+
+
+/*
+    NAVITIME gateway는 역 출입구명입니다.
+    일반 번역 API에 넣으면 "1番口 -> 1번 입"처럼 깨질 수 있으므로
+    숫자/영문 코드는 유지하고 방향 표현만 직접 변환합니다.
+
+    예)
+    1番口      -> 1번
+    2番出口    -> 2번
+    A1出口     -> A1
+    1-2番口    -> 1-2번
+    東口       -> 동쪽
+    西口       -> 서쪽
+    南口       -> 남쪽
+    北口       -> 북쪽
+    中央口     -> 중앙
+    新南口     -> 신남쪽
+*/
+function normalizeNavitimeGatewayText(value) {
+    const raw =
+        String(value || "").trim();
+
+    if (!raw) {
+        return "";
+    }
+
+    const directionMap = {
+        "東口": "동쪽",
+        "西口": "서쪽",
+        "南口": "남쪽",
+        "北口": "북쪽",
+        "中央口": "중앙",
+        "東改札口": "동쪽 개찰구",
+        "西改札口": "서쪽 개찰구",
+        "南改札口": "남쪽 개찰구",
+        "北改札口": "북쪽 개찰구",
+        "中央改札口": "중앙 개찰구",
+        "新南口": "신남쪽",
+        "新北口": "신북쪽"
+    };
+
+    if (currentLanguage === "ja") {
+        return raw;
+    }
+
+    if (currentLanguage === "ko" && directionMap[raw]) {
+        return directionMap[raw];
+    }
+
+    let text = raw;
+
+    if (currentLanguage === "ko") {
+        text = text
+            .replace(/番出口$/u, "번")
+            .replace(/番口$/u, "번")
+            .replace(/出口$/u, "")
+            .replace(/出入口$/u, "")
+            .replace(/入口$/u, "")
+            .replace(/改札口$/u, " 개찰구")
+            .replace(/口$/u, "")
+            .trim();
+
+        return text || raw;
+    }
+
+    // English UI: preserve codes and translate only common directional exits.
+    const englishDirectionMap = {
+        "東口": "East",
+        "西口": "West",
+        "南口": "South",
+        "北口": "North",
+        "中央口": "Central",
+        "新南口": "New South",
+        "新北口": "New North"
+    };
+
+    if (englishDirectionMap[raw]) {
+        return englishDirectionMap[raw];
+    }
+
+    text = text
+        .replace(/番出口$/u, "")
+        .replace(/番口$/u, "")
+        .replace(/出口$/u, "")
+        .replace(/出入口$/u, "")
+        .replace(/入口$/u, "")
+        .replace(/口$/u, "")
+        .trim();
+
+    return text || raw;
+}
+
+
+function createNavitimeStationAssistItems({
+    platform = "",
+    gateway = "",
+    gatewayRole = ""
+} = {}) {
+    const items = [];
+
+    const platformText =
+        normalizeNavitimePlatformText(
+            platform
+        );
+
+    if (platformText) {
+        items.push({
+            type: "platform",
+            label: rt(
+                "플랫폼",
+                "ホーム",
+                "Platform"
+            ),
+            text: platformText
+        });
+    }
+
+    const gatewayText =
+        normalizeNavitimeGatewayText(
+            gateway
+        );
+
+    if (gatewayText && gatewayRole) {
         const isEntrance =
-            role === "entrance";
+            gatewayRole === "entrance";
 
-        const isExit =
-            role === "exit";
-
-        return {
+        items.push({
             type:
                 isEntrance
                     ? "entrance"
-                    : isExit
-                        ? "exit"
-                        : "gateway",
-
-            text:
-                normalizedGateway,
+                    : "exit",
 
             label:
                 isEntrance
@@ -2511,34 +2593,20 @@ function getNavitimeStationAssistInfo({
                         "入口",
                         "Entrance"
                     )
-                    : isExit
-                        ? rt(
-                            "출구",
-                            "出口",
-                            "Exit"
-                        )
-                        : rt(
-                            "출입구",
-                            "出入口",
-                            "Entrance/Exit"
-                        )
-        };
+                    : rt(
+                        "출구",
+                        "出口",
+                        "Exit"
+                    ),
+
+            text:
+                gatewayText
+        });
     }
 
-    if (normalizedNumbering) {
-        return {
-            type: "numbering",
-            text: normalizedNumbering,
-            label: rt(
-                "역 번호",
-                "駅番号",
-                "Station No."
-            )
-        };
-    }
-
-    return null;
+    return items;
 }
+
 
 function normalizeNavitimeTransitRoute(route) {
     const summary =
