@@ -1253,17 +1253,37 @@ body.dark .auth-modal input:focus {
 body.dark .transport-tabs,
 body.dark .transport-tabs button,
 body.dark .place-action-button,
-body.dark .place-card button:not(.close-panel),
+body.dark .place-card button:not(.close-panel):not(.route-option):not(.simple-route-option):not(.route-back-button):not([data-transport]),
 body.dark .sidebar-footer button {
     color: #ddd6c9;
     background-color: #34312b;
 }
 
-body.dark .transport-tabs button.active,
 body.dark .place-action-button:hover,
-body.dark .place-card button:not(.close-panel):hover {
+body.dark .place-card button:not(.close-panel):not(.route-option):not(.simple-route-option):not(.route-back-button):not([data-transport]):hover {
     color: #2d2515;
     background-color: #d8ad35;
+}
+
+/* 위쪽 이동수단 탭: 선택된 것만 색칠 (경로 카드 hover와 분리) */
+body.dark .place-side-panel .transport-tabs button {
+    color: #ddd6c9;
+    background-color: #34312b;
+    border-color: #5a554b;
+}
+
+body.dark .place-side-panel .transport-tabs button i {
+    color: #d4b45a;
+}
+
+body.dark .place-side-panel .transport-tabs button.active {
+    color: #2d2515;
+    background-color: #d8ad35;
+    border-color: #efc84e;
+}
+
+body.dark .place-side-panel .transport-tabs button.active i {
+    color: #5b4026;
 }
 
 

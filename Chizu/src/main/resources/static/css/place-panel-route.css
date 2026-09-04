@@ -1414,6 +1414,10 @@ body:has(#routePanel.show) .place-side-panel #placeRouteButton:hover {
     color: #4f3a22;
 }
 
+.place-side-panel .place-route-panel .transport-tabs button.active i {
+    color: #5b4026;
+}
+
 .place-side-panel .place-route-panel #findRouteButton {
     width: 100%;
     height: 46px;
