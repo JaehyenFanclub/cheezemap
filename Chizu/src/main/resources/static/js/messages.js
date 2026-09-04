@@ -400,56 +400,92 @@ async function refreshOpenConversation() {
 }
 
 function startInlineMessageEdit(messageId, bubble) {
-    const item = messageConversationCache.find(row => Number(row.messageId) === Number(messageId));
+    const item = messageConversationCache.find(
+        row => Number(row.messageId) === Number(messageId)
+    );
+
     if (!item || !bubble) return;
 
     const parsed = splitBackendMessageContent(item.content);
     const text = getMessageActionText();
+
     bubble.classList.add("is-editing");
+
     bubble.innerHTML = `
         <form class="message-inline-edit" data-message-edit-form="${messageId}">
-            <label>
-                <span>${currentLanguage === "ja" ? "件名" : currentLanguage === "en" ? "Subject" : "제목"}</span>
-                <input type="text" name="subject" maxlength="80" value="${escapeGroupHtml(parsed.subject)}" required>
-            </label>
-            <label>
-                <span>${currentLanguage === "ja" ? "本文" : currentLanguage === "en" ? "Message" : "내용"}</span>
-                <textarea name="body" maxlength="1000" rows="4" required>${escapeGroupHtml(parsed.body)}</textarea>
-            </label>
+
+            <textarea
+                name="body"
+                maxlength="1000"
+                rows="4"
+                required
+            >${escapeGroupHtml(parsed.body)}</textarea>
+
             <div class="message-inline-edit-actions">
-                <button type="button" class="message-mini-button" data-message-edit-cancel>${text.cancel}</button>
-                <button type="submit" class="message-mini-button primary">${text.save}</button>
+                <button
+                    type="button"
+                    class="message-mini-button"
+                    data-message-edit-cancel
+                >${text.cancel}</button>
+
+                <button
+                    type="submit"
+                    class="message-mini-button primary"
+                >${text.save}</button>
             </div>
+
         </form>`;
 
-    bubble.querySelector('[name="subject"]')?.focus();
-    bubble.querySelector('[data-message-edit-cancel]')?.addEventListener("click", refreshOpenConversation);
-    bubble.querySelector('[data-message-edit-form]')?.addEventListener("submit", async event => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const subject = form.elements.subject?.value.trim();
-        const body = form.elements.body?.value.trim();
-        if (!subject || !body) {
-            showToast(text.subjectRequired);
-            return;
-        }
-        const submit = form.querySelector('button[type="submit"]');
-        if (submit) submit.disabled = true;
-        try {
-            await apiRequest(`/message/${messageId}/update`, {
-                method: "PUT",
-                auth: true,
-                body: { content: joinBackendMessageContent(subject, body) }
-            });
-            invalidateMessageTranslationCache(messageId);
-            showToast(text.editDone);
-            await refreshOpenConversation();
-        } catch (error) {
-            showToast(error.message);
-        } finally {
-            if (submit) submit.disabled = false;
-        }
-    });
+    bubble.querySelector('[name="body"]')?.focus();
+
+    bubble
+        .querySelector('[data-message-edit-cancel]')
+        ?.addEventListener("click", refreshOpenConversation);
+
+    bubble
+        .querySelector('[data-message-edit-form]')
+        ?.addEventListener("submit", async event => {
+
+            event.preventDefault();
+
+            const form = event.currentTarget;
+            const body = form.elements.body?.value.trim();
+
+            if (!body) {
+                showToast("쪽지 내용을 입력해 주세요.");
+                return;
+            }
+
+            const submit = form.querySelector('button[type="submit"]');
+
+            if (submit) submit.disabled = true;
+
+            try {
+
+                await apiRequest(`/message/${messageId}/update`, {
+                    method: "PUT",
+                    auth: true,
+                    body: {
+                        content: joinBackendMessageContent("쪽지", body)
+                    }
+                });
+
+                invalidateMessageTranslationCache(messageId);
+
+                showToast(text.editDone);
+
+                await refreshOpenConversation();
+
+            } catch (error) {
+
+                showToast(error.message);
+
+            } finally {
+
+                if (submit) submit.disabled = false;
+
+            }
+        });
 }
 
 async function deleteOwnMessage(messageId) {
@@ -706,7 +742,7 @@ async function openMessageConversation(userId, nickname) {
                         aria-label="보내기"
                         title="보내기"
                     >
-                        <i class="ti ti-send"></i>
+                        <i class="ti ti-mail"></i>
                     </button>
                 </form>
             </article>`;
