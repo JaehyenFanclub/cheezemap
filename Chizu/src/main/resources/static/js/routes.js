@@ -1207,17 +1207,10 @@ const NAVITIME_ROUTE_STROKE_WEIGHT = 6;
 const NAVITIME_WALK_DOT_SCALE = 3.6;
 const NAVITIME_WALK_DOT_REPEAT = "13px";
 
-const NAVITIME_TRANSIT_CONFIG = {
-    endpoint:
-        "https://navitime-route-totalnavi.p.rapidapi.com/route_transit",
-
-    // RapidAPI의 X-RapidAPI-Key 값을 여기에 넣으세요.
-    apiKey:
-        "96cd9d8512msh98fc1f6e9f54dd6p1fa3c6jsn78dc7efbfba2",
-
-    host:
-        "navitime-route-totalnavi.p.rapidapi.com"
-};
+/*
+    NAVITIME API 키 / RapidAPI Host / URL은 Spring backend에서만 관리합니다.
+    프론트는 /api/route/transit만 호출합니다.
+*/
 
 function getNavitimeLanguage() {
     return currentLanguage === "ko"
@@ -2832,22 +2825,6 @@ async function fetchNavitimeTransitRoutes(
     origin,
     destination
 ) {
-    const endpoint =
-        String(
-            NAVITIME_TRANSIT_CONFIG.endpoint ||
-            ""
-        ).trim();
-
-    if (!endpoint) {
-        throw new Error(
-            currentLanguage === "ko"
-                ? "NAVITIME API endpoint를 설정해주세요."
-                : currentLanguage === "ja"
-                    ? "NAVITIME API endpointを設定してください。"
-                    : "Set the NAVITIME API endpoint."
-        );
-    }
-
     const start =
         getNavitimePoint(origin);
 
@@ -2866,61 +2843,27 @@ async function fetchNavitimeTransitRoutes(
 
     const url =
         new URL(
-            endpoint,
+            "/api/route/transit",
             window.location.origin
         );
 
-    url.searchParams.set("start", start);
-    url.searchParams.set("goal", goal);
-    url.searchParams.set("datum", "wgs84");
-    url.searchParams.set("term", "1440");
-    url.searchParams.set("limit", "5");
     url.searchParams.set(
-        "start_time",
+        "start",
+        start
+    );
+
+    url.searchParams.set(
+        "goal",
+        goal
+    );
+
+    url.searchParams.set(
+        "startTime",
         getNavitimeStartTime()
     );
-    url.searchParams.set(
-        "coord_unit",
-        "degree"
-    );
-
-    // 지도에 실제 NAVITIME 경로를 그리기 위한 GeoJSON 형상
-    url.searchParams.set("shape", "true");
-    url.searchParams.set(
-        "shape_color",
-        "railway_line"
-    );
-
-    const apiKey =
-        String(
-            NAVITIME_TRANSIT_CONFIG.apiKey ||
-            ""
-        ).trim();
-
-    if (
-        !apiKey ||
-        apiKey === "YOUR_RAPIDAPI_KEY"
-    ) {
-        throw new Error(
-            currentLanguage === "ko"
-                ? "NAVITIME RapidAPI 키를 설정해주세요."
-                : currentLanguage === "ja"
-                    ? "NAVITIME RapidAPIキーを設定してください。"
-                    : "Set the NAVITIME RapidAPI key."
-        );
-    }
-
-    const headers = {
-        "Content-Type":
-            "application/json",
-        "x-rapidapi-host":
-            NAVITIME_TRANSIT_CONFIG.host,
-        "x-rapidapi-key":
-            apiKey
-    };
 
     console.log(
-        "========== NAVITIME TRANSIT 요청 =========="
+        "========== NAVITIME TRANSIT BACKEND 요청 =========="
     );
     console.log(
         "url =",
@@ -2932,7 +2875,10 @@ async function fetchNavitimeTransitRoutes(
             url.toString(),
             {
                 method: "GET",
-                headers
+                headers: {
+                    "Accept":
+                        "application/json"
+                }
             }
         );
 
@@ -2941,13 +2887,32 @@ async function fetchNavitimeTransitRoutes(
 
     if (!response.ok) {
         console.error(
-            "NAVITIME TRANSIT 오류 =",
+            "NAVITIME TRANSIT BACKEND 오류 =",
             response.status,
             responseText
         );
 
+        let errorMessage =
+            `NAVITIME TRANSIT ${response.status}`;
+
+        try {
+            const errorBody =
+                responseText
+                    ? JSON.parse(responseText)
+                    : null;
+
+            errorMessage =
+                String(
+                    errorBody?.message ||
+                    errorBody?.error ||
+                    errorMessage
+                );
+        } catch (_) {
+            // JSON이 아니면 기본 메시지 사용
+        }
+
         throw new Error(
-            `NAVITIME TRANSIT ${response.status}`
+            errorMessage
         );
     }
 
@@ -2960,14 +2925,14 @@ async function fetchNavitimeTransitRoutes(
                 : {};
     } catch (error) {
         console.error(
-            "NAVITIME 응답 JSON 파싱 실패:",
+            "NAVITIME backend 응답 JSON 파싱 실패:",
             responseText
         );
         throw error;
     }
 
     console.log(
-        "========== NAVITIME TRANSIT 응답 =========="
+        "========== NAVITIME TRANSIT BACKEND 응답 =========="
     );
     console.log(data);
 

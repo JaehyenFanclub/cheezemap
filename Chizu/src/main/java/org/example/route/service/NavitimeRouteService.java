@@ -60,6 +60,7 @@ public class NavitimeRouteService {
                 .queryParam("start_time", resolvedStartTime)
                 .queryParam("shape", "true")
                 .queryParam("shape_color", "railway_line")
+                .queryParam("term", 1440)
                 .queryParam("limit", 5)
                 .queryParam("order", "time_optimized")
                 .queryParam("datum", "wgs84")
