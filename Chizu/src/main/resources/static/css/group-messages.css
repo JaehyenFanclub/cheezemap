@@ -3020,8 +3020,11 @@ body.dark .message-conversation-bubble .place-review-translate-toggle:hover {
    - Google Places 검색
 ===================================================== */
 
+/* mr.eum수정부분 */
+/* 새 그룹 만들기 모달의 가로 스크롤 제거 */
 .group-form-modal {
     width: min(640px, calc(100vw - 36px));
+    overflow-x: hidden;
 }
 
 .group-place-options {
@@ -3222,11 +3225,14 @@ body.dark .message-conversation-bubble .place-review-translate-toggle:hover {
     background: #ffd85f;
 }
 
+/* mr.eum수정부분 */
+/* 장소 검색 결과의 불필요한 가로 스크롤 제거 */
 .group-picker-search-results {
     max-height: 225px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
+    overflow-x: hidden;
     overflow-y: auto;
     padding: 1px 3px 1px 1px;
 }
@@ -3911,3 +3917,97 @@ body.dark .message-my-profile-copy span {
         padding-top: 10px;
     }
 }
+
+/* mr.eum수정부분 */
+/* 새 그룹 만들기 - 장소 검색 카드의 체크박스가 잘리지 않도록 크기/영역 고정 */
+.group-picker-search-results .group-place-option,
+.group-picker-existing-places .group-place-option {
+    overflow: visible;
+}
+
+.group-picker-search-results .group-place-option .group-place-check,
+.group-picker-existing-places .group-place-option .group-place-check {
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+/* mr.eum수정부분 */
+/* 새 그룹 만들기 모달 및 장소 목록 스크롤바를 프로젝트 스타일에 맞게 통일 */
+.group-form-modal {
+    scrollbar-width: thin;
+    scrollbar-color: #c9a45a transparent;
+    overflow-x: hidden;
+}
+
+
+.group-form-modal::-webkit-scrollbar,
+.group-picker-existing-groups::-webkit-scrollbar,
+.group-picker-existing-places::-webkit-scrollbar,
+.group-picker-search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-form-modal::-webkit-scrollbar-track,
+.group-picker-existing-groups::-webkit-scrollbar-track,
+.group-picker-existing-places::-webkit-scrollbar-track,
+.group-picker-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb,
+.group-picker-existing-groups::-webkit-scrollbar-thumb,
+.group-picker-existing-places::-webkit-scrollbar-thumb,
+.group-picker-search-results::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c9a45a;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb:hover,
+.group-picker-existing-groups::-webkit-scrollbar-thumb:hover,
+.group-picker-existing-places::-webkit-scrollbar-thumb:hover,
+.group-picker-search-results::-webkit-scrollbar-thumb:hover {
+    background: #a98232;
+}
+
+/* mr.eum수정부분 */
+/* 다크모드 - 모달/장소 목록 스크롤바 */
+body.dark .group-form-modal {
+    scrollbar-color: #8e7335 transparent;
+}
+
+body.dark .group-form-modal::-webkit-scrollbar-track,
+body.dark .group-picker-existing-groups::-webkit-scrollbar-track,
+body.dark .group-picker-existing-places::-webkit-scrollbar-track,
+body.dark .group-picker-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+body.dark .group-form-modal::-webkit-scrollbar-thumb,
+body.dark .group-picker-existing-groups::-webkit-scrollbar-thumb,
+body.dark .group-picker-existing-places::-webkit-scrollbar-thumb,
+body.dark .group-picker-search-results::-webkit-scrollbar-thumb {
+    background: #8e7335;
+}
+
+body.dark .group-form-modal::-webkit-scrollbar-thumb:hover,
+body.dark .group-picker-existing-groups::-webkit-scrollbar-thumb:hover,
+body.dark .group-picker-existing-places::-webkit-scrollbar-thumb:hover,
+body.dark .group-picker-search-results::-webkit-scrollbar-thumb:hover {
+    background: #b0924d;
+}
+
+/* mr.eum수정부분 */
+/* 다크모드 체크박스가 배경과 섞이지 않도록 체크 영역 보정 */
+body.dark .group-picker-search-results .group-place-option .group-place-check,
+body.dark .group-picker-existing-places .group-place-option .group-place-check {
+    border-color: #625a4d;
+    background: #24221e;
+}
+
+body.dark .group-picker-search-results .group-place-option input:checked + .group-place-check,
+body.dark .group-picker-existing-places .group-place-option input:checked + .group-place-check {
+    border-color: #d9a92b;
+    color: #4b351d;
+    background: #f6c945;
+}
+
