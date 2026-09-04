@@ -1576,17 +1576,6 @@ body:has(#routePanel.show) .place-side-panel #placeRouteButton:hover {
     line-height: 1.55 !important;
 }
 
-.place-side-panel .transit-transfer-hint {
-    display: inline-block;
-    margin-top: 6px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--gray-200) 80%, transparent);
-    color: var(--gray-600);
-    font-size: 10px;
-    font-weight: 700;
-}
-
 .place-side-panel .transit-detail-station {
     min-height: 46px;
     padding-bottom: 8px;
@@ -2159,7 +2148,9 @@ body.dark .place-side-panel .place-content {
 
 /* mr.eum수정부분
    펼쳐졌을 때 화살표 */
-.place-side-panel .simple-route-option.expanded .simple-route-chevron {
+.place-side-panel
+.simple-route-option.expanded
+.simple-route-chevron {
     transform: rotate(180deg);
 }
 
@@ -2182,7 +2173,9 @@ body.dark .place-side-panel .place-content {
 
 
 /* mr.eum수정부분 */
-.place-side-panel .simple-route-option.expanded .simple-route-details {
+.place-side-panel
+.simple-route-option.expanded
+.simple-route-details {
     display: block;
 }
 
@@ -2200,7 +2193,8 @@ body.dark .place-side-panel .place-content {
 }
 
 
-.place-side-panel .simple-route-detail-header strong {
+.place-side-panel
+.simple-route-detail-header strong {
     font-size: 12px;
     font-weight: 800;
 }
@@ -2261,7 +2255,8 @@ body.dark .place-side-panel .place-content {
 
 
 /* mr.eum수정부분 */
-.place-side-panel .simple-route-alternatives-toggle > i {
+.place-side-panel
+.simple-route-alternatives-toggle > i {
     color: var(--gray-400);
 
     font-size: 14px;
@@ -2272,7 +2267,9 @@ body.dark .place-side-panel .place-content {
 
 
 /* mr.eum수정부분 */
-.place-side-panel .simple-route-alternatives-toggle.expanded > i {
+.place-side-panel
+.simple-route-alternatives-toggle.expanded
+> i {
     transform: rotate(180deg);
 }
 
@@ -2285,7 +2282,9 @@ body.dark .place-side-panel .place-content {
 
 /* mr.eum수정부분
    대안 카드 사이 간격 */
-.place-side-panel .simple-route-alternatives-list .simple-route-option {
+.place-side-panel
+.simple-route-alternatives-list
+.simple-route-option {
     margin-bottom: 10px;
 }
 
@@ -2305,7 +2304,8 @@ body.dark .place-side-panel .simple-route-option {
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel .simple-route-option.active {
+body.dark .place-side-panel
+.simple-route-option.active {
     background: #3a3528;
 
     border-color: #d8a900;
@@ -2313,25 +2313,29 @@ body.dark .place-side-panel .simple-route-option.active {
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel .simple-route-option .route-line {
+body.dark .place-side-panel
+.simple-route-option .route-line {
     background: #25231f;
 }
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel .simple-route-option .route-line-chips {
+body.dark .place-side-panel
+.simple-route-option .route-line-chips {
     color: #f5f2ea;
 }
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel .simple-route-details {
+body.dark .place-side-panel
+.simple-route-details {
     border-top-color: #4a4740;
 }
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel .simple-route-alternatives-toggle {
+body.dark .place-side-panel
+.simple-route-alternatives-toggle {
     background: #2e2c27;
 
     border-color: #4a4740;
@@ -2341,7 +2345,8 @@ body.dark .place-side-panel .simple-route-alternatives-toggle {
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel .simple-route-alternatives-toggle:hover {
+body.dark .place-side-panel
+.simple-route-alternatives-toggle:hover {
     background: #3a3528;
 
     border-color: #d8a900;
@@ -3056,7 +3061,6 @@ body.review-photo-viewer-open {
    리뷰 내용과 더보기 버튼을 하나의 영역으로 묶습니다.
 */
 .place-review-content-wrap {
-    margin-top: 10px;
     width: 100%;
     box-sizing: border-box;
 }
@@ -3084,17 +3088,16 @@ body.review-photo-viewer-open {
 
 .place-review-content.review-content-collapsed {
     display: -webkit-box;
+
     width: 100%;
     margin: 0;
 
-    /* mr.eum수정부분 */
-    /* 리뷰 본문 글씨 크기 조정 */
-    font-size: 14px;
-
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
+
     overflow: hidden;
     text-overflow: ellipsis;
+
     white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
@@ -3102,14 +3105,12 @@ body.review-photo-viewer-open {
 
 .place-review-content:not(.review-content-collapsed) {
     display: block;
+
     width: 100%;
     margin: 0;
 
-    /* mr.eum수정부분 */
-    /* 펼쳐진 리뷰 본문도 동일한 글씨 크기 유지 */
-    font-size: 14px;
-
     overflow: visible;
+
     white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
@@ -3122,17 +3123,14 @@ body.review-photo-viewer-open {
 
    더보기 버튼이 반드시 보이도록 합니다.
 */
-/* mr.eum수정부분 */
-/* 리뷰 본문보다 더보기 버튼이 튀지 않도록 크기와 굵기 조정 */
 .place-review-more-button {
     display: inline-block;
-    margin-top: 4px;
+    margin-top: 6px;
     padding: 0;
     border: 0;
     background: transparent;
-    font-size: 11px;
-    font-weight: 500;
-    color: inherit;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     text-decoration: underline;
 }
@@ -3258,43 +3256,20 @@ body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
     margin-top: 8px;
 }
 
-/* =====================================================
-   mr.eum수정부분
-   리뷰 번역 버튼을 오른쪽으로 이동
-===================================================== */
-
 .place-review-translate-toggle {
-
-    display: flex;
-
+    display: inline-flex;
     align-items: center;
-
-    width: fit-content;
-
-    margin-left: auto;
-
     gap: 5px;
-
     min-height: 30px;
-
     padding: 5px 9px;
-
     border: 1px solid #e7dfd1;
-
     border-radius: 9px;
-
     background: #fffdf8;
-
     color: #6d6253;
-
     font: inherit;
-
     font-size: 12px;
-
     font-weight: 700;
-
     cursor: pointer;
-
 }
 
 .place-review-translate-toggle:hover {
@@ -3303,29 +3278,16 @@ body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
 }
 
 .place-review-translate-menu {
-
     position: absolute;
-
     z-index: 30;
-
     top: calc(100% + 5px);
-
-    /* mr.eum수정부분 */
-    right: 0;
-    left: auto;
-
+    left: 0;
     min-width: 130px;
-
     padding: 5px;
-
     border: 1px solid #e4dac9;
-
     border-radius: 11px;
-
     background: #ffffff;
-
     box-shadow: 0 10px 28px rgba(45, 37, 24, 0.14);
-
 }
 
 .place-review-translate-option {
@@ -3433,42 +3395,1493 @@ body.dark .place-review-translated-text {
     color: #f1ece2;
 }
 
-/* mr.eum수정부분 */
-/* 길안내 카드 hover 시 상태 변화 완전히 제거 */
-.place-side-panel .simple-route-option:hover,
-.place-side-panel .transit-route-option:hover {
-    background-color: inherit !important;
-    color: inherit !important;
-    box-shadow: inherit !important;
-    border-color: inherit !important;
-    opacity: inherit !important;
-    filter: none !important;
-    transform: none !important;
+
+/* =====================================================
+   CHEESE MAP × NAVITIME 대중교통 상세 디자인
+===================================================== */
+
+.place-side-panel .simple-route-option {
+    position: relative;
 }
 
-/* mr.eum수정부분 */
-/* 이미 선택된 길안내 경로는 마우스를 올려도 선택 상태(노란색 테두리)를 유지 */
-.place-side-panel .simple-route-option.active:hover,
-.place-side-panel .transit-route-option.active:hover {
-    border-color: var(--yellow-dark) !important;
+.place-side-panel .simple-route-option.active {
+    border-color: #d9ad2f;
+    background:
+        linear-gradient(
+            180deg,
+            #fff9e7 0%,
+            #fffdf7 100%
+        );
 }
 
-/* mr.eum수정부분 */
-/* 선택된 길안내 경로는 hover해도 선택 상태의 배경색을 유지 */
-body.dark .place-side-panel .simple-route-option.active:hover,
-body.dark .place-side-panel .transit-route-option.active:hover {
-    background: #393329 !important;
+.place-side-panel .simple-route-option .route-line {
+    border: 1px solid rgba(216, 174, 55, 0.18);
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255, 232, 145, 0.42),
+            rgba(255, 248, 221, 0.72)
+        );
 }
 
-/* mr.eum수정부분 */
-/* 선택된 길찾기의 길안내 본문 글씨를 hover해도 고정 */
-body.dark .place-side-panel .simple-route-option.active:hover .walking-step-instruction {
-    color: #f5f2ea !important;
+.place-side-panel .simple-route-option .route-mode-icon {
+    box-shadow:
+        inset 0 0 0 1px rgba(120, 87, 23, 0.08);
 }
 
-/* mr.eum수정부분 */
-/* 선택된 길찾기의 거리 글씨를 hover해도 고정 */
-body.dark .place-side-panel .simple-route-option.active:hover .walking-step-distance {
-    color: #d1cdc3 !important;
+.place-side-panel .simple-route-option .route-line-chips > span {
+    color: #423721;
+    font-weight: 800;
 }
 
+.place-side-panel .cheese-transit-detail {
+    margin-top: 2px;
+}
+
+.place-side-panel .cheese-transit-overview {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto
+        minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+
+    margin-bottom: 10px;
+    padding: 10px 11px;
+
+    border: 1px solid rgba(216, 174, 55, 0.24);
+    border-radius: 12px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #fff7d7,
+            #fffdf7
+        );
+}
+
+.place-side-panel .cheese-transit-overview > div {
+    min-width: 0;
+}
+
+.place-side-panel .cheese-transit-overview > div:nth-child(3) {
+    text-align: right;
+}
+
+.place-side-panel .cheese-transit-overview span {
+    display: block;
+    margin-bottom: 2px;
+
+    color: #9a855b;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .cheese-transit-overview strong {
+    display: block;
+
+    color: #332b1f;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+
+.place-side-panel .cheese-transit-overview > i {
+    color: #b79442;
+    font-size: 13px;
+}
+
+.place-side-panel .cheese-transit-overview .cheese-transit-overview-fare {
+    grid-column: 1 / -1;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 3px;
+    padding-top: 8px;
+
+    border-top: 1px dashed rgba(171, 139, 68, 0.24);
+
+    text-align: left;
+}
+
+.place-side-panel .cheese-transit-overview .cheese-transit-overview-fare span {
+    margin: 0;
+}
+
+.place-side-panel .cheese-transit-overview .cheese-transit-overview-fare strong {
+    color: #a87600;
+    font-size: 13px;
+}
+
+.place-side-panel .cheese-transit-walk-total {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    margin-bottom: 11px;
+    padding: 6px 9px;
+
+    border-radius: 9px;
+
+    background: #f6f2e8;
+    color: #796d59;
+
+    font-size: 9px;
+    font-weight: 750;
+}
+
+.place-side-panel .cheese-transit-walk-total i {
+    color: #a1834b;
+    font-size: 12px;
+}
+
+.place-side-panel .cheese-transit-timeline {
+    display: block;
+}
+
+.place-side-panel .cheese-transit-section {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 8px;
+
+    position: relative;
+}
+
+.place-side-panel .cheese-transit-section + .cheese-transit-section {
+    margin-top: 3px;
+}
+
+.place-side-panel .cheese-transit-rail {
+    position: relative;
+    min-height: 100%;
+}
+
+.place-side-panel .cheese-transit-node {
+    position: relative;
+    z-index: 2;
+
+    display: grid;
+    place-items: center;
+
+    width: 24px;
+    height: 24px;
+
+    border: 2px solid #d7ac38;
+    border-radius: 50%;
+
+    background: #fffdf7;
+    color: #8c6b1f;
+
+    font-size: 11px;
+
+    box-shadow: 0 2px 6px rgba(82, 62, 24, 0.08);
+}
+
+.place-side-panel .cheese-transit-section.walk .cheese-transit-node {
+    border-color: #b8aea0;
+    color: #756c60;
+}
+
+.place-side-panel .cheese-transit-rail-line {
+    position: absolute;
+    z-index: 1;
+
+    top: 24px;
+    bottom: -8px;
+    left: 11px;
+
+    width: 2px;
+
+    border-radius: 999px;
+    background: #d8b651;
+}
+
+.place-side-panel .cheese-transit-rail-line.dotted {
+    width: 0;
+    border-left: 2px dotted #b8aea0;
+    background: transparent;
+}
+
+.place-side-panel .cheese-transit-section-body {
+    min-width: 0;
+    padding-bottom: 13px;
+}
+
+.place-side-panel .cheese-transit-point {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    min-width: 0;
+    min-height: 24px;
+}
+
+.place-side-panel .cheese-transit-point strong {
+    min-width: 0;
+
+    color: #302a20;
+    font-size: 11px;
+    font-weight: 900;
+
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .cheese-transit-point em {
+    display: inline-grid;
+    place-items: center;
+
+    min-width: 24px;
+    height: 20px;
+    padding: 0 5px;
+
+    border: 1px solid #e0d8ca;
+    border-radius: 6px;
+
+    background: #fff;
+    color: #564c3e;
+
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-clock {
+    flex: 0 0 34px;
+
+    color: #9c885e;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-move-card {
+    margin: 5px 0 7px;
+    padding: 9px 10px;
+
+    border: 1px solid #ece4d5;
+    border-left: 4px solid #e2b942;
+    border-radius: 11px;
+
+    background: #fff;
+
+    box-shadow: 0 3px 10px rgba(69, 56, 35, 0.04);
+}
+
+.place-side-panel .cheese-transit-section.walk .cheese-transit-move-card {
+    border-left-style: dashed;
+    border-left-color: #a99f90;
+    background: #fbfaf7;
+}
+
+.place-side-panel .cheese-transit-move-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.place-side-panel .cheese-transit-mode {
+    display: grid;
+    place-items: center;
+
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+
+    border-radius: 8px;
+
+    background: #fff2bd;
+    color: #7d5d13;
+
+    font-size: 14px;
+}
+
+.place-side-panel .cheese-transit-section.walk .cheese-transit-mode {
+    background: #efede8;
+    color: #71695d;
+}
+
+.place-side-panel .cheese-transit-move-main > div {
+    min-width: 0;
+}
+
+.place-side-panel .cheese-transit-move-main strong {
+    display: block;
+
+    color: #342c20;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.4;
+
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .cheese-transit-move-main span,
+.place-side-panel .cheese-transit-move-main small {
+    display: block;
+
+    margin-top: 2px;
+
+    color: #7f7566;
+    font-size: 9px;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.place-side-panel .cheese-transit-move-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+
+    margin-top: 8px;
+}
+
+.place-side-panel .cheese-transit-move-meta span,
+.place-side-panel .cheese-transit-move-meta b {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 21px;
+    padding: 0 7px;
+
+    border-radius: 999px;
+
+    background: #f5f1e8;
+    color: #6e6252;
+
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .cheese-transit-move-meta b {
+    background: #fff0ad;
+    color: #875f00;
+}
+
+.place-side-panel .cheese-transit-transfer {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    margin: 4px 0 2px;
+    padding: 4px 7px;
+
+    border: 1px solid rgba(215, 172, 56, 0.3);
+    border-radius: 999px;
+
+    background: #fff8dc;
+    color: #886917;
+
+    font-size: 8px;
+    font-weight: 900;
+}
+
+.place-side-panel .transit-fare {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 11px;
+    padding: 9px 11px;
+
+    border: 1px solid rgba(215, 172, 56, 0.28);
+    border-radius: 11px;
+
+    background: #fff8dd;
+}
+
+.place-side-panel .transit-fare-label {
+    color: #806c43;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.place-side-panel .transit-fare-price {
+    color: #9b6b00;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+/* NAVITIME 상세가 simple-route-option 안에서도 정상적으로 펼쳐지게 */
+.place-side-panel
+.simple-route-option.expanded
+.cheese-transit-detail {
+    display: block;
+}
+
+/* Dark */
+body.dark .place-side-panel .simple-route-option.active {
+    border-color: #8e7335;
+    background:
+        linear-gradient(
+            180deg,
+            #353026,
+            #2e2b25
+        );
+}
+
+body.dark .place-side-panel .simple-route-option .route-line {
+    border-color: #5d5135;
+    background: #393329;
+}
+
+body.dark .place-side-panel .simple-route-option .route-line-chips > span,
+body.dark .place-side-panel .cheese-transit-point strong,
+body.dark .place-side-panel .cheese-transit-move-main strong,
+body.dark .place-side-panel .cheese-transit-overview strong {
+    color: #f2ebdd;
+}
+
+body.dark .place-side-panel .cheese-transit-overview,
+body.dark .place-side-panel .cheese-transit-move-card,
+body.dark .place-side-panel .transit-fare {
+    border-color: #504a40;
+    background: #302d27;
+}
+
+body.dark .place-side-panel .cheese-transit-node {
+    border-color: #a7873c;
+    background: #2e2b25;
+    color: #e3c574;
+}
+
+body.dark .place-side-panel .cheese-transit-point em {
+    border-color: #555047;
+    background: #292722;
+    color: #ddd5c7;
+}
+
+body.dark .place-side-panel .cheese-transit-move-main span,
+body.dark .place-side-panel .cheese-transit-move-main small,
+body.dark .place-side-panel .cheese-transit-clock {
+    color: #bdb4a5;
+}
+
+body.dark .place-side-panel .cheese-transit-walk-total,
+body.dark .place-side-panel .cheese-transit-move-meta span {
+    background: #39362f;
+    color: #c8bfae;
+}
+
+
+/* =====================================================
+   NAVITIME 상세 - Google Maps 스타일로 간결화
+   기존 CHEESE MAP 톤은 유지하되 정보 밀도를 낮춥니다.
+===================================================== */
+
+.place-side-panel .cheese-transit-detail.googlelike {
+    margin-top: 4px;
+}
+
+.place-side-panel .cheese-transit-overview.compact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    margin: 0 0 10px;
+    padding: 8px 10px;
+
+    border: 0;
+    border-radius: 10px;
+
+    background: rgba(255, 248, 220, 0.72);
+}
+
+.place-side-panel .cheese-transit-timepair {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.place-side-panel .cheese-transit-timepair strong {
+    color: #302a20;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-timepair span {
+    color: #aa8a3b;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-walk-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    color: #7b705f;
+    font-size: 8px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.place-side-panel .cheese-transit-walk-summary i {
+    font-size: 11px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike {
+    display: block;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-section {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 7px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-node {
+    width: 20px;
+    height: 20px;
+
+    border-width: 1.5px;
+    font-size: 9px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-rail-line {
+    top: 20px;
+    left: 9px;
+    bottom: -4px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-section-body {
+    padding-bottom: 9px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-point {
+    min-height: 20px;
+    gap: 5px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-clock {
+    flex-basis: 32px;
+    font-size: 8px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-point strong {
+    font-size: 10px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-point em {
+    min-width: 22px;
+    height: 18px;
+    padding: 0 4px;
+
+    font-size: 7px;
+}
+
+.place-side-panel .cheese-transit-walk-row,
+.place-side-panel .cheese-transit-ride-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    margin: 4px 0 6px;
+    padding: 7px 9px;
+
+    border-radius: 9px;
+}
+
+.place-side-panel .cheese-transit-walk-row {
+    justify-content: flex-start;
+
+    border: 0;
+    background: #f5f2ec;
+    color: #71685b;
+}
+
+.place-side-panel .cheese-transit-walk-row i {
+    font-size: 11px;
+}
+
+.place-side-panel .cheese-transit-walk-row strong {
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-walk-row span {
+    color: #847a6c;
+    font-size: 8px;
+    font-weight: 750;
+}
+
+.place-side-panel .cheese-transit-ride-row {
+    border: 1px solid #e9e1d2;
+    background: #fff;
+}
+
+.place-side-panel .cheese-transit-ride-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+
+    min-width: 0;
+}
+
+.place-side-panel .cheese-transit-ride-main > div {
+    min-width: 0;
+}
+
+.place-side-panel .cheese-transit-ride-main strong {
+    display: block;
+
+    color: #342d22;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.35;
+
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .cheese-transit-ride-main span,
+.place-side-panel .cheese-transit-ride-main small {
+    display: block;
+
+    margin-top: 2px;
+
+    color: #807568;
+    font-size: 8px;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.place-side-panel .cheese-transit-ride-row .cheese-transit-mode {
+    flex-basis: 24px;
+    width: 24px;
+    height: 24px;
+
+    border-radius: 7px;
+    font-size: 12px;
+}
+
+.place-side-panel .cheese-transit-ride-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    flex: 0 0 auto;
+}
+
+.place-side-panel .cheese-transit-ride-meta span,
+.place-side-panel .cheese-transit-ride-meta b {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 20px;
+    padding: 0 6px;
+
+    border-radius: 999px;
+
+    font-size: 8px;
+    font-weight: 850;
+}
+
+.place-side-panel .cheese-transit-ride-meta span {
+    background: #f3efe7;
+    color: #6f6557;
+}
+
+.place-side-panel .cheese-transit-ride-meta b {
+    background: #fff0ae;
+    color: #8b6500;
+}
+
+.place-side-panel .cheese-transit-transfer {
+    margin: 2px 0 4px;
+    padding: 3px 6px;
+
+    font-size: 7px;
+}
+
+.place-side-panel .transit-fare.total-only {
+    margin-top: 10px;
+    padding: 9px 10px;
+
+    border: 0;
+    border-top: 1px dashed rgba(188, 151, 55, 0.3);
+    border-radius: 0;
+
+    background: transparent;
+}
+
+.place-side-panel .transit-fare.total-only .transit-fare-label {
+    font-size: 9px;
+}
+
+.place-side-panel .transit-fare.total-only .transit-fare-price {
+    font-size: 13px;
+}
+
+/* 기존 과한 카드형 레이아웃 숨김/무력화 */
+.place-side-panel .cheese-transit-detail.googlelike .cheese-transit-move-card,
+.place-side-panel .cheese-transit-detail.googlelike .cheese-transit-overview-fare,
+.place-side-panel .cheese-transit-detail.googlelike .cheese-transit-walk-total {
+    display: none;
+}
+
+/* Dark */
+body.dark .place-side-panel .cheese-transit-overview.compact {
+    background: #353128;
+}
+
+body.dark .place-side-panel .cheese-transit-timepair strong {
+    color: #f0e9dc;
+}
+
+body.dark .place-side-panel .cheese-transit-walk-summary,
+body.dark .place-side-panel .cheese-transit-walk-row {
+    color: #c1b7a7;
+}
+
+body.dark .place-side-panel .cheese-transit-walk-row {
+    background: #37342e;
+}
+
+body.dark .place-side-panel .cheese-transit-ride-row {
+    border-color: #4b463e;
+    background: #2d2a25;
+}
+
+body.dark .place-side-panel .cheese-transit-ride-main strong {
+    color: #f1eadf;
+}
+
+body.dark .place-side-panel .cheese-transit-ride-main span,
+body.dark .place-side-panel .cheese-transit-ride-main small {
+    color: #bbb1a1;
+}
+
+body.dark .place-side-panel .cheese-transit-ride-meta span {
+    background: #3a362f;
+    color: #d0c6b5;
+}
+
+
+/* =====================================================
+   NAVITIME 경로 카드 상단 요약 - Google Maps식 간결화
+   도보 세부는 상단 요약에서 제외하고 출발→도착 + 이용 노선만 표시
+===================================================== */
+
+.place-side-panel .route-line-chips {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+}
+
+.place-side-panel .route-line-primary {
+    display: block;
+    max-width: 100%;
+
+    color: #342d22;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.35;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.place-side-panel .route-line-secondary {
+    display: block;
+    max-width: 100%;
+
+    color: #877b68;
+    font-size: 8px;
+    font-weight: 750;
+    line-height: 1.35;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+body.dark .place-side-panel .route-line-primary {
+    color: #f1eadf;
+}
+
+body.dark .place-side-panel .route-line-secondary {
+    color: #bbb09e;
+}
+
+
+/* =====================================================
+   NAVITIME 노선색 / 환승 가독성 개선
+===================================================== */
+
+.place-side-panel .navitime-route-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 7px 0 10px;
+    margin-bottom: 4px;
+
+    border-bottom: 1px solid #eee7da;
+}
+
+.place-side-panel .navitime-route-head strong {
+    color: #302a20;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-route-head > span {
+    color: #a98835;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-route-head small {
+    margin-left: auto;
+
+    color: #807564;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .navitime-route-steps {
+    padding-top: 4px;
+}
+
+.place-side-panel .navitime-step {
+    display: grid;
+    grid-template-columns:
+        34px
+        24px
+        minmax(0, 1fr);
+    gap: 5px;
+
+    position: relative;
+}
+
+.place-side-panel .navitime-step + .navitime-step {
+    margin-top: 1px;
+}
+
+.place-side-panel .navitime-step-time {
+    padding-top: 2px;
+
+    color: #877b69;
+    font-size: 8px;
+    font-weight: 850;
+    text-align: right;
+}
+
+.place-side-panel .navitime-step-line {
+    position: relative;
+    min-height: 100%;
+}
+
+.place-side-panel .navitime-step-dot {
+    position: relative;
+    z-index: 2;
+
+    display: grid;
+    place-items: center;
+
+    width: 20px;
+    height: 20px;
+
+    border-radius: 50%;
+
+    background: #fff;
+    font-size: 9px;
+}
+
+.place-side-panel .navitime-step-dot.transit {
+    border: 2px solid var(--navitime-line-color, #5B8DEF);
+    color: var(--navitime-line-color, #5B8DEF);
+}
+
+.place-side-panel .navitime-step-dot.walk {
+    border: 1.5px solid #aaa194;
+    color: #81776a;
+}
+
+.place-side-panel .navitime-step-connector {
+    position: absolute;
+
+    top: 20px;
+    bottom: -7px;
+    left: 9px;
+}
+
+.place-side-panel .navitime-step-connector.transit {
+    width: 3px;
+
+    border-radius: 999px;
+    background:
+        var(--navitime-line-color, #5B8DEF);
+}
+
+.place-side-panel .navitime-step-connector.walk {
+    width: 0;
+
+    border-left: 2px dotted #aaa194;
+}
+
+.place-side-panel .navitime-step-content {
+    min-width: 0;
+    padding-bottom: 12px;
+}
+
+.place-side-panel .navitime-step-place,
+.place-side-panel .navitime-station-row strong,
+.place-side-panel .navitime-arrival strong {
+    color: #312b21;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-station-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    min-height: 20px;
+}
+
+.place-side-panel .navitime-station-row em,
+.place-side-panel .navitime-arrival em {
+    display: inline-grid;
+    place-items: center;
+
+    min-width: 22px;
+    height: 18px;
+    padding: 0 4px;
+
+    border: 1px solid #ded6c8;
+    border-radius: 5px;
+
+    background: #fff;
+
+    color: #62594d;
+    font-size: 7px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-line-card {
+    display: grid;
+    grid-template-columns:
+        5px
+        minmax(0, 1fr)
+        auto;
+    gap: 8px;
+
+    align-items: stretch;
+
+    margin: 5px 0 6px;
+    padding: 8px 9px 8px 7px;
+
+    border: 1px solid #e7dfd2;
+    border-radius: 9px;
+
+    background: #fff;
+}
+
+.place-side-panel .navitime-line-swatch {
+    width: 5px;
+    min-height: 100%;
+
+    border-radius: 999px;
+
+    background:
+        var(--navitime-line-color, #5B8DEF);
+}
+
+.place-side-panel .navitime-line-main {
+    min-width: 0;
+}
+
+.place-side-panel .navitime-line-main strong {
+    display: block;
+
+    color: #322c22;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.35;
+
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .navitime-line-main span,
+.place-side-panel .navitime-line-main small {
+    display: block;
+
+    margin-top: 2px;
+
+    color: #7e7466;
+    font-size: 8px;
+    font-weight: 650;
+    line-height: 1.3;
+}
+
+.place-side-panel .navitime-line-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    align-self: center;
+}
+
+.place-side-panel .navitime-line-meta span,
+.place-side-panel .navitime-line-meta b {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 19px;
+    padding: 0 6px;
+
+    border-radius: 999px;
+
+    font-size: 8px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.place-side-panel .navitime-line-meta span {
+    background: #f2eee7;
+    color: #6f665a;
+}
+
+.place-side-panel .navitime-line-meta b {
+    background: #fff0ab;
+    color: #8a6200;
+}
+
+.place-side-panel .navitime-arrival {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    min-height: 20px;
+
+    color: #867a69;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .navitime-arrival > span:first-child {
+    flex: 0 0 auto;
+}
+
+.place-side-panel .navitime-transfer-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    margin: 3px 0 0;
+    padding: 3px 6px;
+
+    border: 1px solid #e3d9c7;
+    border-radius: 999px;
+
+    background: #faf6ee;
+
+    color: #746958;
+    font-size: 7px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-walk-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    margin: 5px 0 6px;
+    padding: 5px 7px;
+
+    border-radius: 8px;
+
+    background: #f4f1eb;
+    color: #746b5e;
+
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .navitime-walk-summary i {
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-walk-summary span + span {
+    color: #948979;
+}
+
+/* Dark mode */
+body.dark .place-side-panel .navitime-route-head {
+    border-bottom-color: #48433b;
+}
+
+body.dark .place-side-panel .navitime-route-head strong,
+body.dark .place-side-panel .navitime-step-place,
+body.dark .place-side-panel .navitime-station-row strong,
+body.dark .place-side-panel .navitime-arrival strong,
+body.dark .place-side-panel .navitime-line-main strong {
+    color: #f2ebdf;
+}
+
+body.dark .place-side-panel .navitime-line-card {
+    border-color: #4c463d;
+    background: #2e2b26;
+}
+
+body.dark .place-side-panel .navitime-line-main span,
+body.dark .place-side-panel .navitime-line-main small,
+body.dark .place-side-panel .navitime-step-time,
+body.dark .place-side-panel .navitime-arrival {
+    color: #bdb3a3;
+}
+
+body.dark .place-side-panel .navitime-station-row em,
+body.dark .place-side-panel .navitime-arrival em {
+    border-color: #565047;
+    background: #292722;
+    color: #ddd4c5;
+}
+
+body.dark .place-side-panel .navitime-transfer-row,
+body.dark .place-side-panel .navitime-walk-summary {
+    border-color: #4d473f;
+    background: #38342e;
+    color: #c5bbab;
+}
+
+
+/* =====================================================
+   NAVITIME SIMPLE FINAL
+   - 노선색 중심
+   - 장식 최소화
+   - 글자 크기 확대
+===================================================== */
+
+.place-side-panel .navitime-route-head {
+    padding: 9px 0 11px;
+}
+
+.place-side-panel .navitime-route-head strong {
+    font-size: 14px;
+}
+
+.place-side-panel .navitime-route-head small {
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-step {
+    grid-template-columns:
+        40px
+        25px
+        minmax(0, 1fr);
+    gap: 7px;
+}
+
+.place-side-panel .navitime-step-time {
+    padding-top: 3px;
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-step-dot {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-step-connector {
+    top: 22px;
+    left: 10px;
+}
+
+.place-side-panel .navitime-step-connector.transit {
+    width: 4px;
+}
+
+.place-side-panel .navitime-step-connector.walk {
+    border-left-width: 2px;
+}
+
+.place-side-panel .navitime-step-content {
+    padding-bottom: 14px;
+}
+
+.place-side-panel .navitime-step-place,
+.place-side-panel .navitime-station-row strong,
+.place-side-panel .navitime-arrival strong {
+    font-size: 12px;
+}
+
+.place-side-panel .navitime-station-row {
+    min-height: 22px;
+}
+
+.place-side-panel .navitime-station-row em,
+.place-side-panel .navitime-arrival em {
+    min-width: 25px;
+    height: 20px;
+    font-size: 8px;
+}
+
+/* 노선 카드: 박스 장식 줄이고 왼쪽 노선색만 강조 */
+.place-side-panel .navitime-line-card {
+    grid-template-columns:
+        5px
+        minmax(0, 1fr)
+        auto;
+    gap: 9px;
+
+    margin: 7px 0;
+    padding: 8px 7px;
+
+    border: 0;
+    border-radius: 7px;
+
+    background: transparent;
+    box-shadow: none;
+}
+
+.place-side-panel .navitime-line-swatch {
+    width: 5px;
+    border-radius: 999px;
+}
+
+.place-side-panel .navitime-line-main strong {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.place-side-panel .navitime-line-main span,
+.place-side-panel .navitime-line-main small {
+    margin-top: 3px;
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-line-meta {
+    gap: 5px;
+}
+
+.place-side-panel .navitime-line-meta span,
+.place-side-panel .navitime-line-meta b {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 9px;
+}
+
+.place-side-panel .navitime-line-meta span {
+    background: #f3f1ec;
+}
+
+/* 실제 운임만 노란 pill */
+.place-side-panel .navitime-line-meta b {
+    background: #fff0aa;
+    color: #805900;
+}
+
+.place-side-panel .navitime-arrival {
+    min-height: 22px;
+    font-size: 10px;
+}
+
+/* 환승은 카드보다 작은 텍스트 행 */
+.place-side-panel .navitime-transfer-row {
+    margin: 4px 0 2px;
+    padding: 0;
+
+    border: 0;
+    border-radius: 0;
+
+    background: transparent;
+
+    color: #8a7a62;
+    font-size: 9px;
+}
+
+.place-side-panel .navitime-transfer-row i {
+    font-size: 11px;
+}
+
+/* 도보도 단순 텍스트형 */
+.place-side-panel .navitime-walk-summary {
+    gap: 6px;
+
+    margin: 6px 0;
+    padding: 4px 0;
+
+    border-radius: 0;
+
+    background: transparent;
+
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-walk-summary i {
+    font-size: 12px;
+}
+
+.place-side-panel .transit-fare.total-only {
+    margin-top: 12px;
+    padding-top: 11px;
+}
+
+.place-side-panel .transit-fare.total-only .transit-fare-label {
+    font-size: 10px;
+}
+
+.place-side-panel .transit-fare.total-only .transit-fare-price {
+    font-size: 15px;
+}
+
+/* 상단 요약도 조금 키움 */
+.place-side-panel .route-line-primary {
+    font-size: 11px;
+}
+
+.place-side-panel .route-line-secondary {
+    font-size: 10px;
+}
+
+/* Dark */
+body.dark .place-side-panel .navitime-line-card {
+    background: transparent;
+    border: 0;
+}
+
+body.dark .place-side-panel .navitime-transfer-row,
+body.dark .place-side-panel .navitime-walk-summary {
+    background: transparent;
+    border: 0;
+}
+
+
+/* =====================================================
+   NAVITIME 승강장 / 출구 우선 표시
+   우선순위: 승강장 > 출구 > 역 번호
+===================================================== */
+
+.place-side-panel .navitime-station-assist {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    min-height: 22px;
+    padding: 0 7px;
+
+    border: 1px solid #ded7cb;
+    border-radius: 6px;
+
+    background: #fff;
+}
+
+.place-side-panel .navitime-station-assist small {
+    color: #8a8072;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .navitime-station-assist b {
+    color: #41392f;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-station-assist.platform {
+    border-color: rgba(91, 141, 239, 0.28);
+    background: rgba(91, 141, 239, 0.07);
+}
+
+.place-side-panel .navitime-station-assist.platform b {
+    color: #3f6fce;
+}
+
+.place-side-panel .navitime-station-assist.gateway {
+    border-color: rgba(214, 170, 49, 0.3);
+    background: rgba(255, 239, 178, 0.38);
+}
+
+.place-side-panel .navitime-station-assist.gateway b {
+    color: #8b6500;
+}
+
+.place-side-panel .navitime-station-assist.numbering {
+    padding: 0 6px;
+    background: transparent;
+}
+
+.place-side-panel .navitime-station-assist.numbering small {
+    display: none;
+}
+
+body.dark .place-side-panel .navitime-station-assist {
+    border-color: #504a42;
+    background: #2e2b26;
+}
+
+body.dark .place-side-panel .navitime-station-assist.platform {
+    border-color: rgba(111, 157, 245, 0.38);
+    background: rgba(75, 118, 201, 0.12);
+}
+
+body.dark .place-side-panel .navitime-station-assist.platform b {
+    color: #8eb2f7;
+}
+
+body.dark .place-side-panel .navitime-station-assist.gateway {
+    border-color: rgba(214, 170, 49, 0.35);
+    background: rgba(166, 125, 22, 0.12);
+}
+
+body.dark .place-side-panel .navitime-station-assist.gateway b {
+    color: #e1c36f;
+}
+
+
+/* =====================================================
+   NAVITIME 출입구 방향 구분
+   도보→대중교통 = 입구 / 대중교통→도보 = 출구
+===================================================== */
+
+.place-side-panel .navitime-station-assist.entrance,
+.place-side-panel .navitime-station-assist.exit {
+    background: transparent;
+}
+
+.place-side-panel .navitime-station-assist.entrance {
+    border-color: rgba(34, 154, 94, 0.30);
+}
+
+.place-side-panel .navitime-station-assist.entrance small,
+.place-side-panel .navitime-station-assist.entrance b {
+    color: #268455;
+}
+
+.place-side-panel .navitime-station-assist.exit {
+    border-color: rgba(208, 155, 34, 0.34);
+}
+
+.place-side-panel .navitime-station-assist.exit small,
+.place-side-panel .navitime-station-assist.exit b {
+    color: #916a10;
+}
+
+body.dark .place-side-panel .navitime-station-assist.entrance {
+    border-color: rgba(76, 190, 124, 0.38);
+}
+
+body.dark .place-side-panel .navitime-station-assist.entrance small,
+body.dark .place-side-panel .navitime-station-assist.entrance b {
+    color: #78d5a0;
+}
+
+body.dark .place-side-panel .navitime-station-assist.exit {
+    border-color: rgba(219, 178, 72, 0.38);
+}
+
+body.dark .place-side-panel .navitime-station-assist.exit small,
+body.dark .place-side-panel .navitime-station-assist.exit b {
+    color: #e0c36f;
+}
