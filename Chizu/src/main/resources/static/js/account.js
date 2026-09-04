@@ -1142,9 +1142,8 @@ function needsSocialProfileCompletion(user) {
 
     const provider = String(user.provider || "LOCAL").toUpperCase();
 
-    // 새 백에서는 LOCAL은 항상 profileComplete=true,
-    // 소셜 계정은 백의 SocialProfileCompletion 결과를 그대로 내려준다.
-    return provider !== "LOCAL" && user.profileComplete === false;
+    // 소셜 계정은 profileComplete === true 일 때만 추가입력 생략
+    return provider !== "LOCAL" && user.profileComplete !== true;
 }
 
 async function handleOAuthCallback() {
@@ -1153,7 +1152,7 @@ async function handleOAuthCallback() {
     const oauthError = params.get("oauth_error");
 
     if (!token && !oauthError) {
-        return;
+        return "none";
     }
 
     params.delete("token");
@@ -1169,7 +1168,7 @@ async function handleOAuthCallback() {
             socialLoginError.textContent = decodeURIComponent(oauthError);
         }
         openModal(loginModal);
-        return;
+        return "error";
     }
 
     try {
@@ -1178,13 +1177,15 @@ async function handleOAuthCallback() {
 
         if (needsSocialProfileCompletion(socialUser)) {
             window.location.replace("complete-profile.html");
-            return;
+            return "redirect";
         }
 
+        closeModal(loginModal);
         updateHeaderAuthState();
         if (typeof updateMessageBadge === "function") updateMessageBadge();
         if (typeof applyCheeseSettings === "function") applyCheeseSettings();
         showToast("toast.loginSuccess");
+        return "done";
     } catch (error) {
         console.error("소셜 로그인 콜백 처리 실패:", error);
         clearAuthToken();
@@ -1196,13 +1197,22 @@ async function handleOAuthCallback() {
             socialLoginError.textContent = error.message;
         }
         openModal(loginModal);
+        return "error";
     }
 }
 
 
 /* 새로고침 후 JWT 로그인 복원 */
 (async function restoreServerLogin() {
-    await handleOAuthCallback();
+    const oauthResult = await handleOAuthCallback();
+
+    // OAuth 직후 추가정보 페이지로 이동 중이면 이후 로직/모달 오픈을 하지 않음
+    if (oauthResult === "redirect") {
+        return;
+    }
+
+    // 소셜 콜백 처리 후에만 회원가입→로그인 모달 오픈 (토큰 레이스 방지)
+    openLoginModalFromSignup();
 
     if (!getAuthToken()) {
         if (currentUser) {
@@ -1214,11 +1224,10 @@ async function handleOAuthCallback() {
     }
     try {
         const restoredUser = await fetchCurrentUser();
+        const onCompleteProfile =
+            window.location.pathname.includes("complete-profile");
 
-        if (
-            needsSocialProfileCompletion(restoredUser) &&
-            !window.location.pathname.endsWith("complete-profile.html")
-        ) {
+        if (needsSocialProfileCompletion(restoredUser) && !onCompleteProfile) {
             window.location.replace("complete-profile.html");
             return;
         }
@@ -1294,4 +1303,4 @@ function openLoginModalFromSignup() {
     }
 }
 
-openLoginModalFromSignup();
+// openLoginModalFromSignup은 restoreServerLogin(OAuth 콜백) 이후에만 호출합니다.
