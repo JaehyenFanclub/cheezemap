@@ -92,6 +92,11 @@ function setMessage(text, success = false) {
 }
 
 async function loadSocialProfile() {
+    const card = document.querySelector(".complete-profile-card");
+    if (card) {
+        card.hidden = true;
+    }
+
     if (!getAuthToken()) {
         window.location.replace("index.html?login=1");
         return;
@@ -101,9 +106,26 @@ async function loadSocialProfile() {
         const data = await apiRequest("/user/mypage", { auth: true });
         const user = mapMyPageUser(data);
 
-        const provider = String(user?.provider || "LOCAL").toUpperCase();
-        if (provider === "LOCAL" || user?.profileComplete === true) {
+        if (!user) {
+            clearAuthToken();
+            localStorage.removeItem("cheeseMapUser");
+            window.location.replace("index.html?login=1");
+            return;
+        }
+
+        const provider = String(user.provider || "").toUpperCase();
+
+        // 이미 입력이 끝났거나 일반(로컬) 계정이면 홈으로
+        if (user.profileComplete === true || provider === "LOCAL") {
             window.location.replace("index.html");
+            return;
+        }
+
+        // provider를 알 수 없으면 로그인부터 다시
+        if (!provider) {
+            clearAuthToken();
+            localStorage.removeItem("cheeseMapUser");
+            window.location.replace("index.html?login=1");
             return;
         }
 
@@ -120,6 +142,9 @@ async function loadSocialProfile() {
         }
 
         localStorage.setItem("cheeseMapUser", JSON.stringify(user));
+        if (card) {
+            card.hidden = false;
+        }
     } catch (error) {
         clearAuthToken();
         localStorage.removeItem("cheeseMapUser");

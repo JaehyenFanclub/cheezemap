@@ -144,9 +144,9 @@ function mapMyPageUser(data, fallbackUser = null) {
             ).toUpperCase(),
 
         profileComplete:
-            data.profileComplete ??
-            fallback.profileComplete ??
-            null
+            typeof data.profileComplete === "boolean"
+                ? data.profileComplete
+                : null
     };
 }
 
