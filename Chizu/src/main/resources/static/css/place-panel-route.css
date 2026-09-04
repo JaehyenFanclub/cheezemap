@@ -2761,6 +2761,15 @@ body.dark .place-side-panel .simple-route-alternatives-toggle:hover {
 
     box-sizing: border-box;
 
+    /* 프로필 + 리뷰 영역 배경 */
+    padding: 8px 12px 50px;
+
+    /* 기존보다 조금 더 불투명한 검정 */
+    background: rgba(0, 0, 0, 0.72);
+
+    /* 사진 아래 영역을 하나의 카드처럼 */
+    border-radius: 10px;
+
 }
 
 
@@ -2775,6 +2784,9 @@ body.dark .place-side-panel .simple-route-alternatives-toggle:hover {
     gap: 8px;
 
     flex-shrink: 0;
+
+    position: relative;
+    z-index: 1;
 
 }
 
@@ -2862,6 +2874,10 @@ body.dark .place-side-panel .simple-route-alternatives-toggle:hover {
     font-size: 14px;
 
     line-height: 36px;
+
+    /* 프로필보다 리뷰 내용을 살짝 아래로 */
+    position: relative;
+    top: 30px;
 
 }
 
