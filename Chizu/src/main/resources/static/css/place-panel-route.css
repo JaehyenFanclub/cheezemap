@@ -4889,3 +4889,111 @@ body.dark .place-side-panel .navitime-station-assist.exit small,
 body.dark .place-side-panel .navitime-station-assist.exit b {
     color: #e0c36f;
 }
+
+
+/* =====================================================
+   장소 상세 리뷰 - 최종 가독성 조정
+   - 다크모드 닉네임 흰색
+   - 평점 별 노란색 고정
+   - 리뷰 본문 확대
+   - 더보기는 본문보다 작게
+   - 번역 버튼 오른쪽 하단 정렬
+===================================================== */
+
+/* 리뷰 본문: 기존 12px보다 키움 */
+.place-side-panel .place-review-content {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+}
+
+/* 더보기는 리뷰 본문보다 작게 */
+.place-side-panel .place-review-more-button {
+    margin-top: 4px !important;
+    padding: 0 !important;
+
+    border: 0 !important;
+    background: transparent !important;
+
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    line-height: 1.35 !important;
+
+    color: var(--gray-600) !important;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.place-side-panel .place-review-more-button:hover {
+    color: var(--gray-800) !important;
+    opacity: 1 !important;
+}
+
+/* 평점 별은 라이트/다크 모두 노란색 유지 */
+.place-side-panel .place-review-rating,
+.place-side-panel .place-review-stars {
+    color: #f5b800 !important;
+}
+
+/* 번역 영역은 리뷰 하단에서 오른쪽 정렬 */
+.place-side-panel .place-review-translation {
+    position: relative;
+
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    flex-wrap: wrap;
+
+    width: 100%;
+    margin-top: 8px;
+}
+
+/* 번역 버튼 자체도 우측으로 */
+.place-side-panel .place-review-translate-toggle {
+    margin-left: auto;
+}
+
+/* 드롭다운은 버튼 오른쪽 기준 */
+.place-side-panel .place-review-translate-menu {
+    left: auto !important;
+    right: 0 !important;
+}
+
+/* 번역 결과 박스는 다시 전체 폭 사용 */
+.place-side-panel .place-review-translated-box {
+    flex: 0 0 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* =========================
+   다크모드 리뷰
+========================= */
+
+body.dark .place-side-panel .place-review-user {
+    color: #ffffff !important;
+}
+
+/* 닉네임 옆 별점도 회색으로 죽지 않게 */
+body.dark .place-side-panel .place-review-rating,
+body.dark .place-side-panel .place-review-stars {
+    color: #f5b800 !important;
+}
+
+/* 리뷰 본문도 읽기 쉬운 밝은 색 유지 */
+body.dark .place-side-panel .place-review-content {
+    color: #f1ece2 !important;
+}
+
+/* 더보기는 본문보다 작고 한 단계 옅게 */
+body.dark .place-side-panel .place-review-more-button {
+    color: #cfc7b9 !important;
+}
+
+body.dark .place-side-panel .place-review-more-button:hover {
+    color: #ffffff !important;
+}
+
+/* 번역 버튼은 오른쪽 하단 위치를 유지하면서 다크톤 유지 */
+body.dark .place-side-panel .place-review-translate-toggle {
+    color: #eee8dc !important;
+}
