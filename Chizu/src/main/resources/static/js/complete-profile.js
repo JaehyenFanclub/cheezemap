@@ -98,7 +98,7 @@ async function loadSocialProfile() {
     }
 
     if (!getAuthToken()) {
-        window.location.replace("index.html?login=1");
+        window.location.replace("/?login=1");
         return;
     }
 
@@ -109,7 +109,7 @@ async function loadSocialProfile() {
         if (!user) {
             clearAuthToken();
             localStorage.removeItem("cheeseMapUser");
-            window.location.replace("index.html?login=1");
+            window.location.replace("/?login=1");
             return;
         }
 
@@ -117,7 +117,7 @@ async function loadSocialProfile() {
 
         // 이미 입력이 끝났거나 일반(로컬) 계정이면 홈으로
         if (user.profileComplete === true || provider === "LOCAL") {
-            window.location.replace("index.html");
+            window.location.replace("/");
             return;
         }
 
@@ -125,7 +125,7 @@ async function loadSocialProfile() {
         if (!provider) {
             clearAuthToken();
             localStorage.removeItem("cheeseMapUser");
-            window.location.replace("index.html?login=1");
+            window.location.replace("/?login=1");
             return;
         }
 
@@ -148,7 +148,7 @@ async function loadSocialProfile() {
     } catch (error) {
         clearAuthToken();
         localStorage.removeItem("cheeseMapUser");
-        window.location.replace("index.html?login=1");
+        window.location.replace("/?login=1");
     }
 }
 
@@ -204,7 +204,7 @@ document.getElementById("completeProfileForm")?.addEventListener("submit", async
         }
 
         setMessage(t("success"), true);
-        setTimeout(() => window.location.replace("index.html"), 500);
+        setTimeout(() => window.location.replace("/"), 500);
     } catch (error) {
         setMessage(error.message);
     } finally {

@@ -150,7 +150,7 @@ document.querySelectorAll(".language-option").forEach(button => {
 document.getElementById("signupLoginLink")?.addEventListener("click", event => {
     event.preventDefault();
     sessionStorage.setItem("cheeseMapOpenLogin", "1");
-    window.location.href = "index.html?login=1";
+    window.location.href = "/?login=1";
 });
 
 form?.addEventListener("submit", async event => {
@@ -232,7 +232,7 @@ form?.addEventListener("submit", async event => {
 
         sessionStorage.setItem("cheeseMapOpenLogin", "1");
         setTimeout(() => {
-            window.location.href = "index.html?login=1";
+            window.location.href = "/?login=1";
         }, 600);
     } catch (error) {
         if (formMessage) {

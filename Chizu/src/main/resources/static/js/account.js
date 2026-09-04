@@ -1176,7 +1176,7 @@ async function handleOAuthCallback() {
         const socialUser = await fetchCurrentUser();
 
         if (needsSocialProfileCompletion(socialUser)) {
-            window.location.replace("complete-profile.html");
+            window.location.replace("/complete-profile");
             return "redirect";
         }
 
@@ -1228,7 +1228,7 @@ async function handleOAuthCallback() {
             window.location.pathname.includes("complete-profile");
 
         if (needsSocialProfileCompletion(restoredUser) && !onCompleteProfile) {
-            window.location.replace("complete-profile.html");
+            window.location.replace("/complete-profile");
             return;
         }
 
@@ -1246,7 +1246,7 @@ async function handleOAuthCallback() {
 
 /* =====================================================
    회원가입 페이지 -> 로그인 모달 바로 열기
-   - signup.html의 index.html?login=1
+   - signup 페이지의 /?login=1
    - sessionStorage cheeseMapOpenLogin
    두 방법을 모두 지원합니다.
 ===================================================== */
