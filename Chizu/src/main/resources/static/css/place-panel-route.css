@@ -1846,8 +1846,12 @@ body.dark .google-place-photo-carousel {
     overflow: hidden;
     border: 1px solid #e8c86a;
     border-radius: 50%;
-    color: #6f5221;
-    background: var(--yellow-light);
+
+    /* mr.eum수정부분 */
+    /* 장소 리뷰 기본 프로필 색상을 마이페이지 기본 프로필과 동일하게 */
+    color: var(--cheese-brown);
+    background: var(--cheese-yellow);
+
     font-size: 17px;
 }
 
