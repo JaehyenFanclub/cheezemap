@@ -4917,9 +4917,40 @@ document
                 return;
             }
 
+            const willClose =
+                panel.classList.contains(
+                    "show"
+                );
+
             panel.classList.toggle(
                 "show"
             );
+
+            // 패널을 접을 때는 길찾기 뒤로가기와 같이 지도 경로를 제거
+            if (willClose) {
+                routePanel?.classList.remove(
+                    "show"
+                );
+                panel.classList.remove(
+                    "route-focus"
+                );
+
+                if (
+                    typeof resetPoiRouteSelection ===
+                    "function"
+                ) {
+                    resetPoiRouteSelection(
+                        true
+                    );
+                }
+
+                if (
+                    typeof clearRenderedRoute ===
+                    "function"
+                ) {
+                    clearRenderedRoute();
+                }
+            }
 
             syncPlaceSidePanelState();
         }
