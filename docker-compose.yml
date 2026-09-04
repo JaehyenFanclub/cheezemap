@@ -1,6 +1,9 @@
+name: cheezemap
+
 services:
   mysql:
     image: mysql:8.4
+    container_name: cheezemap-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
@@ -19,6 +22,7 @@ services:
   app:
     build:
       context: ./Chizu
+    container_name: cheezemap
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8080}:8080"
@@ -33,13 +37,13 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       OAUTH2_GOOGLE_CLIENT_ID: ${OAUTH2_GOOGLE_CLIENT_ID:-}
       OAUTH2_GOOGLE_CLIENT_SECRET: ${OAUTH2_GOOGLE_CLIENT_SECRET:-}
-      OAUTH2_GOOGLE_REDIRECT_URI: ${OAUTH2_GOOGLE_REDIRECT_URI:-}
+      OAUTH2_GOOGLE_REDIRECT_URI: ${OAUTH2_GOOGLE_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/google}
       OAUTH2_NAVER_CLIENT_ID: ${OAUTH2_NAVER_CLIENT_ID:-}
       OAUTH2_NAVER_CLIENT_SECRET: ${OAUTH2_NAVER_CLIENT_SECRET:-}
-      OAUTH2_NAVER_REDIRECT_URI: ${OAUTH2_NAVER_REDIRECT_URI:-}
+      OAUTH2_NAVER_REDIRECT_URI: ${OAUTH2_NAVER_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/naver}
       OAUTH2_LINE_CLIENT_ID: ${OAUTH2_LINE_CLIENT_ID:-}
       OAUTH2_LINE_CLIENT_SECRET: ${OAUTH2_LINE_CLIENT_SECRET:-}
-      OAUTH2_LINE_REDIRECT_URI: ${OAUTH2_LINE_REDIRECT_URI:-}
+      OAUTH2_LINE_REDIRECT_URI: ${OAUTH2_LINE_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/line}
     volumes:
       - uploads_data:/app/uploads
     depends_on:
