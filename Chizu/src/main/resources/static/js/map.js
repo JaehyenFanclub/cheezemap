@@ -214,6 +214,15 @@ function createCategoryMapOptions(center, zoom, category = "all") {
 function bindGoogleMapRuntime() {
     createStationClickAreas();
 
+    /* mr.eum수정부분 */
+    /* 마이페이지에서 표시한 장소 보기 마커는
+       지도의 다른 위치를 클릭하면 제거합니다. */
+    googleMap.addListener("click", () => {
+        if (typeof clearMyReviewPlaceMarker === "function") {
+            clearMyReviewPlaceMarker();
+        }
+    });
+
     googleMap.addListener("click", handleGoogleMapClick);
     // Google 지도에서 역 이름 텍스트는 placeId가 잘 들어오지만,
     // JR/전철/지하철 아이콘은 placeId 없이 클릭되는 경우가 있다.
