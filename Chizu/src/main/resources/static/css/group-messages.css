@@ -3834,6 +3834,30 @@ body.dark .message-conversation-compose textarea::placeholder {
     padding-right: 2px;
 }
 
+/* mr.eum수정부분 */
+/* 쪽지함 대화목록 스크롤바 - 치즈맵 스타일 */
+.message-list {
+    scrollbar-width: thin;
+    scrollbar-color: #c9a45a transparent;
+}
+
+.message-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.message-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.message-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c9a45a;
+}
+
+.message-list::-webkit-scrollbar-thumb:hover {
+    background: #a98232;
+}
+
 .message-my-profile-wrap {
     flex: 0 0 auto;
     margin-top: 14px;
