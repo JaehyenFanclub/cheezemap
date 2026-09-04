@@ -3240,20 +3240,43 @@ body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
     margin-top: 8px;
 }
 
+/* =====================================================
+   mr.eum수정부분
+   리뷰 번역 버튼을 오른쪽으로 이동
+===================================================== */
+
 .place-review-translate-toggle {
-    display: inline-flex;
+
+    display: flex;
+
     align-items: center;
+
+    width: fit-content;
+
+    margin-left: auto;
+
     gap: 5px;
+
     min-height: 30px;
+
     padding: 5px 9px;
+
     border: 1px solid #e7dfd1;
+
     border-radius: 9px;
+
     background: #fffdf8;
+
     color: #6d6253;
+
     font: inherit;
+
     font-size: 12px;
+
     font-weight: 700;
+
     cursor: pointer;
+
 }
 
 .place-review-translate-toggle:hover {
@@ -3262,16 +3285,29 @@ body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
 }
 
 .place-review-translate-menu {
+
     position: absolute;
+
     z-index: 30;
+
     top: calc(100% + 5px);
-    left: 0;
+
+    /* mr.eum수정부분 */
+    right: 0;
+    left: auto;
+
     min-width: 130px;
+
     padding: 5px;
+
     border: 1px solid #e4dac9;
+
     border-radius: 11px;
+
     background: #ffffff;
+
     box-shadow: 0 10px 28px rgba(45, 37, 24, 0.14);
+
 }
 
 .place-review-translate-option {
