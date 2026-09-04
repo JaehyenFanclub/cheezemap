@@ -6,6 +6,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,8 @@ public class NavitimeRouteService {
     private static final ZoneId TOKYO = ZoneId.of("Asia/Tokyo");
     private static final DateTimeFormatter START_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private static final ParameterizedTypeReference<Map<String, Object>> MAP_TYPE =
+            new ParameterizedTypeReference<>() {};
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -33,7 +36,6 @@ public class NavitimeRouteService {
     @Value("${navitime.api.url:https://navitime-route-totalnavi.p.rapidapi.com/route_transit}")
     private String apiUrl;
 
-    @SuppressWarnings("unchecked")
     public Map<String, Object> searchTransit(
             String start,
             String goal,
@@ -71,26 +73,27 @@ public class NavitimeRouteService {
         headers.set("X-RapidAPI-Host", apiHost);
 
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     uri,
                     HttpMethod.GET,
                     new HttpEntity<>(headers),
-                    Map.class
+                    MAP_TYPE
             );
 
             Map<String, Object> body = response.getBody();
-            if (body == null) {
+            if (body == null || body.isEmpty()) {
                 throw new IllegalArgumentException("NAVITIME 경로 결과가 비어 있습니다.");
             }
             return body;
         } catch (HttpStatusCodeException ex) {
+            // getResponseBodyAsString()은 null이 아니라 빈 문자열을 반환할 수 있다.
             String detail = ex.getResponseBodyAsString();
-            if (detail != null && detail.length() > 300) {
+            if (detail.length() > 300) {
                 detail = detail.substring(0, 297) + "...";
             }
             throw new IllegalArgumentException(
                     "NAVITIME 경로 검색 실패 (" + ex.getStatusCode().value() + ")"
-                            + (detail == null || detail.isBlank() ? "" : ": " + detail)
+                            + (detail.isBlank() ? "" : ": " + detail)
             );
         }
     }

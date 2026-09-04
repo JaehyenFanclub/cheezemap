@@ -2159,9 +2159,7 @@ body.dark .place-side-panel .place-content {
 
 /* mr.eum수정부분
    펼쳐졌을 때 화살표 */
-.place-side-panel
-.simple-route-option.expanded
-.simple-route-chevron {
+.place-side-panel .simple-route-option.expanded .simple-route-chevron {
     transform: rotate(180deg);
 }
 
@@ -2184,9 +2182,7 @@ body.dark .place-side-panel .place-content {
 
 
 /* mr.eum수정부분 */
-.place-side-panel
-.simple-route-option.expanded
-.simple-route-details {
+.place-side-panel .simple-route-option.expanded .simple-route-details {
     display: block;
 }
 
@@ -2204,8 +2200,7 @@ body.dark .place-side-panel .place-content {
 }
 
 
-.place-side-panel
-.simple-route-detail-header strong {
+.place-side-panel .simple-route-detail-header strong {
     font-size: 12px;
     font-weight: 800;
 }
@@ -2266,8 +2261,7 @@ body.dark .place-side-panel .place-content {
 
 
 /* mr.eum수정부분 */
-.place-side-panel
-.simple-route-alternatives-toggle > i {
+.place-side-panel .simple-route-alternatives-toggle > i {
     color: var(--gray-400);
 
     font-size: 14px;
@@ -2278,9 +2272,7 @@ body.dark .place-side-panel .place-content {
 
 
 /* mr.eum수정부분 */
-.place-side-panel
-.simple-route-alternatives-toggle.expanded
-> i {
+.place-side-panel .simple-route-alternatives-toggle.expanded > i {
     transform: rotate(180deg);
 }
 
@@ -2293,9 +2285,7 @@ body.dark .place-side-panel .place-content {
 
 /* mr.eum수정부분
    대안 카드 사이 간격 */
-.place-side-panel
-.simple-route-alternatives-list
-.simple-route-option {
+.place-side-panel .simple-route-alternatives-list .simple-route-option {
     margin-bottom: 10px;
 }
 
@@ -2315,8 +2305,7 @@ body.dark .place-side-panel .simple-route-option {
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-option.active {
+body.dark .place-side-panel .simple-route-option.active {
     background: #3a3528;
 
     border-color: #d8a900;
@@ -2324,29 +2313,25 @@ body.dark .place-side-panel
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-option .route-line {
+body.dark .place-side-panel .simple-route-option .route-line {
     background: #25231f;
 }
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-option .route-line-chips {
+body.dark .place-side-panel .simple-route-option .route-line-chips {
     color: #f5f2ea;
 }
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-details {
+body.dark .place-side-panel .simple-route-details {
     border-top-color: #4a4740;
 }
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-alternatives-toggle {
+body.dark .place-side-panel .simple-route-alternatives-toggle {
     background: #2e2c27;
 
     border-color: #4a4740;
@@ -2356,8 +2341,7 @@ body.dark .place-side-panel
 
 
 /* mr.eum수정부분 */
-body.dark .place-side-panel
-.simple-route-alternatives-toggle:hover {
+body.dark .place-side-panel .simple-route-alternatives-toggle:hover {
     background: #3a3528;
 
     border-color: #d8a900;

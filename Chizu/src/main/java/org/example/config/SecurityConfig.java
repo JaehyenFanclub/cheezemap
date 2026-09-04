@@ -31,9 +31,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter
-    ) throws Exception {
-
-        http
+    ) {
+        try {
+            http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -138,7 +138,10 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class
                 );
 
-        return http.build();
+            return http.build();
+        } catch (Exception e) {
+            throw new IllegalStateException("SecurityFilterChain 구성에 실패했습니다.", e);
+        }
     }
 
 

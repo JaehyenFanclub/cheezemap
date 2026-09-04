@@ -159,6 +159,43 @@ function extractCoordFromNavitimeSection(section) {
     return { lat, lng };
 }
 
+function haversineMeters(a, b) {
+    if (!a || !b) return Infinity;
+    const toRad = deg => (deg * Math.PI) / 180;
+    const earthRadius = 6371000;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * earthRadius * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function createNavitimeWalkBridge(from, to) {
+    return {
+        path: [from, to],
+        isWalk: true,
+        color: "#4285F4",
+        outlineColor: "#FFFFFF",
+        transportType: "",
+        isBridge: true
+    };
+}
+
+function extractNavitimeEndpoint(pointLike) {
+    const lat = Number(pointLike?.coord?.lat ?? pointLike?.lat);
+    const lng = Number(
+        pointLike?.coord?.lon ??
+        pointLike?.coord?.lng ??
+        pointLike?.lon ??
+        pointLike?.lng
+    );
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+}
+
 function extractNavitimeWalkSegmentsFromSections(item) {
     const sections = Array.isArray(item?.sections) ? item.sections : [];
     const segments = [];
@@ -175,13 +212,73 @@ function extractNavitimeWalkSegmentsFromSections(item) {
         segments.push({
             path: [from, to],
             isWalk: true,
-            color: "#E8EAED",
+            color: "#4285F4",
             outlineColor: "#FFFFFF",
             transportType: ""
         });
     }
 
     return segments;
+}
+
+/*
+    NAVITIME 철도 shape는 역·출구·환승 지점에서 끊기는 경우가 많다.
+    끊긴 구간은 도보 점선으로 이어 출발지~지하철~도착지가 이어지게 한다.
+*/
+function bridgeNavitimePathGaps(segments, item) {
+    const GAP_METERS = 18;
+    const source = Array.isArray(segments) ? segments.filter(Boolean) : [];
+    if (!source.length) return [];
+
+    const bridged = [];
+    const startPoint =
+        extractNavitimeEndpoint(item?.summary?.start) ||
+        extractCoordFromNavitimeSection(
+            (item?.sections || []).find(section => section?.type === "point")
+        );
+    const goalPoint =
+        extractNavitimeEndpoint(item?.summary?.goal) ||
+        extractCoordFromNavitimeSection(
+            [...(item?.sections || [])].reverse().find(section => section?.type === "point")
+        );
+
+    const firstPoint = source[0]?.path?.[0];
+    if (
+        startPoint &&
+        firstPoint &&
+        haversineMeters(startPoint, firstPoint) > GAP_METERS
+    ) {
+        bridged.push(createNavitimeWalkBridge(startPoint, firstPoint));
+    }
+
+    source.forEach((segment, index) => {
+        if (index > 0) {
+            const prevPath = source[index - 1]?.path || [];
+            const currPath = segment?.path || [];
+            const prevEnd = prevPath[prevPath.length - 1];
+            const currStart = currPath[0];
+            if (
+                prevEnd &&
+                currStart &&
+                haversineMeters(prevEnd, currStart) > GAP_METERS
+            ) {
+                bridged.push(createNavitimeWalkBridge(prevEnd, currStart));
+            }
+        }
+        bridged.push(segment);
+    });
+
+    const lastPath = source[source.length - 1]?.path || [];
+    const lastPoint = lastPath[lastPath.length - 1];
+    if (
+        goalPoint &&
+        lastPoint &&
+        haversineMeters(lastPoint, goalPoint) > GAP_METERS
+    ) {
+        bridged.push(createNavitimeWalkBridge(lastPoint, goalPoint));
+    }
+
+    return bridged;
 }
 
 function extractNavitimePathSegments(item) {
@@ -212,10 +309,10 @@ function extractNavitimePathSegments(item) {
             path,
             isWalk,
             color: isWalk
-                ? "#E8EAED"
+                ? "#4285F4"
                 : String(inline.color || properties.color || "#4285F4"),
             outlineColor: isWalk
-                ? "#9AA0A6"
+                ? "#FFFFFF"
                 : String(outline.color || "#FFFFFF"),
             transportType
         });
@@ -227,26 +324,28 @@ function extractNavitimePathSegments(item) {
         segments.push(...extractNavitimeWalkSegmentsFromSections(item));
     }
 
-    if (segments.length) return segments;
+    if (!segments.length) {
+        // shape가 없으면 구간 좌표로 단일 선 구성
+        const fallbackPath = [];
+        for (const section of item?.sections || []) {
+            const point = extractCoordFromNavitimeSection(section);
+            if (point) fallbackPath.push(point);
+        }
 
-    // shape가 없으면 구간 좌표로 단일 선 구성
-    const fallbackPath = [];
-    for (const section of item?.sections || []) {
-        const point = extractCoordFromNavitimeSection(section);
-        if (point) fallbackPath.push(point);
+        if (fallbackPath.length >= 2) {
+            return [{
+                path: fallbackPath,
+                isWalk: false,
+                color: "#4285F4",
+                outlineColor: "#FFFFFF",
+                transportType: ""
+            }];
+        }
+
+        return [];
     }
 
-    if (fallbackPath.length >= 2) {
-        return [{
-            path: fallbackPath,
-            isWalk: false,
-            color: "#4285F4",
-            outlineColor: "#FFFFFF",
-            transportType: ""
-        }];
-    }
-
-    return [];
+    return bridgeNavitimePathGaps(segments, item);
 }
 
 function extractNavitimePath(item) {
@@ -1226,26 +1325,25 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
     if (pathSegments.length && (travelMode === "TRANSIT" || route.provider === "navitime")) {
         pathSegments.forEach(segment => {
             if (segment.isWalk) {
-                // 다크맵에서도 보이도록 밝은 점선으로 도보를 그린다.
+                // 도보 모드와 동일한 파란 점선으로 표시한다.
                 polylines.push(new google.maps.Polyline({
                     map: googleMap,
                     path: segment.path,
-                    strokeColor: "#E8EAED",
                     strokeOpacity: 0,
-                    strokeWeight: 4,
+                    strokeWeight: 0,
                     zIndex: 12,
                     icons: [{
                         icon: {
                             path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: "#E8EAED",
+                            fillColor: "#4285F4",
                             fillOpacity: 1,
-                            strokeColor: "#5F6368",
-                            strokeOpacity: 0.9,
+                            strokeColor: "#FFFFFF",
+                            strokeOpacity: 0.95,
                             strokeWeight: 1,
-                            scale: 3.2
+                            scale: 4.6
                         },
                         offset: "0",
-                        repeat: "11px"
+                        repeat: "14px"
                     }]
                 }));
                 return;
@@ -1443,24 +1541,26 @@ function getGoogleTransitFareText(route) {
     if (!fare) return "";
 
     const currencyCode = fare?.currencyCode || fare?.currency || "";
-    let amount = null;
+    let rawAmount = NaN;
     if (fare?.units !== undefined || fare?.nanos !== undefined) {
-        amount = Number(fare.units || 0) + Number(fare.nanos || 0) / 1e9;
+        rawAmount = Number(fare.units || 0) + Number(fare.nanos || 0) / 1e9;
     } else if (fare?.value !== undefined) {
-        amount = Number(fare.value);
+        rawAmount = Number(fare.value);
     }
-    if (!Number.isFinite(amount)) return "";
+    if (!Number.isFinite(rawAmount)) return "";
 
-    if (currencyCode === "JPY") return `${Math.round(amount).toLocaleString()}円`;
-    if (!currencyCode) return amount.toLocaleString();
+    const fareAmount = rawAmount;
+
+    if (currencyCode === "JPY") return `${Math.round(fareAmount).toLocaleString()}円`;
+    if (!currencyCode) return fareAmount.toLocaleString();
 
     try {
         return new Intl.NumberFormat(
             currentLanguage === "ko" ? "ko-KR" : currentLanguage === "ja" ? "ja-JP" : "en-US",
             { style: "currency", currency: currencyCode }
-        ).format(amount);
+        ).format(fareAmount);
     } catch (error) {
-        return `${currencyCode} ${amount.toLocaleString()}`;
+        return `${currencyCode} ${fareAmount.toLocaleString()}`;
     }
 }
 
