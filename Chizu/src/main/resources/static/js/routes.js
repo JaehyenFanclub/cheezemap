@@ -947,9 +947,26 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
                         "#5B8DEF"
                     );
 
-                // 확대/축소와 무관하게 화면상 굵기가 일정해 보이도록
-                // NAVITIME 응답의 width/outline은 사용하지 않고,
-                // 실제 노선색 + 고정 px 굵기 한 줄만 그립니다.
+                // 대중교통 노선에 얇은 흰색 외곽선을 먼저 그립니다.
+                // 기존 노선 굵기(NAVITIME_ROUTE_STROKE_WEIGHT)는 그대로 유지합니다.
+                // 모든 외곽선은 같은 zIndex를 사용하고, 실제 노선은 그보다 위에
+                // 같은 zIndex로 올려서 segment 경계에서 흰색이 본선을 덮지 않게 합니다.
+                const routeHalo =
+                    new google.maps.Polyline({
+                        map:
+                            googleMap,
+                        path,
+                        strokeColor:
+                            "#FFFFFF",
+                        strokeOpacity:
+                            0.9,
+                        strokeWeight:
+                            NAVITIME_ROUTE_STROKE_WEIGHT + 2,
+                        zIndex:
+                            20
+                    });
+
+                // 실제 대중교통 노선은 모든 흰색 외곽선보다 항상 위에 표시합니다.
                 const routeLine =
                     new google.maps.Polyline({
                         map:
@@ -962,8 +979,12 @@ async function drawRoute(route, fitViewport = true, travelMode = getSelectedTrav
                         strokeWeight:
                             NAVITIME_ROUTE_STROKE_WEIGHT,
                         zIndex:
-                            20 + index
+                            21
                     });
+
+                lines.push(
+                    routeHalo
+                );
 
                 lines.push(
                     routeLine
@@ -1203,7 +1224,7 @@ async function selectRoute(index) {
    - 아래 endpoint / apiKey만 발급값에 맞게 입력
 ===================================================== */
 
-const NAVITIME_ROUTE_STROKE_WEIGHT = 6;
+const NAVITIME_ROUTE_STROKE_WEIGHT = 8;
 const NAVITIME_WALK_DOT_SCALE = 3.6;
 const NAVITIME_WALK_DOT_REPEAT = "13px";
 
