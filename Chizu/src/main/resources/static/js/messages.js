@@ -36,6 +36,326 @@ function joinBackendMessageContent(subject, body) {
     return `[제목] ${String(subject || "쪽지").trim()}\n\n${String(body || "").trim()}`;
 }
 
+/* =====================================================
+   쪽지 번역 (리뷰 번역과 동일한 /api/translate 사용)
+===================================================== */
+
+const MESSAGE_TRANSLATION_CACHE_KEY = "cheezemap.messageTranslationCache.v1";
+
+function readMessageTranslationCache() {
+    try {
+        const parsed = JSON.parse(
+            localStorage.getItem(MESSAGE_TRANSLATION_CACHE_KEY) || "{}"
+        );
+        return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+function writeMessageTranslationCache(cache) {
+    try {
+        localStorage.setItem(
+            MESSAGE_TRANSLATION_CACHE_KEY,
+            JSON.stringify(cache || {})
+        );
+    } catch (error) {
+        console.debug("쪽지 번역 캐시 저장 실패:", error);
+    }
+}
+
+function hashMessageTranslationText(text) {
+    const value = String(text || "");
+    let hash = 2166136261;
+
+    for (let i = 0; i < value.length; i += 1) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+
+    return (hash >>> 0).toString(36);
+}
+
+function getMessageTranslationCacheKey(messageId, targetLanguage, sourceText = "") {
+    return `${messageId}:${targetLanguage}:${hashMessageTranslationText(sourceText)}`;
+}
+
+function getCachedMessageTranslation(messageId, targetLanguage, sourceText = "") {
+    const cache = readMessageTranslationCache();
+    const entry =
+        cache[getMessageTranslationCacheKey(messageId, targetLanguage, sourceText)] ||
+        null;
+
+    if (!entry?.translatedText) return null;
+
+    if (
+        entry.sourceText != null &&
+        String(entry.sourceText) !== String(sourceText || "")
+    ) {
+        return null;
+    }
+
+    return entry;
+}
+
+function cacheMessageTranslation(
+    messageId,
+    targetLanguage,
+    sourceText,
+    translatedText,
+    detectedLanguage = ""
+) {
+    const cache = readMessageTranslationCache();
+
+    cache[getMessageTranslationCacheKey(messageId, targetLanguage, sourceText)] = {
+        sourceText: String(sourceText || ""),
+        translatedText: String(translatedText || ""),
+        detectedLanguage: String(detectedLanguage || ""),
+        savedAt: Date.now()
+    };
+
+    const keys = Object.keys(cache);
+    if (keys.length > 300) {
+        keys
+            .sort(
+                (a, b) =>
+                    Number(cache[a]?.savedAt || 0) - Number(cache[b]?.savedAt || 0)
+            )
+            .slice(0, keys.length - 300)
+            .forEach(key => {
+                delete cache[key];
+            });
+    }
+
+    writeMessageTranslationCache(cache);
+}
+
+function invalidateMessageTranslationCache(messageId) {
+    if (messageId == null || messageId === "") return;
+
+    const prefix = `${messageId}:`;
+    const cache = readMessageTranslationCache();
+    let changed = false;
+
+    Object.keys(cache).forEach(key => {
+        if (key.startsWith(prefix)) {
+            delete cache[key];
+            changed = true;
+        }
+    });
+
+    if (changed) writeMessageTranslationCache(cache);
+}
+
+function detectMessageLanguage(text) {
+    const value = String(text || "").trim();
+    if (!value) return "";
+    if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/u.test(value)) return "ko";
+    if (/[ぁ-んァ-ヶー]/u.test(value)) return "ja";
+    if (/[A-Za-z]/.test(value)) return "en";
+    return "";
+}
+
+function getMessageLanguageLabel(language) {
+    if (language === "ko") return "한국어";
+    if (language === "ja") return "日本語";
+    return "English";
+}
+
+function getMessageSiteLanguage() {
+    return ["ko", "ja", "en"].includes(currentLanguage) ? currentLanguage : "ko";
+}
+
+function getMessageTranslateButtonLabel() {
+    return currentLanguage === "ja"
+        ? "翻訳"
+        : currentLanguage === "en"
+            ? "Translate"
+            : "번역";
+}
+
+function getMessageTranslatingLabel() {
+    return currentLanguage === "ja"
+        ? "翻訳中..."
+        : currentLanguage === "en"
+            ? "Translating..."
+            : "번역 중...";
+}
+
+function getMessageTranslationSourceText(subject, body) {
+    const title = String(subject || "").trim();
+    const content = String(body || "").trim();
+    if (title && content) return `${title}\n\n${content}`;
+    return title || content;
+}
+
+function renderMessageTranslationControls(messageId, subject, body) {
+    const sourceText = getMessageTranslationSourceText(subject, body);
+    const sourceLanguage = detectMessageLanguage(sourceText);
+    const targetLanguage = getMessageSiteLanguage();
+
+    if (!sourceText) return "";
+    if (sourceLanguage && sourceLanguage === targetLanguage) return "";
+
+    return `
+        <div
+            class="place-review-translation message-translation"
+            data-message-translation
+            data-message-id="${escapeGroupHtml(String(messageId))}"
+        >
+            <button
+                type="button"
+                class="place-review-translate-toggle"
+                data-message-translate-button
+            >
+                <i class="ti ti-language"></i>
+                <span data-message-translate-label>${getMessageTranslateButtonLabel()}</span>
+            </button>
+
+            <div
+                class="place-review-translated-box"
+                data-message-translated-box
+                hidden
+            >
+                <div class="place-review-translated-head">
+                    <span data-message-translated-label></span>
+                    <button
+                        type="button"
+                        class="place-review-original-button"
+                        data-message-original-button
+                    >×</button>
+                </div>
+                <p
+                    class="place-review-translated-text"
+                    data-message-translated-text
+                ></p>
+            </div>
+        </div>
+    `;
+}
+
+async function requestMessageTranslation(messageId, text, targetLanguage) {
+    const sourceText = String(text || "").trim();
+    const cached = getCachedMessageTranslation(messageId, targetLanguage, sourceText);
+
+    if (cached?.translatedText) return cached;
+
+    const result = await apiRequest("/api/translate", {
+        method: "POST",
+        body: {
+            text: sourceText,
+            targetLanguage
+        }
+    });
+
+    const translatedText = String(result?.translatedText || "").trim();
+
+    if (!translatedText) {
+        throw new Error(
+            currentLanguage === "ja"
+                ? "翻訳結果を取得できませんでした。"
+                : currentLanguage === "en"
+                    ? "Could not get the translation."
+                    : "번역 결과를 가져오지 못했습니다."
+        );
+    }
+
+    const normalized = {
+        translatedText,
+        detectedLanguage: String(
+            result?.detectedLanguage || result?.detectedSourceLanguage || ""
+        ).trim()
+    };
+
+    cacheMessageTranslation(
+        messageId,
+        targetLanguage,
+        sourceText,
+        normalized.translatedText,
+        normalized.detectedLanguage
+    );
+
+    return normalized;
+}
+
+document.addEventListener("click", async event => {
+    const translateButton = event.target.closest("[data-message-translate-button]");
+
+    if (translateButton) {
+        event.stopPropagation();
+
+        const bubble = translateButton.closest(".message-conversation-bubble");
+        const wrapper = translateButton.closest("[data-message-translation]");
+        const messageId =
+            wrapper?.dataset.messageId ||
+            bubble?.dataset.messageBubbleId ||
+            "";
+
+        const sourceText =
+            bubble?.querySelector("[data-message-source-text]")?.textContent?.trim() ||
+            "";
+
+        if (!sourceText || !messageId) return;
+
+        const translatedBox = wrapper?.querySelector("[data-message-translated-box]");
+        const translatedTextElement = wrapper?.querySelector(
+            "[data-message-translated-text]"
+        );
+        const translatedLabel = wrapper?.querySelector(
+            "[data-message-translated-label]"
+        );
+        const label = translateButton.querySelector("[data-message-translate-label]");
+        const targetLanguage = getMessageSiteLanguage();
+
+        translateButton.disabled = true;
+        const previousLabel = label?.textContent || getMessageTranslateButtonLabel();
+        if (label) label.textContent = getMessageTranslatingLabel();
+
+        try {
+            const result = await requestMessageTranslation(
+                messageId,
+                sourceText,
+                targetLanguage
+            );
+
+            if (translatedTextElement && translatedBox) {
+                translatedTextElement.textContent = result.translatedText;
+
+                if (translatedLabel) {
+                    translatedLabel.textContent =
+                        `${getMessageLanguageLabel(targetLanguage)} · Google 번역`;
+                }
+
+                translatedBox.hidden = false;
+            }
+        } catch (error) {
+            showToast(
+                error?.message ||
+                (
+                    currentLanguage === "ja"
+                        ? "メッセージを翻訳できませんでした。"
+                        : currentLanguage === "en"
+                            ? "Could not translate the message."
+                            : "쪽지를 번역하지 못했습니다."
+                )
+            );
+        } finally {
+            translateButton.disabled = false;
+            if (label) label.textContent = previousLabel;
+        }
+
+        return;
+    }
+
+    const originalButton = event.target.closest("[data-message-original-button]");
+    if (originalButton) {
+        event.stopPropagation();
+        const translatedBox = originalButton.closest("[data-message-translated-box]");
+        if (translatedBox) translatedBox.hidden = true;
+    }
+});
+
+
 
 const MESSAGE_ACTION_TEXT = {
     ko: {
@@ -121,6 +441,7 @@ function startInlineMessageEdit(messageId, bubble) {
                 auth: true,
                 body: { content: joinBackendMessageContent(subject, body) }
             });
+            invalidateMessageTranslationCache(messageId);
             showToast(text.editDone);
             await refreshOpenConversation();
         } catch (error) {
@@ -139,6 +460,7 @@ async function deleteOwnMessage(messageId) {
             method: "DELETE",
             auth: true
         });
+        invalidateMessageTranslationCache(messageId);
         showToast(text.deleteDone);
         await refreshOpenConversation();
     } catch (error) {
@@ -258,20 +580,33 @@ async function openMessageConversation(userId, nickname) {
             <article class="message-detail">
                 <header>
                     <div><span>대화 상대</span><strong>${escapeGroupHtml(selectedMessageNickname)}</strong></div>
-                    <button type="button" class="primary-button" data-conversation-reply><i class="ti ti-pencil-plus"></i> 쪽지 보내기</button>
+                    <button type="button" class="place-section-link" data-conversation-reply><i class="ti ti-pencil-plus"></i> 쪽지 보내기</button>
                 </header>
                 <div class="message-conversation-thread">
                     ${messageConversationCache.length ? messageConversationCache.map(item => {
                         const parsed = splitBackendMessageContent(item.content);
                         const mine = Boolean(item.whoSend);
                         const messageId = Number(item.messageId);
+                        const translationId = Number.isFinite(messageId)
+                            ? messageId
+                            : `row-${selectedMessageUserId}-${item.messageDate || ""}`;
                         const actionText = getMessageActionText();
                         const canManage = mine && Number.isFinite(messageId);
+                        const sourceText = getMessageTranslationSourceText(
+                            parsed.subject,
+                            parsed.body
+                        );
                         return `
                             <div class="message-conversation-row ${mine ? "mine" : "theirs"}">
-                                <div class="message-conversation-bubble" ${canManage ? `data-message-bubble-id="${messageId}"` : ""}>
+                                <div class="message-conversation-bubble" ${canManage ? `data-message-bubble-id="${messageId}"` : ""} data-message-id="${escapeGroupHtml(String(translationId))}">
                                     <strong>${escapeGroupHtml(parsed.subject)}</strong>
-                                    <p>${escapeGroupHtml(parsed.body).replaceAll("\n", "<br>")}</p>
+                                    <p data-message-body>${escapeGroupHtml(parsed.body).replaceAll("\n", "<br>")}</p>
+                                    <span class="message-source-text" data-message-source-text hidden>${escapeGroupHtml(sourceText)}</span>
+                                    ${renderMessageTranslationControls(
+                                        translationId,
+                                        parsed.subject,
+                                        parsed.body
+                                    )}
                                     <div class="message-bubble-footer">
                                         <small>${formatMessageDate(item.messageDate)}${item.isEdited ? (currentLanguage === "ja" ? " · 編集済み" : currentLanguage === "en" ? " · Edited" : " · 수정됨") : ""}</small>
                                         ${canManage ? `

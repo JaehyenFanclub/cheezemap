@@ -1654,7 +1654,7 @@ async function renderPlaceReviews(placeKey) {
                                             class="place-review-edit-toggle"
                                             data-review-delete
                                         >
-                                            삭제
+                                            ${translate("place.reviewDelete")}
                                         </button>
                                     `
                                     : `
@@ -2667,7 +2667,7 @@ document
 
                 if (
                     !window.confirm(
-                        "이 리뷰를 삭제할까요?"
+                        translate("place.reviewDeleteConfirm")
                     )
                 ) {
                     return;
@@ -2700,7 +2700,7 @@ document
                     ).catch(console.error);
 
                     showToast(
-                        "리뷰가 삭제되었습니다."
+                        translate("place.reviewDeleteDone")
                     );
 
                 } catch (error) {
@@ -3350,14 +3350,14 @@ async function renderMyReviews(
                                 type="button"
                                 data-my-server-review-edit
                             >
-                                수정
+                                ${translate("place.reviewEdit")}
                             </button>
 
                             <button
                                 type="button"
                                 data-my-server-review-delete
                             >
-                                삭제
+                                ${translate("place.reviewDelete")}
                             </button>
                         </div>
                     </div>
@@ -4564,7 +4564,7 @@ document
             ) {
                 if (
                     !window.confirm(
-                        "이 리뷰를 삭제할까요?"
+                        translate("place.reviewDeleteConfirm")
                     )
                 ) {
                     return;
@@ -4620,7 +4620,7 @@ document
                     }
 
                     showToast(
-                        "리뷰가 삭제되었습니다."
+                        translate("place.reviewDeleteDone")
                     );
                 } catch (error) {
                     console.error(

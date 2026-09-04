@@ -1474,6 +1474,45 @@ body.dark .message-compose-modal {
     background: #292722;
 }
 
+body.dark .message-compose-modal {
+    border-color: #4d4538;
+}
+
+body.dark .message-compose-modal h2 {
+    color: #f5f2e9;
+}
+
+body.dark .message-compose-modal label {
+    color: #e6ddcf;
+}
+
+body.dark .message-compose-modal input,
+body.dark .message-compose-modal select,
+body.dark .message-compose-modal textarea {
+    border-color: #4b463c;
+    color: #f5f2e9;
+    background: #312e28;
+}
+
+body.dark .message-compose-modal input::placeholder,
+body.dark .message-compose-modal textarea::placeholder {
+    color: #aaa69b;
+    opacity: 1;
+}
+
+body.dark .message-compose-modal input:focus,
+body.dark .message-compose-modal select:focus,
+body.dark .message-compose-modal textarea:focus {
+    border-color: #dfa818;
+    box-shadow: 0 0 0 4px rgba(246, 201, 69, 0.18);
+}
+
+body.dark .message-compose-modal .secondary-button {
+    border-color: #514b40;
+    color: #e4ddd2;
+    background: #34312b;
+}
+
 body.dark .group-message-header {
     background:
         radial-gradient(circle at 91% 18%, rgba(246, 201, 69, 0.12) 0 34px, transparent 35px),
@@ -2869,6 +2908,30 @@ body.dark .group-create-place-detail-icon {
     background: #fffdf7;
 }
 
+.message-translation {
+    margin-top: 8px;
+    margin-bottom: 2px;
+}
+
+.message-conversation-bubble .place-review-translate-toggle {
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.message-conversation-bubble .place-review-translated-box {
+    margin-top: 8px;
+}
+
+.message-conversation-row.mine .place-review-translated-box {
+    border-color: #efd98a;
+    background: #fffbeb;
+}
+
+.message-source-text {
+    display: none;
+}
+
 .message-inline-edit {
     display: grid;
     gap: 10px;
@@ -2932,6 +2995,22 @@ body.dark .message-mini-button {
     color: var(--text);
     border-color: var(--gray-200);
     background: var(--gray-50);
+}
+
+body.dark .message-conversation-row.mine .place-review-translated-box {
+    border-color: rgba(246, 201, 69, 0.35);
+    background: rgba(246, 201, 69, 0.08);
+}
+
+body.dark .message-conversation-bubble .place-review-translate-toggle {
+    border-color: #4b463d;
+    background: #2b2924;
+    color: #ddd4c4;
+}
+
+body.dark .message-conversation-bubble .place-review-translate-toggle:hover {
+    border-color: #8f7436;
+    background: #373126;
 }
 
 
@@ -3290,6 +3369,42 @@ body.dark .group-place-option.selected {
     border-color: #c98b19 !important;
     background: #ffd75c !important;
     transform: translateY(-1px);
+}
+
+.message-detail [data-conversation-reply] {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 6px 9px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    color: var(--brown-dark) !important;
+    background: var(--yellow-light) !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+}
+
+.message-detail [data-conversation-reply]:hover {
+    border-color: transparent !important;
+    background: #ffe9a5 !important;
+    transform: none;
+}
+
+body.dark .message-detail [data-conversation-reply] {
+    border-color: #5d574b !important;
+    color: #eee7db !important;
+    background: #34312b !important;
+}
+
+body.dark .message-detail [data-conversation-reply]:hover {
+    border-color: #d6ad43 !important;
+    color: #fff5d4 !important;
+    background: #403b31 !important;
 }
 
 /* 기존 상단 탭은 사이드바 제목으로 대체 */
