@@ -110,6 +110,12 @@ public class SecurityConfig {
                                 "/api/translate"
                         ).permitAll()
 
+                        // NAVITIME 대중교통 경로 (공개)
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/route/transit"
+                        ).permitAll()
+
                         // 그룹 공유 조회
                         .requestMatchers(
                                 HttpMethod.GET,

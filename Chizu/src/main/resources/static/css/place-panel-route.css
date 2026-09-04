@@ -1576,6 +1576,17 @@ body:has(#routePanel.show) .place-side-panel #placeRouteButton:hover {
     line-height: 1.55 !important;
 }
 
+.place-side-panel .transit-transfer-hint {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gray-200) 80%, transparent);
+    color: var(--gray-600);
+    font-size: 10px;
+    font-weight: 700;
+}
+
 .place-side-panel .transit-detail-station {
     min-height: 46px;
     padding-bottom: 8px;
