@@ -28,7 +28,7 @@ public class Message {
     @Column(name = "isRecepted", nullable = false)
     private Boolean isRecepted;
 
-    @Column(name = "content")
+    @Column(name = "content", columnDefinition = "TEXT")
     @NotBlank
     private String content;
 
