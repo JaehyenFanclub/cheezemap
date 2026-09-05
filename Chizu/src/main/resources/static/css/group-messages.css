@@ -5503,3 +5503,536 @@ body.dark .group-picker-current-empty {
     }
 }
 
+
+/* =====================================================
+   GROUP EDITOR - 그룹 수정 장소선택 잘림 보정
+   - 새 그룹: 기존처럼 검색 전 스크롤 없음
+   - 그룹 수정: 현재 저장된 장소가 추가되므로 장소선택 영역 자체 스크롤
+   - 취소/저장 버튼은 기존 위치 유지
+===================================================== */
+
+/*
+   기본 새 그룹 화면은 기존 정책 유지:
+   검색 결과가 생기기 전에는 group-picker 스크롤바를 만들지 않는다.
+*/
+.group-form-modal .group-picker {
+    max-height: 300px;
+    overflow-y: hidden;
+}
+
+/*
+   그룹 수정 화면에는 "현재 저장된 장소" 섹션이 추가되기 때문에
+   같은 300px에서 overflow:hidden이면
+   기존 그룹/장소 검색 영역이 아래에서 잘려 버립니다.
+
+   현재 저장 장소 섹션이 있을 때만
+   group-picker 자체를 스크롤 영역으로 전환합니다.
+*/
+.group-form-modal
+.group-picker:has(.group-picker-current-section) {
+    max-height: min(370px, calc(100vh - 440px));
+    min-height: 250px;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    padding-right: 6px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal
+.group-picker:has(.group-picker-current-section)::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-form-modal
+.group-picker:has(.group-picker-current-section)::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal
+.group-picker:has(.group-picker-current-section)::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-form-modal
+.group-picker:has(.group-picker-current-section)::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+/*
+   현재 저장된 장소 자체도 너무 많은 경우
+   이 목록이 모달 높이를 전부 먹지 않도록 내부 높이 제한.
+*/
+.group-form-modal .group-picker-current-places {
+    max-height: 150px;
+}
+
+/*
+   수정 화면에서 장소 검색 제목/검색창까지
+   스크롤 끝에서 완전히 보이도록 하단 여유 추가.
+*/
+.group-form-modal
+.group-picker:has(.group-picker-current-section) {
+    padding-bottom: 10px;
+}
+
+/* 기존 그룹 목록도 수정 화면에서는 과하게 높아지지 않게 */
+.group-form-modal
+.group-picker:has(.group-picker-current-section)
+.group-picker-existing-groups {
+    max-height: 125px;
+}
+
+/* 모바일 */
+@media (max-width: 760px) {
+    .group-form-modal
+    .group-picker:has(.group-picker-current-section) {
+        max-height: min(330px, calc(100vh - 390px));
+        min-height: 220px;
+    }
+
+    .group-form-modal .group-picker-current-places {
+        max-height: 140px;
+    }
+
+    .group-form-modal
+    .group-picker:has(.group-picker-current-section)
+    .group-picker-existing-groups {
+        max-height: 110px;
+    }
+}
+
+
+/* =====================================================
+   GROUP EDITOR - 수정/저장 버튼 잘림 최종 보정
+   - 모달 전체는 고정 프레임
+   - 폼 내부에서 장소 선택 영역만 남은 높이를 사용
+   - 취소/저장 버튼은 항상 하단에 노출
+===================================================== */
+
+.group-form-modal {
+    overflow: hidden !important;
+}
+
+/*
+   헤더 아래의 실제 폼 높이를 화면 안에 제한.
+   form 자체를 flex column으로 바꿔
+   마지막 액션 버튼 영역이 항상 남도록 한다.
+*/
+.group-form-modal #groupForm {
+    min-height: 0;
+    max-height: calc(100vh - 205px);
+
+    display: flex !important;
+    flex-direction: column;
+    gap: 14px !important;
+
+    overflow: hidden;
+}
+
+/* 이름/메모는 고정 높이 유지 */
+.group-form-modal #groupForm > label {
+    flex: 0 0 auto;
+}
+
+/*
+   장소 선택 영역만 남은 높이를 먹도록 함.
+   내용이 길면 이 안에서만 스크롤.
+*/
+.group-form-modal .group-place-fieldset {
+    min-height: 0;
+    flex: 1 1 auto;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+}
+
+.group-form-modal .group-place-fieldset > legend {
+    flex: 0 0 auto;
+}
+
+/* 실제 장소 선택 UI */
+.group-form-modal .group-place-options {
+    min-height: 0;
+    flex: 1 1 auto;
+
+    max-height: none !important;
+    overflow: hidden !important;
+}
+
+/*
+   수정 화면의 picker만 내부 스크롤.
+   기존 '현재 저장된 장소 / 기존 그룹 / 장소 검색' 전부 이 안에서 스크롤된다.
+*/
+.group-form-modal .group-picker {
+    min-height: 0 !important;
+    max-height: none !important;
+    height: 100%;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    padding-right: 6px;
+    padding-bottom: 10px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+/*
+   취소 / 저장 버튼은 flex에서 마지막 고정 영역.
+   스크롤 대상이 아니므로 항상 보인다.
+*/
+.group-form-modal .group-form-actions {
+    position: static !important;
+    flex: 0 0 auto;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin: 0 !important;
+    padding: 14px 0 0 !important;
+
+    border-top: 1px solid #eee5d6;
+    background: #fffefb !important;
+    box-shadow: none !important;
+}
+
+.group-form-modal .group-form-actions button {
+    min-width: 96px;
+    min-height: 44px;
+}
+
+/* 다크모드 */
+body.dark .group-form-modal .group-form-actions {
+    border-top-color: #49443b;
+    background: #292722 !important;
+}
+
+/* 모바일 */
+@media (max-width: 760px) {
+    .group-form-modal #groupForm {
+        max-height: calc(100vh - 165px);
+        gap: 12px !important;
+    }
+
+    .group-form-modal .group-form-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding-top: 12px !important;
+    }
+
+    .group-form-modal .group-form-actions button {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+
+/* =====================================================
+   GROUP EDITOR - 전체 모달 스크롤 최종 보정
+   - 내용이 길면 모달 전체가 스크롤
+   - 현재 저장 장소 / 기존 그룹 / 장소 검색이 잘리지 않음
+   - 취소/저장 버튼은 하단 sticky로 항상 노출
+===================================================== */
+
+/*
+   기존에 form / fieldset / group-picker 각각 높이를 나눠 갖게 하면서
+   내용이 많은 수정 화면에서 중간 영역이 잘리는 문제가 있었습니다.
+
+   이제 그룹 수정 모달은 "전체 내용 스크롤 + 하단 액션 sticky" 구조로 통일합니다.
+*/
+.group-form-modal {
+    max-height: calc(100vh - 32px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-form-modal::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+/* form 자체의 높이/overflow 제한 해제 */
+.group-form-modal #groupForm {
+    display: grid !important;
+    gap: 16px !important;
+
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+
+    overflow: visible !important;
+}
+
+/* 장소 선택 fieldset도 전체 높이를 자연스럽게 사용 */
+.group-form-modal .group-place-fieldset {
+    display: block !important;
+
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+
+    overflow: visible !important;
+}
+
+/* 장소 선택 바깥 컨테이너 높이 제한 제거 */
+.group-form-modal .group-place-options {
+    display: block !important;
+
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+
+    overflow: visible !important;
+}
+
+/* group-picker도 화면을 잘라먹지 않게 전체 높이 사용 */
+.group-form-modal .group-picker,
+.group-form-modal
+.group-picker:has(.group-picker-current-section) {
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+
+    overflow: visible !important;
+
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/*
+   현재 저장 장소는 9~10곳 이상이어도
+   일단 모두 보이게 하고, 모달 전체 스크롤로 접근.
+   너무 길어지는 걸 막기 위해 이 목록만 최대 높이 320px.
+*/
+.group-form-modal .group-picker-current-places {
+    max-height: 320px !important;
+    overflow-y: auto !important;
+    padding-right: 5px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal
+.group-picker-current-places::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-form-modal
+.group-picker-current-places::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+/* 기존 그룹 목록도 너무 길면 자체 스크롤 */
+.group-form-modal .group-picker-existing-groups,
+.group-form-modal
+.group-picker:has(.group-picker-current-section)
+.group-picker-existing-groups {
+    max-height: 180px !important;
+    overflow-y: auto !important;
+}
+
+/* 검색 결과는 기본 4개 그대로, 더보기는 플로팅 팝오버 유지 */
+.group-form-modal .group-picker-search-results {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/*
+   취소 / 저장은 모달 스크롤 하단에 sticky.
+   아래로 내려가도 항상 화면 하단에 붙어 있게 함.
+*/
+.group-form-modal .group-form-actions {
+    position: sticky !important;
+    bottom: -1px;
+    z-index: 100;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+
+    min-height: 72px;
+
+    margin: 8px -28px -24px !important;
+    padding: 14px 28px 18px !important;
+
+    border-top: 1px solid #eee5d6;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255, 253, 248, .96) 0%,
+            #fffdf8 24%,
+            #fffdf8 100%
+        ) !important;
+
+    box-shadow:
+        0 -8px 20px rgba(71, 53, 24, .05) !important;
+}
+
+.group-form-modal .group-form-actions button {
+    min-width: 96px;
+    min-height: 44px;
+}
+
+/* 다크모드 */
+body.dark .group-form-modal .group-form-actions {
+    border-top-color: #49443b;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(41, 39, 34, .96) 0%,
+            #292722 24%,
+            #292722 100%
+        ) !important;
+}
+
+/* 모바일 */
+@media (max-width: 760px) {
+    .group-form-modal {
+        max-height: calc(100vh - 18px) !important;
+    }
+
+    .group-form-modal .group-picker-current-places {
+        max-height: 280px !important;
+    }
+
+    .group-form-modal .group-form-actions {
+        bottom: -1px;
+
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+
+        margin: 8px -18px -18px !important;
+        padding: 12px 18px 16px !important;
+    }
+
+    .group-form-modal .group-form-actions button {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+
+/* =====================================================
+   그룹 수정 - 현재 저장된 장소 컴팩트 4열
+   - 현재 저장된 장소에서 주소 숨김
+   - 4열 배치로 세로 공간 절약
+===================================================== */
+
+/* 현재 저장된 장소 카드만 4열 */
+.group-form-modal .group-picker-current-places {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+
+    max-height: 220px !important;
+}
+
+/*
+   현재 저장된 장소 카드 안의 보조 텍스트(주소/카테고리 줄) 숨김.
+   장소명만 남겨 높이를 줄입니다.
+*/
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place
+.group-picker-place-copy
+small {
+    display: none !important;
+}
+
+/* 카드 자체도 조금 더 낮고 촘촘하게 */
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place {
+    min-height: 46px;
+    padding: 8px !important;
+    gap: 7px !important;
+}
+
+/* 체크박스도 살짝 축소 */
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place
+.group-place-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+}
+
+/* 장소명 한 줄 처리 */
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place
+.group-picker-place-copy {
+    min-width: 0;
+}
+
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place
+.group-picker-place-copy strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 10px;
+}
+
+/* 중간 폭에서는 3열 */
+@media (max-width: 980px) {
+    .group-form-modal .group-picker-current-places {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+/* 모바일에서는 2열 */
+@media (max-width: 760px) {
+    .group-form-modal .group-picker-current-places {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        max-height: 220px !important;
+    }
+}
+
