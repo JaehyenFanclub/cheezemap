@@ -5001,3 +5001,462 @@ body.dark .place-side-panel .place-review-more-button:hover {
 body.dark .place-side-panel .place-review-translate-toggle {
     color: #eee8dc !important;
 }
+
+
+/* =====================================================
+   CHEESE MAP - 장소 SNS 공유 모달
+===================================================== */
+
+.place-share-modal {
+    position: fixed;
+    z-index: 1000005;
+    inset: 0;
+
+    display: grid;
+    place-items: center;
+
+    padding: 18px;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transition:
+        opacity .18s ease,
+        visibility .18s ease;
+}
+
+.place-share-modal.show {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.place-share-backdrop {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+    padding: 0;
+
+    border: 0;
+    background: rgba(32, 28, 22, 0.46);
+    backdrop-filter: blur(4px);
+
+    cursor: default;
+}
+
+.place-share-sheet {
+    position: relative;
+    z-index: 1;
+
+    width: min(430px, calc(100vw - 30px));
+
+    padding: 22px;
+
+    border: 1px solid #eadfca;
+    border-radius: 22px;
+
+    background: #fffdf8;
+
+    box-shadow:
+        0 24px 70px rgba(41, 33, 24, 0.24);
+
+    transform: translateY(8px) scale(.985);
+
+    transition:
+        transform .2s ease;
+}
+
+.place-share-modal.show
+.place-share-sheet {
+    transform: translateY(0) scale(1);
+}
+
+.place-share-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.place-share-head span {
+    display: block;
+    margin-bottom: 4px;
+
+    color: #b77a00;
+
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .16em;
+}
+
+.place-share-head h3 {
+    margin: 0;
+
+    color: #2f2922;
+
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.place-share-close {
+    width: 34px;
+    height: 34px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+
+    border: 1px solid #e8dfcf;
+    border-radius: 11px;
+
+    color: #746a5e;
+    background: #ffffff;
+
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.place-share-place {
+    margin-top: 17px;
+    padding: 13px 14px;
+
+    border: 1px solid #eee4d4;
+    border-radius: 14px;
+
+    background: #fbf8f1;
+}
+
+.place-share-place strong {
+    display: block;
+
+    color: #332d25;
+
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.45;
+}
+
+.place-share-place span {
+    display: block;
+    margin-top: 4px;
+
+    color: #85796a;
+
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.place-share-options {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-top: 18px;
+}
+
+.place-share-option {
+    min-width: 0;
+    min-height: 84px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    padding: 10px 6px;
+
+    border: 1px solid #ebe1d0;
+    border-radius: 15px;
+
+    color: #40382f;
+    background: #ffffff;
+
+    cursor: pointer;
+
+    transition:
+        transform .14s ease,
+        border-color .14s ease,
+        background .14s ease,
+        box-shadow .14s ease;
+}
+
+.place-share-option:hover {
+    transform: translateY(-2px);
+
+    border-color: #dfb84d;
+    background: #fffaf0;
+
+    box-shadow:
+        0 7px 16px rgba(81, 62, 35, 0.08);
+}
+
+.place-share-brand {
+    width: 44px;
+    height: 44px;
+
+    display: grid;
+    place-items: center;
+
+    flex: 0 0 auto;
+}
+
+.share-brand-svg {
+    width: 44px;
+    height: 44px;
+    display: block;
+    overflow: visible;
+}
+
+/* LINE */
+.place-share-option.line .share-brand-svg > rect {
+    fill: #06c755;
+}
+
+.place-share-option.line .line-bubble {
+    fill: #ffffff;
+}
+
+.place-share-option.line .line-wordmark {
+    fill: #06c755;
+    font-size: 7px;
+    font-weight: 900;
+    font-family: Arial, Helvetica, sans-serif;
+    letter-spacing: -0.2px;
+}
+
+/* X */
+.place-share-option.x .share-brand-svg > rect {
+    fill: #0a0a0a;
+}
+
+.place-share-option.x .x-mark {
+    fill: #ffffff;
+}
+
+/* KakaoTalk */
+.place-share-option.kakao .share-brand-svg > rect {
+    fill: #fee500;
+}
+
+.place-share-option.kakao .kakao-bubble {
+    fill: #3c1e1e;
+}
+
+/* Instagram */
+.place-share-option.instagram .instagram-outline {
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: 2.5;
+}
+
+.place-share-option.instagram .instagram-dot {
+    fill: #ffffff;
+}
+
+/* Utility */
+.place-share-option.native .utility-svg > rect,
+.place-share-option.copy .utility-svg > rect {
+    fill: #fff1b7;
+}
+
+.place-share-option.native .utility-svg path,
+.place-share-option.copy .utility-svg path {
+    fill: none;
+    stroke: #8b6112;
+    stroke-width: 2.3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.place-share-option b {
+    max-width: 100%;
+
+    overflow: hidden;
+
+    font-size: 10px;
+    font-weight: 850;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+
+
+
+
+
+
+/* 다크모드 */
+
+body.dark .place-share-sheet {
+    border-color: #4c473d;
+    background: #2e2b25;
+
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, .42);
+}
+
+body.dark .place-share-head h3,
+body.dark .place-share-place strong,
+body.dark .place-share-option {
+    color: #f5f0e7;
+}
+
+body.dark .place-share-close,
+body.dark .place-share-option {
+    border-color: #4c473d;
+    background: #35322c;
+}
+
+body.dark .place-share-close {
+    color: #ddd5c8;
+}
+
+body.dark .place-share-place {
+    border-color: #49443b;
+    background: #292722;
+}
+
+
+
+body.dark .place-share-place span {
+    color: #bbb1a3;
+}
+
+body.dark .place-share-option:hover {
+    border-color: #8c7134;
+    background: #3b362b;
+}
+
+
+/* 모바일에서는 하단 시트처럼 표시 */
+
+@media (max-width: 560px) {
+    .place-share-modal {
+        align-items: end;
+        padding: 0;
+    }
+
+    .place-share-sheet {
+        width: 100%;
+
+        padding:
+            20px
+            18px
+            calc(
+                20px +
+                env(safe-area-inset-bottom)
+            );
+
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+
+        border-radius:
+            22px
+            22px
+            0
+            0;
+
+        transform:
+            translateY(24px);
+    }
+
+    .place-share-modal.show
+    .place-share-sheet {
+        transform:
+            translateY(0);
+    }
+
+    .place-share-options {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            );
+    }
+}
+
+
+
+/* 장소 공유 모달 - 아이콘/간격 최종 보정 */
+.place-share-options {
+    gap: 12px;
+}
+
+.place-share-option {
+    min-height: 92px;
+    padding: 12px 7px 10px;
+    gap: 9px;
+}
+
+.place-share-option b {
+    font-size: 10.5px;
+    letter-spacing: -0.01em;
+}
+
+
+
+/* =====================================================
+   장소 공유 - 실제 브랜드 이미지 아이콘 적용
+   LINE / KakaoTalk / Instagram
+===================================================== */
+
+
+/* 실제 이미지 아이콘을 쓰는 브랜드는 기존 SVG 색상 규칙 무효화 */
+.place-share-option.line .place-share-brand,
+.place-share-option.kakao .place-share-brand,
+.place-share-option.instagram .place-share-brand {
+    background: transparent !important;
+}
+
+/* 맨 아래 설명 문구는 표시하지 않음 */
+
+
+/* =====================================================
+   장소 공유 - LINE / KakaoTalk / Instagram inline SVG
+   별도 PNG 파일 필요 없음
+===================================================== */
+
+.place-share-brand-svg {
+    width: 46px;
+    height: 46px;
+    display: block;
+    overflow: visible;
+}
+
+/* 브랜드 SVG가 카드 안에서 또 배경을 받지 않도록 정리 */
+.place-share-option.line .place-share-brand,
+.place-share-option.kakao .place-share-brand,
+.place-share-option.instagram .place-share-brand {
+    width: 46px;
+    height: 46px;
+    background: transparent !important;
+}
+
+/* 설명 문구는 완전히 숨김 */
+.place-share-note {
+    display: none !important;
+}
+
+
+/* LINE 아이콘 비율 보정 */
+.place-share-option.line .line-logo-svg {
+    width: 46px;
+    height: 46px;
+}
+
+.place-share-option.line .place-share-brand {
+    display: grid;
+    place-items: center;
+}
