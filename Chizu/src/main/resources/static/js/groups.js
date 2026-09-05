@@ -157,6 +157,12 @@ function getGroupSaveCategoryPreset(
     const rawCategory = (
         hasStoredPlace
             ? [
+                /*
+                    새로고침 후에는 DB placeCategory만 믿지 않고
+                    Google Place Details에서 복원한 실제 primaryType을
+                    가장 먼저 사용합니다.
+                */
+                place?.googlePrimaryType,
                 normalizeGroupSaveText(
                     place?.category
                 ),
@@ -1155,6 +1161,197 @@ function getLocalDateTimeInputValue(date = new Date()) {
     );
 }
 
+async function restoreGroupPlaceGoogleCategory(
+    backendPlace,
+    placeKey
+) {
+    if (
+        !backendPlace ||
+        !placeKey ||
+        !places?.[placeKey]
+    ) {
+        return;
+    }
+
+    const googlePlaceId =
+        String(
+            backendPlace?.googlePlaceId ||
+            (
+                String(placeKey)
+                    .startsWith("google_")
+                    ? String(placeKey)
+                        .slice(
+                            "google_".length
+                        )
+                    : ""
+            )
+        ).trim();
+
+    if (
+        !googlePlaceId ||
+        typeof fetchGooglePoiDetails !==
+            "function"
+    ) {
+        return;
+    }
+
+    try {
+        const googlePlace =
+            await fetchGooglePoiDetails(
+                googlePlaceId
+            );
+
+        if (!googlePlace) {
+            return;
+        }
+
+        const primaryType =
+            String(
+                googlePlace?.primaryType ||
+                ""
+            ).trim();
+
+        const primaryTypeDisplayName =
+            String(
+                googlePlace
+                    ?.primaryTypeDisplayName ||
+                ""
+            ).trim();
+
+        const isTransit =
+            [
+                "train_station",
+                "subway_station",
+                "transit_station"
+            ].includes(
+                primaryType
+                    .toLowerCase()
+            );
+
+        const current =
+            places[placeKey];
+
+        /*
+            Google의 실제 primaryType을 따로 보관합니다.
+            getGroupSaveCategoryPreset()은 이 값을 DB 카테고리보다
+            먼저 검사하므로 새로고침 후에도 역이 호텔/관광지로
+            잘못 바뀌지 않습니다.
+        */
+        current.googlePrimaryType =
+            primaryType;
+
+        if (primaryTypeDisplayName) {
+            current.category = {
+                ko:
+                    primaryTypeDisplayName,
+                ja:
+                    primaryTypeDisplayName,
+                en:
+                    primaryTypeDisplayName
+            };
+        } else if (primaryType) {
+            const localizedType =
+                groupPickerLocalizedType(
+                    primaryType
+                );
+
+            current.category = {
+                ko: localizedType,
+                ja: localizedType,
+                en: localizedType
+            };
+        }
+
+        current.type =
+            isTransit
+                ? "transport"
+                : (
+                    primaryType ||
+                    current.type ||
+                    "tour"
+                );
+
+        /*
+            이름/주소/좌표도 Google 상세값이 있으면 같이 보정합니다.
+            단, 그룹 표시의 핵심은 primaryType 복원입니다.
+        */
+        const displayName =
+            String(
+                googlePlace
+                    ?.displayName ||
+                ""
+            ).trim();
+
+        if (displayName) {
+            current.name = {
+                ko: displayName,
+                ja: displayName,
+                en: displayName
+            };
+        }
+
+        const address =
+            String(
+                googlePlace
+                    ?.formattedAddress ||
+                ""
+            ).trim();
+
+        if (address) {
+            current.address = {
+                ko: address,
+                ja: address,
+                en: address
+            };
+        }
+
+        const location =
+            googlePlace?.location;
+
+        const lat =
+            typeof location?.lat ===
+                "function"
+                ? Number(
+                    location.lat()
+                )
+                : Number(
+                    location?.lat
+                );
+
+        const lng =
+            typeof location?.lng ===
+                "function"
+                ? Number(
+                    location.lng()
+                )
+                : Number(
+                    location?.lng
+                );
+
+        if (
+            Number.isFinite(lat) &&
+            Number.isFinite(lng)
+        ) {
+            current.position = {
+                lat,
+                lng
+            };
+        }
+
+    } catch (error) {
+        /*
+            Google 상세 조회가 실패하면
+            기존 DB 데이터로 그대로 표시합니다.
+        */
+        console.warn(
+            "그룹 장소 Google 카테고리 복원 실패:",
+            backendPlace?.placeId,
+            error
+        );
+    }
+}
+
+
 async function hydrateGroup(raw) {
     const placeBackendIds = []
         .concat(raw.placeIds ?? raw.placeId ?? [])
@@ -1168,7 +1365,22 @@ async function hydrateGroup(raw) {
             const key = typeof registerFrontendPlaceFromBackend === "function"
                 ? registerFrontendPlaceFromBackend(data)
                 : await backendPlaceIdToFrontendKey(backendId);
-            if (key) placeIds.push(key);
+
+            if (key) {
+                /*
+                    새로고침 후 그룹 장소를 DB에서 복원할 때
+                    Google Place ID가 있는 장소는 실제 Google primaryType까지
+                    다시 복원한 뒤 그룹 목록에 넣습니다.
+                */
+                await restoreGroupPlaceGoogleCategory(
+                    data,
+                    key
+                );
+
+                placeIds.push(
+                    key
+                );
+            }
         } catch (error) {
             console.warn("그룹 장소 로드 실패:", backendId, error);
         }
