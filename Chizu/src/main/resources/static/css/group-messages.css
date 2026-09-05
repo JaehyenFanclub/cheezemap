@@ -3201,12 +3201,38 @@ body.dark .message-conversation-bubble .place-review-translate-toggle:hover {
     transform: rotate(180deg);
 }
 
+/* mr.eum수정부분 */
+/* 펼쳐진 그룹의 장소 목록만 독립적으로 스크롤 */
 .group-picker-existing-places {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
+    max-height: 150px;
+    overflow-y: auto;
     padding: 0 10px 10px;
     border-top: 1px solid #f2ecdf;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+/* mr.eum수정부분 */
+/* 기존 그룹 내부 장소 목록 치즈맵 스크롤바 */
+.group-picker-existing-places::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-picker-existing-places::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-existing-places::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-picker-existing-places::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
 }
 
 .group-picker-existing-places[hidden] {
@@ -3281,13 +3307,38 @@ body.dark .message-conversation-bubble .place-review-translate-toggle:hover {
     background: #ffd85f;
 }
 
+/* mr.eum수정부분 */
+/* 장소 검색 결과 영역만 독립적으로 스크롤 */
 .group-picker-search-results {
     max-height: 225px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
+    overflow-x: hidden;
     overflow-y: auto;
-    padding: 1px 3px 1px 1px;
+    padding: 1px 6px 1px 1px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+/* mr.eum수정부분 */
+/* 장소 검색 결과 치즈맵 스크롤바 */
+.group-picker-search-results::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-picker-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-search-results::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-picker-search-results::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
 }
 
 .group-picker-search-empty,
@@ -4000,3 +4051,320 @@ body.dark .group-detail-meta {
     border-bottom-color: #4a4740;
 }
 
+/* mr.eum수정부분 */
+/* 그룹 생성 모달 전체 스크롤을 치즈맵 스타일로 변경 */
+.group-form-modal {
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal::-webkit-scrollbar {
+    width: 7px;
+}
+
+.group-form-modal::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+/* mr.eum수정부분 */
+/* 기존 그룹 선택 영역을 2열 카드로 변경 */
+.group-picker-existing-groups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    max-height: 235px;
+    overflow-y: auto;
+    padding: 1px 5px 1px 1px;
+}
+
+/* mr.eum수정부분 */
+/* 그룹 카드를 버튼 형태로 사용 */
+.group-picker-existing-group {
+    width: 100%;
+    min-width: 0;
+    min-height: 64px;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    color: var(--text);
+    background: #fffdfa;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition:
+        border-color .16s ease,
+        background .16s ease,
+        transform .16s ease;
+}
+
+.group-picker-existing-group:hover {
+    border-color: #e3c564;
+    background: #fff8df;
+    transform: translateY(-1px);
+}
+
+/* mr.eum수정부분 */
+/* 기존 그룹 아이콘 */
+.group-picker-existing-group-icon {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--cheese-brown);
+    background: #fff0b0;
+    font-size: 16px;
+}
+
+/* mr.eum수정부분 */
+/* 그룹 이름/장소 수 */
+.group-picker-existing-group-copy {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+.group-picker-existing-group-copy strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.group-picker-existing-group-copy small {
+    color: var(--gray-500);
+    font-size: 9px;
+    font-weight: 600;
+}
+
+/* mr.eum수정부분 */
+/* 기존 펼침용 화살표 대신 오른쪽 이동 아이콘 */
+.group-picker-existing-group .group-picker-chevron {
+    color: var(--gray-500);
+    font-size: 15px;
+}
+
+/* mr.eum수정부분 */
+/* 기존 인라인 장소 영역은 더 이상 사용하지 않음 */
+.group-picker-existing-places {
+    display: none !important;
+}
+
+/* =====================================================
+   그룹 저장 장소 선택 팝업
+===================================================== */
+
+/* mr.eum수정부분 */
+/* 그룹 카드 클릭 시 표시되는 장소 선택 팝업 배경 */
+.group-picker-place-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(24, 20, 14, 0.52);
+}
+
+.group-picker-place-modal-backdrop[hidden] {
+    display: none;
+}
+
+/* mr.eum수정부분 */
+/* 저장 장소 팝업 */
+.group-picker-place-modal {
+    position: relative;
+    width: min(560px, calc(100vw - 40px));
+    max-height: min(620px, calc(100vh - 40px));
+    display: flex;
+    flex-direction: column;
+    padding: 26px;
+    border: 1px solid rgba(178, 140, 64, 0.22);
+    border-radius: 22px;
+    color: var(--text);
+    background: #292722;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+    box-sizing: border-box;
+}
+
+/* mr.eum수정부분 */
+/* 팝업 닫기 */
+.group-picker-place-modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 10px;
+    color: #eee8dc;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.group-picker-place-modal-close:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+/* mr.eum수정부분 */
+/* 팝업 제목 */
+.group-picker-place-modal-heading {
+    padding-right: 40px;
+    margin-bottom: 16px;
+}
+
+.group-picker-place-modal-heading .group-eyebrow {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.group-picker-place-modal-heading h3 {
+    margin: 0;
+    color: #f7f2e8;
+    font-size: 18px;
+}
+
+.group-picker-place-modal-heading p {
+    margin: 5px 0 0;
+    color: #aaa297;
+    font-size: 10px;
+}
+
+/* mr.eum수정부분 */
+/* 저장된 장소만 내부 스크롤 */
+.group-picker-place-modal-list {
+    min-height: 0;
+    max-height: 390px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 2px 6px 4px 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #c9a45a transparent;
+}
+
+/* mr.eum수정부분 */
+/* 저장 장소 팝업 스크롤바 */
+.group-picker-place-modal-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-picker-place-modal-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-place-modal-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c9a45a;
+}
+
+.group-picker-place-modal-list::-webkit-scrollbar-thumb:hover {
+    background: #a98232;
+}
+
+/* mr.eum수정부분 */
+/* 팝업 장소 카드 */
+.group-picker-place-modal-list .group-place-option {
+    min-width: 0;
+    min-height: 54px;
+}
+
+/* mr.eum수정부분 */
+/* 팝업 하단 선택 완료 */
+.group-picker-place-modal-actions {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.group-picker-place-modal-actions .primary-button {
+    min-width: 110px;
+    min-height: 42px;
+    border-radius: 12px;
+}
+
+/* =====================================================
+   장소 검색 결과 내부 스크롤
+===================================================== */
+
+/* mr.eum수정부분 */
+/* 검색 결과 영역만 고정 높이 + 자체 스크롤 */
+.group-picker-search-results {
+    min-height: 0;
+    height: 180px;
+    max-height: 180px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 2px 6px 2px 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #c9a45a transparent;
+}
+
+/* mr.eum수정부분 */
+/* 장소 검색 결과 치즈 스크롤바 */
+.group-picker-search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-picker-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-search-results::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c9a45a;
+}
+
+.group-picker-search-results::-webkit-scrollbar-thumb:hover {
+    background: #a98232;
+}
+
+/* mr.eum수정부분 */
+/* 다크모드 기존 그룹 카드 */
+body.dark .group-picker-existing-group {
+    border-color: #4b463c;
+    background: #292722;
+}
+
+body.dark .group-picker-existing-group:hover {
+    border-color: #8e7335;
+    background: #3b3427;
+}
+
+/* mr.eum수정부분 */
+/* 모바일에서는 그룹 카드와 장소를 1열로 */
+@media (max-width: 760px) {
+    .group-picker-existing-groups,
+    .group-picker-place-modal-list,
+    .group-picker-search-results {
+        grid-template-columns: 1fr;
+    }
+}

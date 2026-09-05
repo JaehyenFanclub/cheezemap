@@ -1858,6 +1858,9 @@ async function renderGroupPickerSearchResults(
     }
 }
 
+/* mr.eum수정부분 */
+/* 기존 그룹을 2열 카드로 표시하고,
+   그룹 클릭 시 저장된 장소 선택 팝업을 표시 */
 function renderExistingGroupPicker(
     selectedKeys,
     currentGroupId = null
@@ -1888,6 +1891,8 @@ function renderExistingGroupPicker(
         return;
     }
 
+    /* mr.eum수정부분 */
+    /* 기존 그룹은 장소를 바로 펼치지 않고 2열 카드로만 표시 */
     list.innerHTML =
         groups
             .map(group => {
@@ -1895,73 +1900,140 @@ function renderExistingGroupPicker(
                     getGroupPlaces(group);
 
                 return `
-                    <section
+                    <button
+                        type="button"
                         class="group-picker-existing-group"
-                        data-picker-group="${group.groupId}"
+                        data-picker-group-open="${escapeGroupHtml(group.groupId)}"
                     >
-                        <button
-                            type="button"
-                            class="group-picker-existing-group-toggle"
-                            data-picker-group-toggle="${group.groupId}"
-                            aria-expanded="false"
-                        >
-                            <span class="group-picker-existing-group-icon">
-                                <i class="ti ti-users-group"></i>
-                            </span>
+                        <span class="group-picker-existing-group-icon">
+                            <i class="ti ti-users-group"></i>
+                        </span>
 
-                            <span class="group-picker-existing-group-copy">
-                                <strong>
-                                    ${escapeGroupHtml(group.groupName)}
-                                </strong>
+                        <span class="group-picker-existing-group-copy">
+                            <strong>
+                                ${escapeGroupHtml(group.groupName)}
+                            </strong>
 
-                                <small>
-                                    ${groupPlaces.length}곳
-                                </small>
-                            </span>
+                            <small>
+                                ${groupPlaces.length}곳
+                            </small>
+                        </span>
 
-                            <i
-                                class="ti ti-chevron-down group-picker-chevron"
-                            ></i>
-                        </button>
-
-                        <div
-                            class="group-picker-existing-places"
-                            data-picker-group-places="${group.groupId}"
-                            hidden
-                        >
-                            ${
-                                groupPlaces.length
-                                    ? groupPlaces
-                                        .map(
-                                            ({
-                                                placeKey,
-                                                place
-                                            }) =>
-                                                groupPickerPlaceOptionHtml(
-                                                    placeKey,
-                                                    place,
-                                                    selectedKeys.has(
-                                                        String(placeKey)
-                                                    ),
-                                                    "group-picker-existing-place"
-                                                )
-                                        )
-                                        .join("")
-                                    : `
-                                        <div class="group-picker-empty-groups">
-                                            저장된 장소가 없습니다.
-                                        </div>
-                                    `
-                            }
-                        </div>
-                    </section>
+                        <i class="ti ti-chevron-right group-picker-chevron"></i>
+                    </button>
                 `;
             })
             .join("");
 
+    /* mr.eum수정부분 */
+    /* 그룹 클릭 시 표시할 저장 장소 팝업을 최초 1회 생성 */
+    let placeModal =
+        document.getElementById(
+            "groupPickerPlaceModal"
+        );
+
+    if (!placeModal) {
+        placeModal =
+            document.createElement("div");
+
+        placeModal.id =
+            "groupPickerPlaceModal";
+
+        placeModal.className =
+            "group-picker-place-modal-backdrop";
+
+        placeModal.hidden = true;
+
+        placeModal.innerHTML = `
+            <div
+                class="group-picker-place-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="groupPickerPlaceModalTitle"
+            >
+                <button
+                    type="button"
+                    class="group-picker-place-modal-close"
+                    aria-label="닫기"
+                >
+                    ×
+                </button>
+
+                <div class="group-picker-place-modal-heading">
+                    <span class="group-eyebrow">
+                        GROUP PLACES
+                    </span>
+
+                    <h3 id="groupPickerPlaceModalTitle">
+                        저장된 장소
+                    </h3>
+
+                    <p id="groupPickerPlaceModalCount"></p>
+                </div>
+
+                <div
+                    class="group-picker-place-modal-list"
+                    id="groupPickerPlaceModalList"
+                ></div>
+
+                <div class="group-picker-place-modal-actions">
+                    <button
+                        type="button"
+                        class="primary-button"
+                        id="groupPickerPlaceModalDone"
+                    >
+                        선택 완료
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(
+            placeModal
+        );
+
+        const closePlaceModal =
+            () => {
+                placeModal.hidden = true;
+            };
+
+        placeModal
+            .querySelector(
+                ".group-picker-place-modal-close"
+            )
+            ?.addEventListener(
+                "click",
+                closePlaceModal
+            );
+
+        placeModal
+            .querySelector(
+                "#groupPickerPlaceModalDone"
+            )
+            ?.addEventListener(
+                "click",
+                closePlaceModal
+            );
+
+        /* 팝업 바깥 클릭 시 닫기 */
+        placeModal.addEventListener(
+            "click",
+            event => {
+                if (
+                    event.target ===
+                    placeModal
+                ) {
+                    closePlaceModal();
+                }
+            }
+        );
+    }
+
+    /* mr.eum수정부분 */
+    /* 그룹 카드 클릭 → 해당 그룹의 저장 장소 팝업 */
     list
         .querySelectorAll(
-            "[data-picker-group-toggle]"
+            "[data-picker-group-open]"
         )
         .forEach(button => {
             button.addEventListener(
@@ -1969,27 +2041,84 @@ function renderExistingGroupPicker(
                 () => {
                     const groupId =
                         button.dataset
-                            .pickerGroupToggle;
+                            .pickerGroupOpen;
 
-                    const placesPanel =
-                        list.querySelector(
-                            `[data-picker-group-places="${groupId}"]`
+                    const group =
+                        groups.find(item =>
+                            String(
+                                item.groupId
+                            ) ===
+                            String(groupId)
                         );
 
-                    const expanded =
-                        button.getAttribute(
-                            "aria-expanded"
-                        ) === "true";
-
-                    button.setAttribute(
-                        "aria-expanded",
-                        String(!expanded)
-                    );
-
-                    if (placesPanel) {
-                        placesPanel.hidden =
-                            expanded;
+                    if (!group) {
+                        return;
                     }
+
+                    const groupPlaces =
+                        getGroupPlaces(
+                            group
+                        );
+
+                    const modalList =
+                        placeModal.querySelector(
+                            "#groupPickerPlaceModalList"
+                        );
+
+                    const title =
+                        placeModal.querySelector(
+                            "#groupPickerPlaceModalTitle"
+                        );
+
+                    const count =
+                        placeModal.querySelector(
+                            "#groupPickerPlaceModalCount"
+                        );
+
+                    if (title) {
+                        title.textContent =
+                            `${group.groupName} · 저장된 장소`;
+                    }
+
+                    if (count) {
+                        count.textContent =
+                            `${groupPlaces.length}곳`;
+                    }
+
+                    if (modalList) {
+                        modalList.innerHTML =
+                            groupPlaces.length
+                                ? groupPlaces
+                                    .map(
+                                        ({
+                                            placeKey,
+                                            place
+                                        }) =>
+                                            groupPickerPlaceOptionHtml(
+                                                placeKey,
+                                                place,
+                                                selectedKeys.has(
+                                                    String(
+                                                        placeKey
+                                                    )
+                                                ),
+                                                "group-picker-existing-place"
+                                            )
+                                    )
+                                    .join("")
+                                : `
+                                    <div class="group-picker-empty-groups">
+                                        저장된 장소가 없습니다.
+                                    </div>
+                                `;
+
+                        bindGroupPickerCheckedStyle(
+                            modalList
+                        );
+                    }
+
+                    placeModal.hidden =
+                        false;
                 }
             );
         });
@@ -2122,9 +2251,7 @@ function renderGroupPlaceOptions(
                 ></div>
             </section>
 
-            <div class="group-picker-divider">
-                <span>또는</span>
-            </div>
+
 
             <section class="group-picker-section">
                 <div class="group-picker-section-heading">
