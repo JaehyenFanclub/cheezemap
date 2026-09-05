@@ -5199,3 +5199,148 @@ body:not(.dark) .group-picker-place-modal-actions {
     }
 }
 
+
+/* =====================================================
+   기존 그룹 저장 장소 팝업 - 라이트/다크 테마 최종 보정
+   기존 CSS가 .group-picker-place-modal 자체를 #292722로 고정해
+   라이트모드에서도 검게 보이던 문제 수정
+===================================================== */
+
+/* ---------- LIGHT MODE ---------- */
+body:not(.dark) .group-picker-place-modal {
+    color: #2f2b24 !important;
+    background: #fffdf8 !important;
+    border-color: #e7dcc8 !important;
+    box-shadow:
+        0 24px 70px rgba(70, 52, 24, 0.20) !important;
+}
+
+body:not(.dark) .group-picker-place-modal-close {
+    color: #6d665c !important;
+    background: #f3f1ec !important;
+}
+
+body:not(.dark) .group-picker-place-modal-close:hover {
+    color: #4f473d !important;
+    background: #ebe7de !important;
+}
+
+body:not(.dark) .group-picker-place-modal-heading .group-eyebrow {
+    color: #c98712 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-heading h3 {
+    color: #2c2822 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-heading p {
+    color: #8c8276 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option {
+    border-color: #e5ddcf !important;
+    background: #ffffff !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option:hover {
+    border-color: #dfbd61 !important;
+    background: #fff9e8 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option.selected {
+    border-color: #d5a832 !important;
+    background: #fff3c5 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option strong {
+    color: #302c26 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option small {
+    color: #8d8378 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-check {
+    border-color: #d8d1c7 !important;
+    background: #ffffff !important;
+}
+
+body:not(.dark)
+.group-picker-place-modal-list
+.group-place-option input:checked + .group-place-check {
+    border-color: #d3a72f !important;
+    color: #6c4b11 !important;
+    background: #ffd95f !important;
+}
+
+body:not(.dark) .group-picker-place-modal-actions {
+    border-top-color: #e9dfcd !important;
+}
+
+
+/* ---------- DARK MODE ---------- */
+body.dark .group-picker-place-modal {
+    color: #f2ede5 !important;
+    background: #292722 !important;
+    border-color: rgba(178, 140, 64, 0.22) !important;
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, 0.35) !important;
+}
+
+body.dark .group-picker-place-modal-close {
+    color: #eee8dc !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark .group-picker-place-modal-close:hover {
+    background: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.dark .group-picker-place-modal-heading h3 {
+    color: #f7f2e8 !important;
+}
+
+body.dark .group-picker-place-modal-heading p {
+    color: #aaa297 !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option {
+    border-color: #3b3832 !important;
+    background: #34312c !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option:hover {
+    border-color: #6f603c !important;
+    background: #3d382d !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option.selected {
+    border-color: #a8873a !important;
+    background: #493f28 !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option strong {
+    color: #f0ebe3 !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option small {
+    color: #aaa297 !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-check {
+    border-color: #5a554b !important;
+    background: #2c2924 !important;
+}
+
+body.dark
+.group-picker-place-modal-list
+.group-place-option input:checked + .group-place-check {
+    border-color: #d5aa42 !important;
+    color: #2d210d !important;
+    background: #e9bc45 !important;
+}
+
+body.dark .group-picker-place-modal-actions {
+    border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
