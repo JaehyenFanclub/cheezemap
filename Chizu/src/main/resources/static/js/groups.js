@@ -157,12 +157,6 @@ function getGroupSaveCategoryPreset(
     const rawCategory = (
         hasStoredPlace
             ? [
-                /*
-                    새로고침 후에는 DB placeCategory만 믿지 않고
-                    Google Place Details에서 복원한 실제 primaryType을
-                    가장 먼저 사용합니다.
-                */
-                place?.googlePrimaryType,
                 normalizeGroupSaveText(
                     place?.category
                 ),
@@ -1161,197 +1155,6 @@ function getLocalDateTimeInputValue(date = new Date()) {
     );
 }
 
-async function restoreGroupPlaceGoogleCategory(
-    backendPlace,
-    placeKey
-) {
-    if (
-        !backendPlace ||
-        !placeKey ||
-        !places?.[placeKey]
-    ) {
-        return;
-    }
-
-    const googlePlaceId =
-        String(
-            backendPlace?.googlePlaceId ||
-            (
-                String(placeKey)
-                    .startsWith("google_")
-                    ? String(placeKey)
-                        .slice(
-                            "google_".length
-                        )
-                    : ""
-            )
-        ).trim();
-
-    if (
-        !googlePlaceId ||
-        typeof fetchGooglePoiDetails !==
-            "function"
-    ) {
-        return;
-    }
-
-    try {
-        const googlePlace =
-            await fetchGooglePoiDetails(
-                googlePlaceId
-            );
-
-        if (!googlePlace) {
-            return;
-        }
-
-        const primaryType =
-            String(
-                googlePlace?.primaryType ||
-                ""
-            ).trim();
-
-        const primaryTypeDisplayName =
-            String(
-                googlePlace
-                    ?.primaryTypeDisplayName ||
-                ""
-            ).trim();
-
-        const isTransit =
-            [
-                "train_station",
-                "subway_station",
-                "transit_station"
-            ].includes(
-                primaryType
-                    .toLowerCase()
-            );
-
-        const current =
-            places[placeKey];
-
-        /*
-            Google의 실제 primaryType을 따로 보관합니다.
-            getGroupSaveCategoryPreset()은 이 값을 DB 카테고리보다
-            먼저 검사하므로 새로고침 후에도 역이 호텔/관광지로
-            잘못 바뀌지 않습니다.
-        */
-        current.googlePrimaryType =
-            primaryType;
-
-        if (primaryTypeDisplayName) {
-            current.category = {
-                ko:
-                    primaryTypeDisplayName,
-                ja:
-                    primaryTypeDisplayName,
-                en:
-                    primaryTypeDisplayName
-            };
-        } else if (primaryType) {
-            const localizedType =
-                groupPickerLocalizedType(
-                    primaryType
-                );
-
-            current.category = {
-                ko: localizedType,
-                ja: localizedType,
-                en: localizedType
-            };
-        }
-
-        current.type =
-            isTransit
-                ? "transport"
-                : (
-                    primaryType ||
-                    current.type ||
-                    "tour"
-                );
-
-        /*
-            이름/주소/좌표도 Google 상세값이 있으면 같이 보정합니다.
-            단, 그룹 표시의 핵심은 primaryType 복원입니다.
-        */
-        const displayName =
-            String(
-                googlePlace
-                    ?.displayName ||
-                ""
-            ).trim();
-
-        if (displayName) {
-            current.name = {
-                ko: displayName,
-                ja: displayName,
-                en: displayName
-            };
-        }
-
-        const address =
-            String(
-                googlePlace
-                    ?.formattedAddress ||
-                ""
-            ).trim();
-
-        if (address) {
-            current.address = {
-                ko: address,
-                ja: address,
-                en: address
-            };
-        }
-
-        const location =
-            googlePlace?.location;
-
-        const lat =
-            typeof location?.lat ===
-                "function"
-                ? Number(
-                    location.lat()
-                )
-                : Number(
-                    location?.lat
-                );
-
-        const lng =
-            typeof location?.lng ===
-                "function"
-                ? Number(
-                    location.lng()
-                )
-                : Number(
-                    location?.lng
-                );
-
-        if (
-            Number.isFinite(lat) &&
-            Number.isFinite(lng)
-        ) {
-            current.position = {
-                lat,
-                lng
-            };
-        }
-
-    } catch (error) {
-        /*
-            Google 상세 조회가 실패하면
-            기존 DB 데이터로 그대로 표시합니다.
-        */
-        console.warn(
-            "그룹 장소 Google 카테고리 복원 실패:",
-            backendPlace?.placeId,
-            error
-        );
-    }
-}
-
-
 async function hydrateGroup(raw) {
     const placeBackendIds = []
         .concat(raw.placeIds ?? raw.placeId ?? [])
@@ -1359,32 +1162,70 @@ async function hydrateGroup(raw) {
         .filter(id => Number.isFinite(id) && id > 0);
 
     const placeIds = [];
+    const unresolvedPlaceBackendIds = [];
+
     for (const backendId of placeBackendIds) {
         try {
-            const data = await getBackendPlaceById(backendId);
-            const key = typeof registerFrontendPlaceFromBackend === "function"
-                ? registerFrontendPlaceFromBackend(data)
-                : await backendPlaceIdToFrontendKey(backendId);
-
-            if (key) {
-                /*
-                    새로고침 후 그룹 장소를 DB에서 복원할 때
-                    Google Place ID가 있는 장소는 실제 Google primaryType까지
-                    다시 복원한 뒤 그룹 목록에 넣습니다.
-                */
-                await restoreGroupPlaceGoogleCategory(
-                    data,
-                    key
+            const data =
+                await getBackendPlaceById(
+                    backendId
                 );
 
-                placeIds.push(
-                    key
+            const key =
+                typeof registerFrontendPlaceFromBackend ===
+                    "function"
+                    ? registerFrontendPlaceFromBackend(
+                        data
+                    )
+                    : await backendPlaceIdToFrontendKey(
+                        backendId
+                    );
+
+            if (!key) {
+                unresolvedPlaceBackendIds.push(
+                    backendId
                 );
+                continue;
             }
+
+            /*
+                중요:
+                그룹은 백의 placeId가 진짜 원본입니다.
+
+                프론트 placeKey는 화면 표시용일 뿐이므로
+                어떤 경로로 복원됐든 반드시 정확한 backend placeId를
+                해당 places 객체에 같이 저장합니다.
+
+                이렇게 해두면 수정 시 ensureBackendPlace()로
+                다른 장소를 다시 찾거나 새 장소로 연결하지 않습니다.
+            */
+            if (places?.[key]) {
+                places[key].backendPlaceId =
+                    backendId;
+            }
+
+            placeIds.push(
+                key
+            );
+
         } catch (error) {
-            console.warn("그룹 장소 로드 실패:", backendId, error);
+            /*
+                일시적인 장소 조회 실패 때문에
+                그룹 수정 시 해당 placeId가 삭제되면 안 됩니다.
+                백의 원래 placeId는 unresolved 목록에 보존합니다.
+            */
+            unresolvedPlaceBackendIds.push(
+                backendId
+            );
+
+            console.warn(
+                "그룹 장소 로드 실패:",
+                backendId,
+                error
+            );
         }
     }
+
     const rawCloneCount = Number(
         raw.cloneCount ??
         raw.shareCount ??
@@ -1397,13 +1238,18 @@ async function hydrateGroup(raw) {
         groupDate: raw.groupDate,
         groupMemo: raw.groupMemo || "",
         groupName: raw.groupName,
+
+        /*
+            placeBackendIds는 백에서 내려온 원본 전체 목록 그대로 유지.
+            placeIds는 화면에서 정상 복원된 frontend key 목록.
+        */
         placeIds,
         placeBackendIds,
+        unresolvedPlaceBackendIds,
 
-        // 백에서 cloneCount를 내려주면 실제 "가져가기 횟수"를 표시합니다.
-        // 아직 필드가 없거나 값이 없으면 0회로 표시합니다.
         cloneCount:
-            Number.isFinite(rawCloneCount) && rawCloneCount >= 0
+            Number.isFinite(rawCloneCount) &&
+            rawCloneCount >= 0
                 ? rawCloneCount
                 : 0
     };
@@ -1440,19 +1286,36 @@ function getGroupPlaces(group) {
     const frontendKeys =
         group.placeIds || [];
 
-    const backendIds =
-        group.placeBackendIds || [];
-
     return frontendKeys
-        .map((placeKey, index) => ({
-            placeKey,
-            place:
-                places[placeKey],
-            backendPlaceId:
+        .map(placeKey => {
+            const place =
+                places[placeKey];
+
+            /*
+                절대 배열 index로 backend placeId를 맞추지 않습니다.
+
+                예:
+                backend ids = [10, 20, 30]
+                place 20 로드 실패
+                frontend keys = [key10, key30]
+
+                예전 방식은 key30에 20을 붙여버렸습니다.
+                이게 수정/지도보기에서 "다른 장소로 바뀌는" 핵심 원인이 될 수 있습니다.
+
+                이제 hydrateGroup에서 각 place 객체에 직접 심어둔
+                backendPlaceId만 사용합니다.
+            */
+            const backendPlaceId =
                 Number(
-                    backendIds[index]
-                ) || null
-        }))
+                    place?.backendPlaceId
+                ) || null;
+
+            return {
+                placeKey,
+                place,
+                backendPlaceId
+            };
+        })
         .filter(item =>
             item.place
         );
@@ -1646,17 +1509,114 @@ function renderSelectedGroup() {
                         typeof openBackendPlaceById ===
                             "function"
                     ) {
-                        try { await openBackendPlaceById( backendPlaceId ); 
-                            /* mr.eum수정부분 */ /* 그룹 → 저장된 장소 → 지도 보기에서도 기존 마이페이지 내 리뷰와 동일한 장소 마커를 표시합니다. */ 
-                            if ( typeof showMyReviewPlaceMarker === "function" && typeof getBackendPlaceById === "function" ) 
-                                { const backendPlace = await getBackendPlaceById( backendPlaceId ); 
-                                    const position = { lat: Number( backendPlace?.placeLatitude ), 
-                                        lng: Number( backendPlace?.placeLongitude ) }; 
-                                        if ( Number.isFinite(position.lat) && Number.isFinite(position.lng) ) 
-                                            { await showMyReviewPlaceMarker( position, backendPlace?.placeName || "장소" ); 
-                                                googleMap?.panTo( position ); if ( (googleMap?.getZoom() || 0) < 15 ) 
-                                                    { googleMap?.setZoom(15); } } } return; } 
-                        catch (error) { console.error( "그룹 장소 상세 열기 실패:", error ); }
+                        try {
+                            /*
+                                backend placeId로 장소를 여는 데 성공했다면
+                                여기서 끝냅니다.
+
+                                openBackendPlaceById()
+                                → googlePlaceId
+                                → openGooglePoi()
+
+                                흐름에서 Google Places의 실제 대표 좌표가
+                                이미 적용되므로, 뒤에서 DB의 placeLatitude /
+                                placeLongitude로 마커와 panTo를 다시 덮어쓰지 않습니다.
+
+                                특히 역/전철 POI는 DB 저장 좌표와 Google 대표 좌표가
+                                조금 다를 수 있어서 이전 코드에서는 위치가 옆으로
+                                틀어져 보일 수 있었습니다.
+                            */
+                            await openBackendPlaceById(
+                                backendPlaceId
+                            );
+
+                            /*
+                                Google Places로 장소를 연 뒤에는
+                                DB 좌표가 아니라 "실제로 열린 Google 장소의 좌표"에
+                                마커를 표시합니다.
+
+                                우선순위:
+                                1) selectedGooglePoi.position
+                                2) 현재 selectedPlaceKey의 places[position]
+
+                                둘 다 Google 상세 열기 이후 갱신된 값이므로
+                                역/전철 POI도 DB 좌표로 다시 틀어지지 않습니다.
+                            */
+                            const googlePosition =
+                                selectedGooglePoi
+                                    ?.position ||
+                                (
+                                    selectedPlaceKey &&
+                                    places?.[selectedPlaceKey]
+                                        ?.position
+                                );
+
+                            const markerPosition = {
+                                lat:
+                                    Number(
+                                        googlePosition
+                                            ?.lat
+                                    ),
+                                lng:
+                                    Number(
+                                        googlePosition
+                                            ?.lng
+                                    )
+                            };
+
+                            if (
+                                Number.isFinite(
+                                    markerPosition.lat
+                                ) &&
+                                Number.isFinite(
+                                    markerPosition.lng
+                                )
+                            ) {
+                                if (
+                                    typeof showMyReviewPlaceMarker ===
+                                    "function"
+                                ) {
+                                    await showMyReviewPlaceMarker(
+                                        markerPosition,
+                                        selectedGooglePoi
+                                            ?.name ||
+                                        places?.[
+                                            selectedPlaceKey
+                                        ]?.name?.ko ||
+                                        places?.[
+                                            selectedPlaceKey
+                                        ]?.name?.ja ||
+                                        places?.[
+                                            selectedPlaceKey
+                                        ]?.name?.en ||
+                                        "장소"
+                                    );
+                                }
+
+                                googleMap?.panTo(
+                                    markerPosition
+                                );
+
+                                if (
+                                    (
+                                        googleMap?.getZoom() ||
+                                        0
+                                    ) < 15
+                                ) {
+                                    googleMap?.setZoom(
+                                        15
+                                    );
+                                }
+                            }
+
+                            return;
+
+                        } catch (error) {
+                            console.error(
+                                "그룹 장소 상세 열기 실패:",
+                                error
+                            );
+                        }
                     }
 
                     /*
@@ -1941,14 +1901,18 @@ function bindGroupPickerCheckedStyle(container) {
                     input.value
                 );
 
-            if (
+            /*
+                HTML이 예전에 선택된 상태로 렌더돼 있어도
+                실제 현재 선택 상태 Set을 기준으로 강제 동기화합니다.
+
+                그룹 수정에서 기존 장소를 체크 해제한 뒤
+                다른 그룹 팝업/검색 결과를 열었을 때
+                삭제 예정 장소가 다시 체크되는 문제를 막습니다.
+            */
+            input.checked =
                 groupPickerSelectedKeysState.has(
                     key
-                )
-            ) {
-                input.checked =
-                    true;
-            }
+                );
 
             const option =
                 input.closest(
@@ -1977,6 +1941,35 @@ function bindGroupPickerCheckedStyle(container) {
                         "selected",
                         input.checked
                     );
+
+                    /*
+                        같은 장소가 검색 결과/기존 그룹 팝업 등
+                        다른 위치에도 동시에 보이면 체크 상태를 맞춥니다.
+                    */
+                    document
+                        .querySelectorAll(
+                            'input[name="groupPlace"]'
+                        )
+                        .forEach(otherInput => {
+                            if (
+                                otherInput === input ||
+                                String(otherInput.value) !== key
+                            ) {
+                                return;
+                            }
+
+                            otherInput.checked =
+                                input.checked;
+
+                            otherInput
+                                .closest(
+                                    ".group-place-option"
+                                )
+                                ?.classList.toggle(
+                                    "selected",
+                                    input.checked
+                                );
+                        });
                 }
             );
         });
@@ -3378,6 +3371,85 @@ function renderExistingGroupPicker(
     );
 }
 
+function renderCurrentGroupSavedPlaces(
+    selectedKeys,
+    currentGroupId
+) {
+    const section =
+        document.getElementById(
+            "groupCurrentSavedSection"
+        );
+
+    const list =
+        document.getElementById(
+            "groupCurrentSavedPlaces"
+        );
+
+    const count =
+        document.getElementById(
+            "groupCurrentSavedCount"
+        );
+
+    if (
+        !section ||
+        !list ||
+        !currentGroupId
+    ) {
+        return;
+    }
+
+    const currentGroup =
+        groupCache.find(group =>
+            String(group.groupId) ===
+            String(currentGroupId)
+        );
+
+    const groupPlaces =
+        currentGroup
+            ? getGroupPlaces(
+                currentGroup
+            )
+            : [];
+
+    if (count) {
+        count.textContent =
+            `${groupPlaces.length}곳`;
+    }
+
+    if (!groupPlaces.length) {
+        list.innerHTML = `
+            <div class="group-picker-current-empty">
+                현재 저장된 장소가 없습니다.
+            </div>
+        `;
+
+        return;
+    }
+
+    list.innerHTML =
+        groupPlaces
+            .map(
+                ({
+                    placeKey,
+                    place
+                }) =>
+                    groupPickerPlaceOptionHtml(
+                        placeKey,
+                        place,
+                        selectedKeys.has(
+                            String(placeKey)
+                        ),
+                        "group-picker-current-place"
+                    )
+            )
+            .join("");
+
+    bindGroupPickerCheckedStyle(
+        list
+    );
+}
+
+
 function renderGroupPlaceOptions(
     selectedPlaceIds = [],
     options = {}
@@ -3500,6 +3572,40 @@ function renderGroupPlaceOptions(
 
     container.innerHTML = `
         <div class="group-picker">
+
+            ${
+                options.currentGroupId
+                    ? `
+                        <section
+                            class="group-picker-section group-picker-current-section"
+                            id="groupCurrentSavedSection"
+                        >
+                            <div class="group-picker-section-heading">
+                                <div>
+                                    <strong>
+                                        현재 저장된 장소
+                                    </strong>
+
+                                    <small>
+                                        체크를 해제하면 저장할 때 그룹에서 삭제됩니다.
+                                    </small>
+                                </div>
+
+                                <span
+                                    class="group-picker-current-count"
+                                    id="groupCurrentSavedCount"
+                                ></span>
+                            </div>
+
+                            <div
+                                class="group-picker-current-places"
+                                id="groupCurrentSavedPlaces"
+                            ></div>
+                        </section>
+                    `
+                    : ""
+            }
+
             <section class="group-picker-section">
                 <div class="group-picker-section-heading">
                     <div>
@@ -3548,6 +3654,13 @@ function renderGroupPlaceOptions(
             </section>
         </div>
     `;
+
+    if (options.currentGroupId) {
+        renderCurrentGroupSavedPlaces(
+            selected,
+            options.currentGroupId
+        );
+    }
 
     renderExistingGroupPicker(
         selected,
@@ -3652,7 +3765,6 @@ async function openGroupForm(
 
     /*
         새 그룹/그룹 수정 창을 열 때 서버의 실제 내 그룹 목록을 다시 읽습니다.
-        기존 하드코딩 장소 목록은 사용하지 않습니다.
     */
     if (!options.placeKey) {
         try {
@@ -3670,8 +3782,30 @@ async function openGroupForm(
         }
     }
 
+    /*
+        중요:
+        loadGroupsFromServer()는 groupCache 전체를 새 객체로 교체합니다.
+
+        그런데 예전 코드는 reload 전에 클릭했던 '옛 group 객체'의
+        placeIds를 그대로 renderGroupPlaceOptions()에 넘겼습니다.
+        이러면 최신 places 매핑과 오래된 frontend key가 섞여서
+        수정 저장 시 다른 placeId로 재해석될 수 있습니다.
+
+        reload 후에는 반드시 최신 groupCache의 그룹을 다시 잡습니다.
+    */
+    const refreshedGroup =
+        group
+            ? (
+                groupCache.find(item =>
+                    String(item.groupId) ===
+                    String(group.groupId)
+                ) ||
+                group
+            )
+            : null;
+
     renderGroupPlaceOptions(
-        group?.placeIds ||
+        refreshedGroup?.placeIds ||
         (
             options.placeKey
                 ? [options.placeKey]
@@ -3679,13 +3813,14 @@ async function openGroupForm(
         ),
         {
             lockedPlaceKey:
-                !group &&
+                !refreshedGroup &&
                 options.placeKey
                     ? options.placeKey
                     : null,
 
             currentGroupId:
-                group?.groupId || null
+                refreshedGroup?.groupId ||
+                null
         }
     );
 
@@ -3861,10 +3996,37 @@ async function submitGroupForm(event) {
                         frontendKeys
                     );
 
+                /*
+                    화면에 복원하지 못한 기존 장소는
+                    사용자가 체크 해제한 것이 아닙니다.
+
+                    일시적인 조회 실패 때문에 백에서 삭제되는 일을 막기 위해
+                    unresolved placeId는 새 목록에 자동으로 유지합니다.
+                */
+                const preservedUnresolvedIds =
+                    Array.isArray(
+                        target?.unresolvedPlaceBackendIds
+                    )
+                        ? target.unresolvedPlaceBackendIds
+                            .map(Number)
+                            .filter(id =>
+                                Number.isFinite(id) &&
+                                id > 0
+                            )
+                        : [];
+
+                const finalBackendPlaceIds =
+                    Array.from(
+                        new Set([
+                            ...backendPlaceIds,
+                            ...preservedUnresolvedIds
+                        ])
+                    );
+
                 await syncGroupPlaces(
                     Number(editId),
                     target?.placeBackendIds || [],
-                    backendPlaceIds
+                    finalBackendPlaceIds
                 );
 
             } catch (placeError) {

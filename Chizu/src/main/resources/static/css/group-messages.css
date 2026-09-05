@@ -5374,3 +5374,132 @@ body.dark .group-picker-place-modal-actions {
     background: #c99f35;
 }
 
+
+/* =====================================================
+   그룹 수정 - 현재 저장된 장소
+   체크 해제 후 저장하면 그룹에서 삭제
+===================================================== */
+
+.group-picker-current-section {
+    padding-bottom: 2px;
+}
+
+.group-picker-current-section
+.group-picker-section-heading {
+    align-items: flex-start;
+}
+
+.group-picker-current-section
+.group-picker-section-heading > div {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.group-picker-current-section
+.group-picker-section-heading small {
+    color: var(--gray-500);
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.group-picker-current-count {
+    flex: 0 0 auto;
+    min-width: 31px;
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    border-radius: 999px;
+    color: var(--cheese-brown);
+    background: var(--cheese-soft);
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.group-picker-current-places {
+    max-height: 176px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    overflow-y: auto;
+    padding: 2px 5px 2px 2px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-picker-current-places::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-picker-current-places::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-current-places::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-picker-current-places::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+.group-picker-current-place {
+    border-color: #e8d6a5 !important;
+    background: #fffaf0 !important;
+}
+
+.group-picker-current-place.selected {
+    border-color: #e0b63e !important;
+    background: #fff1b9 !important;
+}
+
+/* 체크 해제 상태는 삭제 예정임을 은은하게 표시 */
+.group-picker-current-place:not(.selected) {
+    opacity: .58;
+}
+
+.group-picker-current-empty {
+    grid-column: 1 / -1;
+    padding: 14px;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    color: var(--gray-500);
+    background: #fbfaf7;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* 다크모드 */
+body.dark .group-picker-current-count {
+    color: #f1dfad;
+    background: #4a4029;
+}
+
+body.dark .group-picker-current-place {
+    border-color: #5d5135 !important;
+    background: #332f26 !important;
+}
+
+body.dark .group-picker-current-place.selected {
+    border-color: #a98735 !important;
+    background: #493f28 !important;
+}
+
+body.dark .group-picker-current-empty {
+    border-color: #4a463d;
+    color: #aaa297;
+    background: #292722;
+}
+
+@media (max-width: 760px) {
+    .group-picker-current-places {
+        grid-template-columns: 1fr;
+        max-height: 190px;
+    }
+}
+
