@@ -1398,18 +1398,17 @@ function renderSelectedGroup() {
                         typeof openBackendPlaceById ===
                             "function"
                     ) {
-                        try {
-                            await openBackendPlaceById(
-                                backendPlaceId
-                            );
-
-                            return;
-                        } catch (error) {
-                            console.error(
-                                "그룹 장소 상세 열기 실패:",
-                                error
-                            );
-                        }
+                        try { await openBackendPlaceById( backendPlaceId ); 
+                            /* mr.eum수정부분 */ /* 그룹 → 저장된 장소 → 지도 보기에서도 기존 마이페이지 내 리뷰와 동일한 장소 마커를 표시합니다. */ 
+                            if ( typeof showMyReviewPlaceMarker === "function" && typeof getBackendPlaceById === "function" ) 
+                                { const backendPlace = await getBackendPlaceById( backendPlaceId ); 
+                                    const position = { lat: Number( backendPlace?.placeLatitude ), 
+                                        lng: Number( backendPlace?.placeLongitude ) }; 
+                                        if ( Number.isFinite(position.lat) && Number.isFinite(position.lng) ) 
+                                            { await showMyReviewPlaceMarker( position, backendPlace?.placeName || "장소" ); 
+                                                googleMap?.panTo( position ); if ( (googleMap?.getZoom() || 0) < 15 ) 
+                                                    { googleMap?.setZoom(15); } } } return; } 
+                        catch (error) { console.error( "그룹 장소 상세 열기 실패:", error ); }
                     }
 
                     /*

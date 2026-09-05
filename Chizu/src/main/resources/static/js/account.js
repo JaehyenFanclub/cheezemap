@@ -941,13 +941,17 @@ async function renderMyLikes(
 
                     closeModal(mypageModal);
 
-                    if (
-                        typeof openBackendPlaceById === "function"
-                    ) {
-                        await openBackendPlaceById(
-                            placeId
-                        );
-                    }
+                    if ( typeof openBackendPlaceById === "function" ) 
+                        { await openBackendPlaceById( placeId ); 
+                            /* mr.eum수정부분 */ /* 마이페이지 좋아요 → 장소 보기에서도 내 리뷰와 동일하게 해당 장소 위치에 마커를 표시합니다. */ 
+                            if (typeof showMyReviewPlaceMarker === "function") 
+                                { const backendPlace = await getBackendPlaceById(placeId); 
+                                    const position = { lat: Number(backendPlace?.placeLatitude), 
+                                        lng: Number(backendPlace?.placeLongitude) }; 
+                                        if ( Number.isFinite(position.lat) && Number.isFinite(position.lng) ) 
+                                            { await showMyReviewPlaceMarker( position, backendPlace?.placeName || "장소" ); 
+                                                googleMap?.panTo(position); 
+                        if ((googleMap?.getZoom() || 0) < 15) { googleMap?.setZoom(15); } } } }
                 }
             );
         });
