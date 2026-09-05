@@ -59,7 +59,8 @@ public class GroupService {
                 group.getGroupDate(),
                 group.getGroupMemo(),
                 group.getGroupName(),
-                placeIds
+                placeIds,
+                group.getCloneCount()
         );
     }
 
