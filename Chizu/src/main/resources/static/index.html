@@ -1767,14 +1767,12 @@
                     >
                 </label>
 
-                <label>
-                    그룹 날짜 <em>*</em>
-                    <input
-                        type="datetime-local"
-                        id="groupDate"
-                        required
-                    >
-                </label>
+                <!-- mr.eum수정부분 -->
+                <!-- 그룹 날짜 입력 UI는 제거하고 기존 JS/백엔드 호환을 위해 값만 유지 -->
+                <input
+                    type="hidden"
+                    id="groupDate"
+                >
 
                 <label>
                     그룹 메모
