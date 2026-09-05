@@ -625,7 +625,7 @@ function renderMessageAvatar(photoUrl, name, extraClass = '') {
     }
 
     return `
-        <span class="message-avatar ${extraClass}">
+        <span class="message-avatar has-photo ${extraClass}">
             <img
                 src="${escapeGroupHtml(normalizedPhotoUrl)}"
                 alt="${safeName} 프로필"

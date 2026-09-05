@@ -1223,7 +1223,7 @@ function translate(key) {
 }
 
 
-function showToast(messageOrKey) {
+function showToast(messageOrKey, durationMs = 2000) {
     if (!toast) {
         return;
     }
@@ -1239,7 +1239,47 @@ function showToast(messageOrKey) {
 
     window.cheeseToastTimer = setTimeout(() => {
         toast.classList.remove("show");
-    }, 2000);
+    }, durationMs);
+}
+
+/** 로딩 화면이 사라진 뒤 토스트 표시 (지도 로드 토스트와 같은 위치/스타일) */
+function showToastAfterLoading(messageOrKey, durationMs = 3500) {
+    let shown = false;
+
+    const reveal = () => {
+        if (shown) {
+            return;
+        }
+        shown = true;
+        // 지도 로드 토스트가 먼저 뜨면 에러 메시지가 보이도록 짧게 지연
+        setTimeout(() => showToast(messageOrKey, durationMs), 450);
+    };
+
+    const screen = document.getElementById("loadingScreen");
+    if (!screen || screen.classList.contains("is-hidden")) {
+        reveal();
+        return;
+    }
+
+    const observer = new MutationObserver(() => {
+        if (
+            screen.classList.contains("is-hidden") ||
+            !document.body.contains(screen)
+        ) {
+            observer.disconnect();
+            reveal();
+        }
+    });
+
+    observer.observe(screen, {
+        attributes: true,
+        attributeFilter: ["class"]
+    });
+
+    setTimeout(() => {
+        observer.disconnect();
+        reveal();
+    }, 9000);
 }
 
 

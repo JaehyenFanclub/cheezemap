@@ -1167,11 +1167,19 @@ async function handleOAuthCallback() {
     window.history.replaceState({}, document.title, nextUrl);
 
     if (oauthError) {
+        let message = oauthError;
+        try {
+            message = decodeURIComponent(oauthError);
+        } catch {
+            /* URLSearchParams가 이미 디코딩한 경우 그대로 사용 */
+        }
+
         const socialLoginError = document.getElementById("socialLoginError");
         if (socialLoginError) {
-            socialLoginError.textContent = decodeURIComponent(oauthError);
+            socialLoginError.textContent = message;
         }
         openModal(loginModal);
+        showToastAfterLoading(message);
         return "error";
     }
 
@@ -1201,6 +1209,7 @@ async function handleOAuthCallback() {
             socialLoginError.textContent = error.message;
         }
         openModal(loginModal);
+        showToastAfterLoading(error.message || "소셜 로그인에 실패했습니다.");
         return "error";
     }
 }
