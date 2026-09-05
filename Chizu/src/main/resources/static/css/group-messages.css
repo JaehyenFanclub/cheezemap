@@ -4928,3 +4928,29 @@ body.dark .group-picker-place-modal-actions .primary-button:hover {
 .group-list::-webkit-scrollbar-thumb:hover {
     background: #c99f35;
 }
+
+/* mr.eum수정부분 */
+/* 다크모드 - 내 그룹 목록 치즈맵 스크롤바 */
+body.dark .group-save-group-list {
+    scrollbar-width: thin;
+    scrollbar-color: #c9a45a transparent;
+}
+
+/* mr.eum수정부분 */
+/* 다크모드 - 내 그룹 목록 스크롤바 */
+body.dark .group-save-group-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+body.dark .group-save-group-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+body.dark .group-save-group-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c9a45a;
+}
+
+body.dark .group-save-group-list::-webkit-scrollbar-thumb:hover {
+    background: #a98232;
+}
