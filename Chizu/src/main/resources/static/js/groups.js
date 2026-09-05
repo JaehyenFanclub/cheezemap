@@ -1103,6 +1103,54 @@ function toInputDate(value) {
     return String(value).replace(" ", "T").slice(0, 16);
 }
 
+/*
+    그룹 날짜 입력 UI는 사용하지 않습니다.
+
+    - 새 그룹: 모달을 연 시점의 로컬 날짜/시간을 자동 저장
+    - 그룹 수정: 기존 groupDate를 그대로 유지
+*/
+let groupFormStoredDate = "";
+
+
+function removeGroupDateFieldFromEditor() {
+    const dateInput =
+        document.getElementById(
+            "groupDate"
+        );
+
+    if (!dateInput) {
+        return;
+    }
+
+    /*
+        현재 HTML에서는 groupDate가 label 안에 들어가 있으므로
+        날짜 제목 + 필수표시 + 입력칸을 한 번에 제거합니다.
+        구조가 달라져도 input 자체는 반드시 제거됩니다.
+    */
+    const field =
+        dateInput.closest(
+            "label"
+        ) ||
+        dateInput.closest(
+            ".group-form-field"
+        ) ||
+        dateInput.parentElement;
+
+    if (
+        field &&
+        field !==
+        document.getElementById(
+            "groupForm"
+        )
+    ) {
+        field.remove();
+        return;
+    }
+
+    dateInput.remove();
+}
+
+
 // datetime-local에는 UTC(toISOString)가 아니라
 // 브라우저의 실제 로컬 시간을 그대로 넣어야 합니다.
 // 한국/일본 환경에서는 현재 UTC+9 시간이 그대로 표시됩니다.
@@ -3243,11 +3291,6 @@ async function openGroupForm(
             "groupName"
         );
 
-    const date =
-        document.getElementById(
-            "groupDate"
-        );
-
     const memo =
         document.getElementById(
             "groupMemo"
@@ -3270,13 +3313,16 @@ async function openGroupForm(
             group?.groupName || "";
     }
 
-    if (date) {
-        date.value =
-            toInputDate(
-                group?.groupDate
-            ) ||
-            getLocalDateTimeInputValue();
-    }
+    /*
+        날짜 입력칸은 화면에서 제거합니다.
+        수정이면 기존 날짜를 유지하고,
+        새 그룹이면 지금 시간을 자동으로 사용합니다.
+    */
+    groupFormStoredDate =
+        group?.groupDate ||
+        getLocalDateTimeInputValue();
+
+    removeGroupDateFieldFromEditor();
 
     if (memo) {
         memo.value =
@@ -3420,8 +3466,8 @@ async function submitGroupForm(event) {
             ?.value.trim();
 
     const groupDate =
-        document.getElementById("groupDate")
-            ?.value;
+        groupFormStoredDate ||
+        getLocalDateTimeInputValue();
 
     const groupMemo =
         document.getElementById("groupMemo")
@@ -3432,9 +3478,9 @@ async function submitGroupForm(event) {
             getGroupPickerSelectedKeys()
         );
 
-    if (!groupName || !groupDate) {
+    if (!groupName) {
         showToast(
-            "그룹 이름과 날짜를 입력해 주세요."
+            "그룹 이름을 입력해 주세요."
         );
 
         return;
