@@ -1311,10 +1311,10 @@ function renderSelectedGroup() {
         <div class="group-detail-meta">
             <span
                 class="group-detail-meta-chip group-clone-count"
-                title="다른 사용자가 이 그룹을 가져간 횟수"
+                title="다른 사용자가 공유 링크를 통해 이 그룹을 저장한 횟수"
             >
                 <i class="ti ti-download"></i>
-                가져가기 ${cloneCount}회
+                공유 저장 ${cloneCount}회
             </span>
         </div>
 
