@@ -1106,8 +1106,8 @@ function toInputDate(value) {
 /*
     그룹 날짜 입력 UI는 사용하지 않습니다.
 
-    - 새 그룹: 모달을 연 시점의 로컬 날짜/시간을 자동 저장
-    - 그룹 수정: 기존 groupDate를 그대로 유지
+    - 새 그룹: 현재 로컬 날짜/시간 자동 저장
+    - 그룹 수정: 기존 groupDate 유지
 */
 let groupFormStoredDate = "";
 
@@ -1122,26 +1122,14 @@ function removeGroupDateFieldFromEditor() {
         return;
     }
 
-    /*
-        현재 HTML에서는 groupDate가 label 안에 들어가 있으므로
-        날짜 제목 + 필수표시 + 입력칸을 한 번에 제거합니다.
-        구조가 달라져도 input 자체는 반드시 제거됩니다.
-    */
     const field =
-        dateInput.closest(
-            "label"
-        ) ||
-        dateInput.closest(
-            ".group-form-field"
-        ) ||
+        dateInput.closest("label") ||
+        dateInput.closest(".group-form-field") ||
         dateInput.parentElement;
 
     if (
         field &&
-        field !==
-        document.getElementById(
-            "groupForm"
-        )
+        field !== document.getElementById("groupForm")
     ) {
         field.remove();
         return;
@@ -2353,50 +2341,128 @@ function openGroupPickerMorePopover(
 
     const positionPopover =
         () => {
-            const sectionRect =
-                section.getBoundingClientRect();
-
             const buttonRect =
                 button.getBoundingClientRect();
 
-            const width =
-                Math.min(
-                    460,
-                    Math.max(
-                        280,
-                        sectionRect.width - 8
+            const modal =
+                section.closest(
+                    ".group-form-modal"
+                );
+
+            const modalRect =
+                modal
+                    ?.getBoundingClientRect();
+
+            const viewportPadding =
+                14;
+
+            const availableWidth =
+                Math.max(
+                    280,
+                    Math.min(
+                        520,
+                        (
+                            modalRect?.width ||
+                            window.innerWidth
+                        ) -
+                        36
                     )
                 );
 
-            const maxLeft =
-                Math.max(
-                    0,
-                    sectionRect.width -
-                    width
+            const width =
+                Math.min(
+                    500,
+                    availableWidth
                 );
 
-            const preferredLeft =
-                buttonRect.left -
-                sectionRect.left;
+            /*
+                더보기 패널은 문서 흐름에 넣지 않고
+                viewport 위에 fixed 팝오버로 띄웁니다.
+                따라서 아래 폼 영역을 밀어내지 않습니다.
+            */
+            let left =
+                buttonRect.left +
+                (
+                    buttonRect.width -
+                    width
+                ) /
+                2;
+
+            left =
+                Math.max(
+                    viewportPadding,
+                    Math.min(
+                        left,
+                        window.innerWidth -
+                        width -
+                        viewportPadding
+                    )
+                );
+
+            const estimatedHeight =
+                Math.min(
+                    390,
+                    96 +
+                    Math.ceil(
+                        Math.min(
+                            moreRows.length,
+                            GROUP_PICKER_MORE_RESULT_LIMIT
+                        ) /
+                        2
+                    ) *
+                    66
+                );
+
+            const spaceBelow =
+                window.innerHeight -
+                buttonRect.bottom -
+                viewportPadding;
+
+            const spaceAbove =
+                buttonRect.top -
+                viewportPadding;
+
+            const openAbove =
+                spaceBelow <
+                    Math.min(
+                        estimatedHeight,
+                        310
+                    ) &&
+                spaceAbove >
+                    spaceBelow;
+
+            let top =
+                openAbove
+                    ? buttonRect.top -
+                        estimatedHeight -
+                        10
+                    : buttonRect.bottom +
+                        10;
+
+            top =
+                Math.max(
+                    viewportPadding,
+                    Math.min(
+                        top,
+                        window.innerHeight -
+                        estimatedHeight -
+                        viewportPadding
+                    )
+                );
+
+            popover.classList.toggle(
+                "opens-up",
+                openAbove
+            );
 
             popover.style.width =
                 `${width}px`;
 
             popover.style.left =
-                `${Math.min(
-                    Math.max(
-                        preferredLeft,
-                        0
-                    ),
-                    maxLeft
-                )}px`;
+                `${left}px`;
 
             popover.style.top =
-                `${
-                    buttonRect.bottom -
-                    sectionRect.top +
-                    8
-                }px`;
+                `${top}px`;
         };
 
     positionPopover();
@@ -2461,9 +2527,10 @@ function openGroupPickerMorePopover(
         resizeHandler
     );
 
-    modal?.addEventListener(
+    window.addEventListener(
         "scroll",
-        resizeHandler
+        resizeHandler,
+        true
     );
 
     groupPickerMorePopoverCleanup =
@@ -2483,9 +2550,10 @@ function openGroupPickerMorePopover(
                 resizeHandler
             );
 
-            modal?.removeEventListener(
+            window.removeEventListener(
                 "scroll",
-                resizeHandler
+                resizeHandler,
+                true
             );
 
             popover.remove();
@@ -2495,6 +2563,23 @@ function openGroupPickerMorePopover(
                 "false"
             );
         };
+}
+
+
+function setGroupEditorSearchScrollState(
+    resultContainer,
+    hasResults
+) {
+    const modal =
+        resultContainer
+            ?.closest(
+                ".group-form-modal"
+            );
+
+    modal?.classList.toggle(
+        "has-search-results",
+        Boolean(hasResults)
+    );
 }
 
 
@@ -2520,8 +2605,18 @@ async function renderGroupPickerSearchResults(
         resultContainer.innerHTML =
             "";
 
+        setGroupEditorSearchScrollState(
+            resultContainer,
+            false
+        );
+
         return;
     }
+
+    setGroupEditorSearchScrollState(
+        resultContainer,
+        false
+    );
 
     resultContainer.innerHTML = `
         <div class="group-picker-search-empty">
@@ -2670,6 +2765,11 @@ async function renderGroupPickerSearchResults(
                 </div>
             `;
 
+            setGroupEditorSearchScrollState(
+                resultContainer,
+                false
+            );
+
             return;
         }
 
@@ -2738,6 +2838,11 @@ async function renderGroupPickerSearchResults(
             }
         `;
 
+        setGroupEditorSearchScrollState(
+            resultContainer,
+            true
+        );
+
         bindGroupPickerCheckedStyle(
             resultContainer
         );
@@ -2783,6 +2888,11 @@ async function renderGroupPickerSearchResults(
                 )}
             </div>
         `;
+
+        setGroupEditorSearchScrollState(
+            resultContainer,
+            false
+        );
     }
 }
 
@@ -3060,6 +3170,10 @@ function renderGroupPlaceOptions(
     selectedPlaceIds = [],
     options = {}
 ) {
+    groupFormModal?.classList.remove(
+        "has-search-results"
+    );
+
     closeGroupPickerMorePopover();
 
     groupPickerSelectedKeysState =
@@ -3313,11 +3427,6 @@ async function openGroupForm(
             group?.groupName || "";
     }
 
-    /*
-        날짜 입력칸은 화면에서 제거합니다.
-        수정이면 기존 날짜를 유지하고,
-        새 그룹이면 지금 시간을 자동으로 사용합니다.
-    */
     groupFormStoredDate =
         group?.groupDate ||
         getLocalDateTimeInputValue();
