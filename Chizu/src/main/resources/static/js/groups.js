@@ -1593,19 +1593,45 @@ function ensureGroupSearchPlace(candidate) {
     return placeKey;
 }
 
+let groupPickerSelectedKeysState =
+    new Set();
+
+
 function getGroupPickerSelectedKeys() {
+    /*
+        더보기 팝오버는 닫힐 때 DOM에서 제거됩니다.
+        따라서 document.querySelectorAll(...)만으로 선택값을 모으면
+        팝오버에서 체크한 장소가 그룹 저장 시 사라집니다.
+
+        선택 상태를 별도 Set으로 유지하고,
+        현재 DOM의 체크 상태도 마지막으로 동기화합니다.
+    */
+    document
+        .querySelectorAll(
+            'input[name="groupPlace"]'
+        )
+        .forEach(input => {
+            const key =
+                String(
+                    input.value
+                );
+
+            if (input.checked) {
+                groupPickerSelectedKeysState.add(
+                    key
+                );
+            } else {
+                groupPickerSelectedKeysState.delete(
+                    key
+                );
+            }
+        });
+
     return new Set(
-        Array
-            .from(
-                document.querySelectorAll(
-                    'input[name="groupPlace"]:checked'
-                )
-            )
-            .map(input =>
-                String(input.value)
-            )
+        groupPickerSelectedKeysState
     );
 }
+
 
 function groupPickerPlaceOptionHtml(
     placeKey,
@@ -1655,12 +1681,27 @@ function groupPickerPlaceOptionHtml(
     `;
 }
 
+
 function bindGroupPickerCheckedStyle(container) {
     container
         ?.querySelectorAll(
             '.group-place-option input[name="groupPlace"]'
         )
         .forEach(input => {
+            const key =
+                String(
+                    input.value
+                );
+
+            if (
+                groupPickerSelectedKeysState.has(
+                    key
+                )
+            ) {
+                input.checked =
+                    true;
+            }
+
             const option =
                 input.closest(
                     ".group-place-option"
@@ -1674,6 +1715,16 @@ function bindGroupPickerCheckedStyle(container) {
             input.addEventListener(
                 "change",
                 () => {
+                    if (input.checked) {
+                        groupPickerSelectedKeysState.add(
+                            key
+                        );
+                    } else {
+                        groupPickerSelectedKeysState.delete(
+                            key
+                        );
+                    }
+
                     option?.classList.toggle(
                         "selected",
                         input.checked
@@ -1754,11 +1805,650 @@ async function searchGroupPickerPlaces(query) {
                 "JP",
 
             maxResultCount:
-                12
+                14
         });
 
     return response?.places || [];
 }
+
+
+const GROUP_PICKER_PRIMARY_RESULT_LIMIT = 4;
+const GROUP_PICKER_MORE_RESULT_LIMIT = 10;
+
+let groupPickerMorePopoverCleanup = null;
+
+
+function normalizeGroupPickerSearchText(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[_\s]+/g, " ");
+}
+
+
+function getGroupPickerSearchAliases(query) {
+    const normalized =
+        normalizeGroupPickerSearchText(
+            query
+        );
+
+    const aliasGroups = [
+        [
+            "카페", "까페", "커피",
+            "cafe", "café", "coffee",
+            "カフェ", "喫茶"
+        ],
+        [
+            "라멘", "라면",
+            "ramen", "ラーメン"
+        ],
+        [
+            "음식점", "식당", "맛집",
+            "restaurant", "レストラン", "飲食店"
+        ],
+        [
+            "베이커리", "빵집",
+            "bakery", "パン"
+        ],
+        [
+            "바", "술집",
+            "bar", "バー", "居酒屋"
+        ],
+        [
+            "공원",
+            "park", "公園"
+        ],
+        [
+            "박물관", "미술관",
+            "museum", "gallery",
+            "博物館", "美術館"
+        ],
+        [
+            "호텔", "숙박",
+            "hotel", "lodging",
+            "ホテル", "宿泊"
+        ],
+        [
+            "쇼핑", "쇼핑몰",
+            "shopping", "mall",
+            "ショッピング"
+        ]
+    ];
+
+    const matchedGroup =
+        aliasGroups.find(group =>
+            group.some(alias =>
+                normalizeGroupPickerSearchText(
+                    alias
+                ) ===
+                normalized
+            )
+        );
+
+    return new Set(
+        (
+            matchedGroup ||
+            [query]
+        )
+            .map(
+                normalizeGroupPickerSearchText
+            )
+            .filter(Boolean)
+    );
+}
+
+
+function groupPickerBackendRowMatchesQuery(
+    row,
+    query
+) {
+    const aliases =
+        getGroupPickerSearchAliases(
+            query
+        );
+
+    const searchableValues =
+        [
+            row?.placeName,
+            row?.placeCategory,
+            row?.placeAddress
+        ]
+            .map(
+                normalizeGroupPickerSearchText
+            )
+            .filter(Boolean);
+
+    return Array
+        .from(aliases)
+        .some(alias =>
+            searchableValues.some(value =>
+                value.includes(alias)
+            )
+        );
+}
+
+
+function ensureGroupBackendSearchPlace(row) {
+    const backendPlaceId =
+        Number(
+            row?.placeId
+        );
+
+    if (
+        !Number.isFinite(
+            backendPlaceId
+        ) ||
+        backendPlaceId <= 0
+    ) {
+        return null;
+    }
+
+    /*
+        추천 API 응답에는 googlePlaceId가 없기 때문에
+        registerFrontendPlaceFromBackend()에 억지로 맡기지 않습니다.
+
+        DB placeId를 직접 들고 있는 그룹검색 전용 frontend key를 만들고
+        그룹 저장 시에는 이 backendPlaceId를 그대로 사용합니다.
+    */
+    const placeKey =
+        `groupdb_${backendPlaceId}`;
+
+    const name =
+        String(
+            row?.placeName ||
+            `장소 #${backendPlaceId}`
+        ).trim();
+
+    const category =
+        String(
+            row?.placeCategory ||
+            "장소"
+        ).trim();
+
+    const address =
+        String(
+            row?.placeAddress ||
+            ""
+        ).trim();
+
+    const lat =
+        Number(
+            row?.placeLatitude
+        );
+
+    const lng =
+        Number(
+            row?.placeLongitude
+        );
+
+    places[placeKey] = {
+        ...(places[placeKey] || {}),
+
+        backendPlaceId,
+
+        groupSearchSource:
+            "backend",
+
+        groupSearchScore:
+            Number(
+                row?.score
+            ) || 0,
+
+        groupSearchHitCount:
+            Number(
+                row?.hitCount
+            ) || 0,
+
+        name: {
+            ko: name,
+            ja: name,
+            en: name
+        },
+
+        category: {
+            ko: category,
+            ja: category,
+            en: category
+        },
+
+        address: {
+            ko: address,
+            ja: address,
+            en: address
+        },
+
+        type:
+            "tour",
+
+        rating:
+            Number(
+                row?.avgRating
+            ) || 0,
+
+        reviewCount:
+            Number(
+                row?.reviewCount
+            ) || 0,
+
+        crowd: {
+            ko: "인기",
+            ja: "人気",
+            en: "Popular"
+        },
+
+        icon:
+            "ti-map-pin",
+
+        color:
+            "linear-gradient(135deg, #ffe5a7, #f4bc45)",
+
+        position: {
+            lat:
+                Number.isFinite(lat)
+                    ? lat
+                    : null,
+
+            lng:
+                Number.isFinite(lng)
+                    ? lng
+                    : null
+        }
+    };
+
+    return placeKey;
+}
+
+
+async function searchGroupPickerBackendPlaces(
+    query
+) {
+    /*
+        백엔드는 수정하지 않습니다.
+        이미 존재하는 추천장소 API를 그대로 사용합니다.
+
+        이 API가 내려주는 score에는
+        평점 + 리뷰 수 + hit_count가 반영되어 있으므로
+        응답 순서를 그대로 CHEESE MAP 인기순으로 사용합니다.
+    */
+    try {
+        const center =
+            googleMap
+                ?.getCenter
+                ?.()
+                ?.toJSON
+                ?.() ||
+            {
+                lat: 35.6895,
+                lng: 139.6917
+            };
+
+        const params =
+            new URLSearchParams({
+                lat:
+                    String(
+                        center.lat
+                    ),
+
+                lng:
+                    String(
+                        center.lng
+                    ),
+
+                radius:
+                    "30000",
+
+                limit:
+                    "20"
+            });
+
+        const response =
+            await apiRequest(
+                `/place/recommend?${params.toString()}`,
+                {
+                    auth:
+                        true
+                }
+            );
+
+        return (
+            Array.isArray(
+                response
+            )
+                ? response
+                : []
+        )
+            .filter(row =>
+                groupPickerBackendRowMatchesQuery(
+                    row,
+                    query
+                )
+            );
+
+    } catch (error) {
+        console.warn(
+            "CHEESE MAP 추천 장소 검색 실패 - Google 검색으로 보충:",
+            error
+        );
+
+        return [];
+    }
+}
+
+
+function groupPickerPlaceDedupeKey(
+    place
+) {
+    const name =
+        normalizeGroupPickerSearchText(
+            localizedValue(
+                place?.name
+            )
+        );
+
+    const address =
+        normalizeGroupPickerSearchText(
+            localizedValue(
+                place?.address
+            )
+        );
+
+    return `${name}|${address}`;
+}
+
+
+function closeGroupPickerMorePopover() {
+    if (
+        typeof groupPickerMorePopoverCleanup ===
+        "function"
+    ) {
+        const cleanup =
+            groupPickerMorePopoverCleanup;
+
+        groupPickerMorePopoverCleanup =
+            null;
+
+        cleanup();
+    }
+
+    document
+        .querySelectorAll(
+            ".group-picker-more-popover"
+        )
+        .forEach(element =>
+            element.remove()
+        );
+
+    document
+        .querySelectorAll(
+            "[data-group-picker-more-button]"
+        )
+        .forEach(button => {
+            button.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+        });
+}
+
+
+function openGroupPickerMorePopover(
+    button,
+    query,
+    moreItems
+) {
+    closeGroupPickerMorePopover();
+
+    if (
+        !button ||
+        !Array.isArray(
+            moreItems
+        ) ||
+        !moreItems.length
+    ) {
+        return;
+    }
+
+    const section =
+        button.closest(
+            ".group-picker-section"
+        );
+
+    if (!section) {
+        return;
+    }
+
+    const selected =
+        getGroupPickerSelectedKeys();
+
+    const moreRows =
+        moreItems
+            .slice(
+                0,
+                GROUP_PICKER_MORE_RESULT_LIMIT
+            )
+            .map(item => {
+                const place =
+                    places[
+                        item.placeKey
+                    ];
+
+                if (!place) {
+                    return "";
+                }
+
+                return groupPickerPlaceOptionHtml(
+                    item.placeKey,
+                    place,
+                    selected.has(
+                        String(
+                            item.placeKey
+                        )
+                    ),
+                    item.source === "backend"
+                        ? "group-picker-search-option is-cheese-priority"
+                        : "group-picker-search-option"
+                );
+            })
+            .filter(Boolean);
+
+    if (!moreRows.length) {
+        return;
+    }
+
+    const popover =
+        document.createElement(
+            "div"
+        );
+
+    popover.className =
+        "group-picker-more-popover";
+
+    popover.innerHTML = `
+        <div class="group-picker-more-popover-header">
+            <div>
+                <strong>
+                    ${escapeGroupHtml(query)} 더보기
+                </strong>
+
+                <small>
+                    최대 ${GROUP_PICKER_MORE_RESULT_LIMIT}곳
+                </small>
+            </div>
+
+            <button
+                type="button"
+                class="group-picker-more-close"
+                data-group-picker-more-close
+                aria-label="닫기"
+            >
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        <div class="group-picker-more-list">
+            ${moreRows.join("")}
+        </div>
+    `;
+
+    section.appendChild(
+        popover
+    );
+
+    button.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    bindGroupPickerCheckedStyle(
+        popover
+    );
+
+    const positionPopover =
+        () => {
+            const sectionRect =
+                section.getBoundingClientRect();
+
+            const buttonRect =
+                button.getBoundingClientRect();
+
+            const width =
+                Math.min(
+                    460,
+                    Math.max(
+                        280,
+                        sectionRect.width - 8
+                    )
+                );
+
+            const maxLeft =
+                Math.max(
+                    0,
+                    sectionRect.width -
+                    width
+                );
+
+            const preferredLeft =
+                buttonRect.left -
+                sectionRect.left;
+
+            popover.style.width =
+                `${width}px`;
+
+            popover.style.left =
+                `${Math.min(
+                    Math.max(
+                        preferredLeft,
+                        0
+                    ),
+                    maxLeft
+                )}px`;
+
+            popover.style.top =
+                `${
+                    buttonRect.bottom -
+                    sectionRect.top +
+                    8
+                }px`;
+        };
+
+    positionPopover();
+
+    const closeButton =
+        popover.querySelector(
+            "[data-group-picker-more-close]"
+        );
+
+    const modal =
+        section.closest(
+            ".group-form-modal"
+        );
+
+    const outsideHandler =
+        event => {
+            if (
+                popover.contains(
+                    event.target
+                ) ||
+                button.contains(
+                    event.target
+                )
+            ) {
+                return;
+            }
+
+            closeGroupPickerMorePopover();
+        };
+
+    const keyHandler =
+        event => {
+            if (
+                event.key ===
+                "Escape"
+            ) {
+                closeGroupPickerMorePopover();
+            }
+        };
+
+    const resizeHandler =
+        () =>
+            positionPopover();
+
+    closeButton?.addEventListener(
+        "click",
+        closeGroupPickerMorePopover
+    );
+
+    document.addEventListener(
+        "pointerdown",
+        outsideHandler
+    );
+
+    document.addEventListener(
+        "keydown",
+        keyHandler
+    );
+
+    window.addEventListener(
+        "resize",
+        resizeHandler
+    );
+
+    modal?.addEventListener(
+        "scroll",
+        resizeHandler
+    );
+
+    groupPickerMorePopoverCleanup =
+        () => {
+            document.removeEventListener(
+                "pointerdown",
+                outsideHandler
+            );
+
+            document.removeEventListener(
+                "keydown",
+                keyHandler
+            );
+
+            window.removeEventListener(
+                "resize",
+                resizeHandler
+            );
+
+            modal?.removeEventListener(
+                "scroll",
+                resizeHandler
+            );
+
+            popover.remove();
+
+            button.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+        };
+}
+
 
 async function renderGroupPickerSearchResults(
     query
@@ -1776,8 +2466,11 @@ async function renderGroupPickerSearchResults(
         String(query || "")
             .trim();
 
+    closeGroupPickerMorePopover();
+
     if (!text) {
-        resultContainer.innerHTML = "";
+        resultContainer.innerHTML =
+            "";
 
         return;
     }
@@ -1790,15 +2483,139 @@ async function renderGroupPickerSearchResults(
     `;
 
     try {
+        const [
+            backendRows,
+            googleCandidates
+        ] =
+            await Promise.all([
+                searchGroupPickerBackendPlaces(
+                    text
+                ),
+                searchGroupPickerPlaces(
+                    text
+                )
+            ]);
+
         const selected =
             getGroupPickerSelectedKeys();
 
-        const candidates =
-            await searchGroupPickerPlaces(
-                text
-            );
+        const items = [];
+        const dedupeKeys =
+            new Set();
 
-        if (!candidates.length) {
+        /*
+            1순위:
+            CHEESE MAP DB 추천 결과를 직접 넣습니다.
+            Google 검색 상위 결과에 포함되지 않아도 사라지지 않습니다.
+        */
+        backendRows.forEach(row => {
+            if (
+                items.length >=
+                (
+                    GROUP_PICKER_PRIMARY_RESULT_LIMIT +
+                    GROUP_PICKER_MORE_RESULT_LIMIT
+                )
+            ) {
+                return;
+            }
+
+            const placeKey =
+                ensureGroupBackendSearchPlace(
+                    row
+                );
+
+            if (
+                !placeKey ||
+                !places[placeKey]
+            ) {
+                return;
+            }
+
+            const dedupeKey =
+                groupPickerPlaceDedupeKey(
+                    places[placeKey]
+                );
+
+            if (
+                dedupeKey &&
+                dedupeKeys.has(
+                    dedupeKey
+                )
+            ) {
+                return;
+            }
+
+            if (dedupeKey) {
+                dedupeKeys.add(
+                    dedupeKey
+                );
+            }
+
+            items.push({
+                placeKey,
+                source:
+                    "backend"
+            });
+        });
+
+        /*
+            2순위:
+            CHEESE MAP DB 결과로 14곳이 안 차면
+            Google Places 검색 결과를 뒤에 보충합니다.
+        */
+        googleCandidates.forEach(
+            candidate => {
+                if (
+                    items.length >=
+                    (
+                        GROUP_PICKER_PRIMARY_RESULT_LIMIT +
+                        GROUP_PICKER_MORE_RESULT_LIMIT
+                    )
+                ) {
+                    return;
+                }
+
+                const placeKey =
+                    ensureGroupSearchPlace(
+                        candidate
+                    );
+
+                if (
+                    !placeKey ||
+                    !places[placeKey]
+                ) {
+                    return;
+                }
+
+                const dedupeKey =
+                    groupPickerPlaceDedupeKey(
+                        places[placeKey]
+                    );
+
+                if (
+                    dedupeKey &&
+                    dedupeKeys.has(
+                        dedupeKey
+                    )
+                ) {
+                    return;
+                }
+
+                if (dedupeKey) {
+                    dedupeKeys.add(
+                        dedupeKey
+                    );
+                }
+
+                items.push({
+                    placeKey,
+                    source:
+                        "google"
+                });
+            }
+        );
+
+        if (!items.length) {
             resultContainer.innerHTML = `
                 <div class="group-picker-search-empty">
                     검색 결과가 없습니다.
@@ -1808,39 +2625,102 @@ async function renderGroupPickerSearchResults(
             return;
         }
 
-        const rows =
-            candidates
-                .map(candidate => {
-                    const placeKey =
-                        ensureGroupSearchPlace(
-                            candidate
-                        );
+        const primaryItems =
+            items.slice(
+                0,
+                GROUP_PICKER_PRIMARY_RESULT_LIMIT
+            );
 
-                    if (
-                        !placeKey ||
-                        !places[placeKey]
-                    ) {
+        const moreItems =
+            items.slice(
+                GROUP_PICKER_PRIMARY_RESULT_LIMIT,
+                GROUP_PICKER_PRIMARY_RESULT_LIMIT +
+                GROUP_PICKER_MORE_RESULT_LIMIT
+            );
+
+        const primaryRows =
+            primaryItems
+                .map(item => {
+                    const place =
+                        places[
+                            item.placeKey
+                        ];
+
+                    if (!place) {
                         return "";
                     }
 
                     return groupPickerPlaceOptionHtml(
-                        placeKey,
-                        places[placeKey],
+                        item.placeKey,
+                        place,
                         selected.has(
-                            placeKey
+                            String(
+                                item.placeKey
+                            )
                         ),
-                        "group-picker-search-option"
+                        item.source === "backend"
+                            ? "group-picker-search-option is-cheese-priority"
+                            : "group-picker-search-option"
                     );
                 })
-                .filter(Boolean)
-                .join("");
+                .filter(Boolean);
 
-        resultContainer.innerHTML =
-            rows;
+        resultContainer.innerHTML = `
+            ${primaryRows.join("")}
+
+            ${
+                moreItems.length
+                    ? `
+                        <div class="group-picker-more-trigger-wrap">
+                            <button
+                                type="button"
+                                class="group-picker-more-trigger"
+                                data-group-picker-more-button
+                                aria-expanded="false"
+                            >
+                                <span>
+                                    ${escapeGroupHtml(text)} 더보기
+                                </span>
+
+                                <i class="ti ti-chevron-down"></i>
+                            </button>
+                        </div>
+                    `
+                    : ""
+            }
+        `;
 
         bindGroupPickerCheckedStyle(
             resultContainer
         );
+
+        const moreButton =
+            resultContainer.querySelector(
+                "[data-group-picker-more-button]"
+            );
+
+        moreButton?.addEventListener(
+            "click",
+            () => {
+                const isOpen =
+                    moreButton.getAttribute(
+                        "aria-expanded"
+                    ) ===
+                    "true";
+
+                if (isOpen) {
+                    closeGroupPickerMorePopover();
+                    return;
+                }
+
+                openGroupPickerMorePopover(
+                    moreButton,
+                    text,
+                    moreItems
+                );
+            }
+        );
+
     } catch (error) {
         console.error(
             "그룹 장소 검색 실패:",
@@ -2132,6 +3012,14 @@ function renderGroupPlaceOptions(
     selectedPlaceIds = [],
     options = {}
 ) {
+    closeGroupPickerMorePopover();
+
+    groupPickerSelectedKeysState =
+        new Set(
+            (selectedPlaceIds || [])
+                .map(String)
+        );
+
     const container =
         document.getElementById(
             "groupPlaceOptions"
@@ -2446,11 +3334,54 @@ async function openGroupForm(
 
 async function resolveSelectedPlaceIds(frontendKeys) {
     const ids = [];
+
     for (const key of frontendKeys) {
-        const p = await ensureBackendPlace(key);
-        ids.push(Number(p.placeId));
+        const backendPlaceId =
+            Number(
+                places?.[key]
+                    ?.backendPlaceId
+            );
+
+        /*
+            CHEESE MAP 추천 API에서 온 장소는 이미 DB placeId가 있습니다.
+            다시 ensureBackendPlace()를 호출하지 않고 기존 ID를 그대로 씁니다.
+        */
+        if (
+            Number.isFinite(
+                backendPlaceId
+            ) &&
+            backendPlaceId > 0
+        ) {
+            ids.push(
+                backendPlaceId
+            );
+
+            continue;
+        }
+
+        const p =
+            await ensureBackendPlace(
+                key
+            );
+
+        const placeId =
+            Number(
+                p?.placeId
+            );
+
+        if (
+            Number.isFinite(placeId) &&
+            placeId > 0
+        ) {
+            ids.push(
+                placeId
+            );
+        }
     }
-    return ids;
+
+    return Array.from(
+        new Set(ids)
+    );
 }
 
 async function syncGroupPlaces(groupId, oldIds, newIds) {
@@ -2497,13 +3428,9 @@ async function submitGroupForm(event) {
             ?.value.trim() || "";
 
     const frontendKeys =
-        Array
-            .from(
-                document.querySelectorAll(
-                    'input[name="groupPlace"]:checked'
-                )
-            )
-            .map(input => input.value);
+        Array.from(
+            getGroupPickerSelectedKeys()
+        );
 
     if (!groupName || !groupDate) {
         showToast(
