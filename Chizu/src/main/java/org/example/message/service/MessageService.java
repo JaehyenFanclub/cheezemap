@@ -8,21 +8,26 @@ import org.example.config.TokenBlacklist;
 import org.example.message.dto.*;
 import org.example.message.entity.Message;
 import org.example.message.repository.MessageRepository;
-import org.example.user.service.UserDisplayNames;
 import org.example.user.entity.User;
+import org.example.user.entity.UserPhoto;
+import org.example.user.repository.UserPhotoRepository;
 import org.example.user.repository.UserRepository;
+import org.example.user.service.UserDisplayNames;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 public class MessageService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final UserPhotoRepository userPhotoRepository;
     private final TokenBlacklist tokenBlacklist;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -74,6 +79,12 @@ public class MessageService {
     public List<GetChatterResponse> getChatters(String token){
         User user = findUserByToken(token);
         List<Long> chattersList = messageRepository.findAllChatters(user.getId());
+        Map<Long, String> photoUrlByUserId = userPhotoRepository.findByUser_IdIn(chattersList).stream()
+                .collect(Collectors.toMap(
+                        photo -> photo.getUser().getId(),
+                        UserPhoto::getPhotoUrl,
+                        (first, ignored) -> first
+                ));
         List<GetChatterResponse> result = new ArrayList<>();
         for(Long id : chattersList){
             List<Message> messages = messageRepository.findByUsers(user.getId(),id);
@@ -87,7 +98,8 @@ public class MessageService {
                     UserDisplayNames.nickname(chatter),
                     message.getContent(),
                     message.getMessageDate(),
-                    id
+                    id,
+                    photoUrlByUserId.get(id)
             ));
         }
         return result;

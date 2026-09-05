@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Schema(description = "대화 상대 조회 요청 응답")
 public record GetChatterResponse(
-        @Schema(description = "대화 상대 목록", example = "[1, 2, 3]")
+        @Schema(description = "대화 상대 닉네임", example = "치즈러버")
         String Chatter,
 
         @Schema(description = "마지막 대화 내용", example = "마지막 대화")
@@ -17,7 +17,10 @@ public record GetChatterResponse(
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
         LocalDateTime lastMessage,
 
-        @Schema(description = "대화 상대 id", example="1")
-        Long userId
+        @Schema(description = "대화 상대 id", example = "1")
+        Long userId,
+
+        @Schema(description = "대화 상대 프로필 사진 URL (없으면 null)", example = "/images/users/1.jpg")
+        String photoUrl
 ) {
 }

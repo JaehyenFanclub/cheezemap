@@ -57,11 +57,10 @@ public class SecurityConfig {
                         // 정적 파일
                         .requestMatchers(
                                 "/",
-                                "/index.html",
+                                "/html/**",
                                 "/signup",
                                 "/profile-edit",
                                 "/complete-profile",
-                                "/*.html",
                                 "/css/**",
                                 "/js/**",
                                 "/png/**",
