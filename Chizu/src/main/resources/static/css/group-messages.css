@@ -57,6 +57,8 @@
     gap: 7px;
 }
 
+/* mr.eum수정부분 */
+/* 기존 그룹 모달 크기를 유지하기 위해 레이아웃 높이를 고정 */
 .group-layout {
     display: grid;
     grid-template-columns: 290px minmax(0, 1fr);
@@ -288,9 +290,12 @@
     font-weight: 800;
 }
 
+/* mr.eum수정부분 */
+/* 오른쪽 상세 패널 전체 스크롤 제거.
+   저장된 장소 목록에서만 스크롤되도록 처리 */
 .group-detail-panel {
     min-width: 0;
-    overflow-y: auto;
+    overflow: hidden;
     padding: 26px 28px;
     background: #ffffff;
 }
@@ -402,9 +407,36 @@
     font-size: 11px;
 }
 
+/* mr.eum수정부분 */
+/* 저장된 장소 목록만 세로 스크롤 */
 .group-place-list {
     display: grid;
     gap: 10px;
+    height: 310px;
+    overflow-y: auto;
+    padding-right: 6px;
+    
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+/* mr.eum수정부분 */
+/* 치즈맵 스타일 스크롤바 */
+.group-place-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-place-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-place-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-place-list::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
 }
 
 .group-place-card {
