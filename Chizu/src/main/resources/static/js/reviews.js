@@ -1535,27 +1535,137 @@ function updateReviewMoreButtons() {
     reviewContents.forEach(wrap => {
 
         const content =
-            wrap.querySelector("[data-review-content]");
+            wrap.querySelector(
+                "[data-review-content]"
+            );
 
         const moreButton =
-            wrap.querySelector("[data-review-more-button]");
+            wrap.querySelector(
+                "[data-review-more-button]"
+            );
 
         if (!content || !moreButton) {
             return;
         }
 
         /*
-         * 실제 내용의 높이가 한 줄 높이보다 크면
-         * 여러 줄짜리 리뷰라고 판단합니다.
-         */
-        const isLongReview =
-            content.scrollHeight > content.clientHeight + 1;
+            글자 수(예: 50자)로 판단하지 않고
+            현재 리뷰 칸의 실제 너비를 기준으로 계산합니다.
 
-        moreButton.hidden = !isLongReview;
+            내용이 한 줄에 다 들어가면:
+            → 더보기 숨김
+
+            실제로 두 번째 줄이 생기는 순간부터:
+            → 더보기 표시
+
+            반응형/폰트 크기가 바뀌어도 정확하게 동작하도록
+            숨은 복제본을 만들어 전체 높이를 측정합니다.
+        */
+        const style =
+            window.getComputedStyle(
+                content
+            );
+
+        const lineHeight =
+            Number.parseFloat(
+                style.lineHeight
+            ) || 22.4;
+
+        const width =
+            content.getBoundingClientRect()
+                .width;
+
+        if (!width) {
+            moreButton.hidden = true;
+            return;
+        }
+
+        const measure =
+            content.cloneNode(true);
+
+        measure.classList.remove(
+            "review-content-collapsed"
+        );
+
+        Object.assign(
+            measure.style,
+            {
+                position: "absolute",
+                left: "-99999px",
+                top: "0",
+                width: `${width}px`,
+                height: "auto",
+                maxHeight: "none",
+                margin: "0",
+                padding: "0",
+                visibility: "hidden",
+                pointerEvents: "none",
+                overflow: "visible",
+                display: "block",
+                whiteSpace: "normal",
+                WebkitLineClamp: "unset",
+                WebkitBoxOrient: "initial"
+            }
+        );
+
+        document.body.appendChild(
+            measure
+        );
+
+        const fullHeight =
+            measure.getBoundingClientRect()
+                .height;
+
+        measure.remove();
+
+        /*
+            한 줄 높이보다 실제 내용 높이가 커지는 순간
+            = 두 번째 줄이 생긴 순간.
+        */
+        const needsMore =
+            fullHeight >
+            lineHeight + 1;
+
+        moreButton.hidden =
+            !needsMore;
+
+        if (!needsMore) {
+            content.classList.add(
+                "review-content-collapsed"
+            );
+
+            moreButton.textContent =
+                "더보기";
+        }
     });
 }
 
-updateReviewMoreButtons();
+
+function scheduleReviewMoreButtonUpdate() {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            updateReviewMoreButtons();
+        });
+    });
+}
+
+/* 패널 폭/창 크기가 바뀌면 더보기 필요 여부 다시 계산 */
+let reviewMoreResizeTimer = null;
+
+window.addEventListener(
+    "resize",
+    () => {
+        clearTimeout(
+            reviewMoreResizeTimer
+        );
+
+        reviewMoreResizeTimer =
+            setTimeout(
+                scheduleReviewMoreButtonUpdate,
+                120
+            );
+    }
+);
 
 // mr.eum수정부분
 function renderPlaceReviewEditPhotos(item) {
@@ -1846,6 +1956,12 @@ async function renderPlaceReviews(placeKey) {
                 </article>
             `;
         }).join("");
+
+    /*
+        리뷰 DOM이 실제로 렌더된 다음
+        현재 폭 기준으로 2번째 줄 발생 여부를 확인합니다.
+    */
+    scheduleReviewMoreButtonUpdate();
 }
 
 async function renderPlaceMenu(placeKey) {

@@ -5460,3 +5460,24 @@ body.dark .place-share-option:hover {
     display: grid;
     place-items: center;
 }
+
+/* =====================================================
+   리뷰 더보기 최종 표시 조건
+   - 한 줄이면 숨김
+   - 실제로 두 번째 줄이 생길 때만 표시
+===================================================== */
+
+/*
+   기존 .place-review-more-button { display:inline-block; } 규칙이
+   HTML hidden 속성을 덮어쓰고 있어서 짧은 리뷰에도 더보기가 보였습니다.
+*/
+.place-side-panel .place-review-more-button[hidden],
+.place-review-more-button[hidden] {
+    display: none !important;
+}
+
+/* 더보기 버튼은 표시될 때만 기존 작은 크기 유지 */
+.place-side-panel .place-review-more-button:not([hidden]) {
+    display: inline-block !important;
+}
+
