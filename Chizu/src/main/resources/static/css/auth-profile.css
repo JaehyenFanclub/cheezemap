@@ -1,0 +1,1852 @@
+/* =====================================================
+   CHEESE MAP 추가 기능 스타일
+   로딩 나침반 / 실시간 날씨 / 로그인·회원가입
+   로그인 헤더 / 마이페이지 / 언어 전환
+===================================================== */
+
+:root {
+    --cheese-yellow: #f5c84c;
+    --cheese-deep: #d99624;
+    --cheese-cream: #fff7d6;
+    --cheese-brown: #6f562c;
+    --cheese-border: #ead79c;
+}
+
+
+/* =====================================================
+   로딩 화면
+===================================================== */
+
+.loading-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background:
+        radial-gradient(
+            circle at center,
+            #fffdf4 0%,
+            var(--cheese-cream) 100%
+        );
+
+    opacity: 1;
+    visibility: visible;
+
+    transition:
+        opacity 0.4s ease,
+        visibility 0.4s ease;
+}
+
+.loading-screen.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+
+    color: var(--cheese-brown);
+}
+
+.loading-content > strong {
+    font-size: 22px;
+    letter-spacing: 0.08em;
+}
+
+.loading-content > span {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+
+/* =====================================================
+   로딩 나침반
+   로고 전체가 아니라 바늘만 회전
+===================================================== */
+
+.loading-compass {
+    position: relative;
+
+    width: 126px;
+    height: 126px;
+}
+
+.loading-logo-base {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+    object-fit: contain;
+}
+
+.loading-needle {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 5px;
+    height: 70px;
+
+    border-radius: 999px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #e25c45 0%,
+            #e25c45 48%,
+            #ffffff 48%,
+            #ffffff 52%,
+            #70542d 52%,
+            #70542d 100%
+        );
+
+    box-shadow:
+        0 2px 8px
+        rgba(82, 57, 20, 0.24);
+
+    transform-origin: 50% 50%;
+
+    transform:
+        translate(-50%, -50%)
+        rotate(0deg);
+
+    animation:
+        cheeseCompassSpin
+        1.15s
+        linear
+        infinite;
+}
+
+.loading-needle::after {
+    content: "";
+
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 13px;
+    height: 13px;
+
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+
+    background: var(--cheese-yellow);
+
+    transform: translate(-50%, -50%);
+}
+
+@keyframes cheeseCompassSpin {
+    from {
+        transform:
+            translate(-50%, -50%)
+            rotate(0deg);
+    }
+
+    to {
+        transform:
+            translate(-50%, -50%)
+            rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-needle {
+        animation: none;
+    }
+}
+
+
+/* =====================================================
+   로그인 후 헤더 프로필 버튼
+===================================================== */
+
+.profile-button:hover {
+    transform: translateY(-1px);
+
+    border-color: var(--cheese-deep);
+    background: var(--cheese-cream);
+}
+
+.profile-button[hidden],
+.login-button[hidden] {
+    display: none !important;
+}
+
+.profile-avatar,
+.mypage-avatar {
+    display: grid;
+    place-items: center;
+
+    color: var(--cheese-brown);
+    background: var(--cheese-yellow);
+
+    border-radius: 50%;
+}
+
+.profile-avatar {
+    width: 30px;
+    height: 30px;
+
+    flex-shrink: 0;
+
+    font-size: 17px;
+}
+
+.profile-name {
+    max-width: 100px;
+
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+
+/* =====================================================
+   로그인 모달 전체 최종 디자인
+===================================================== */
+
+.auth-modal {
+    position: relative;
+
+    width: min(410px, calc(100vw - 32px));
+    padding: 30px 26px 24px;
+
+    border-radius: 22px;
+
+    background: var(--white);
+    box-shadow: var(--shadow);
+
+    overflow: hidden;
+}
+
+
+/* 로그인 폼 전체 배치 */
+.auth-modal form {
+    width: 100%;
+
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+
+    margin: 0;
+    padding: 0;
+}
+
+
+/* 이메일·비밀번호 제목 */
+.auth-modal form label {
+    display: block !important;
+
+    width: 100% !important;
+    margin: 0 0 6px !important;
+    padding: 0 !important;
+
+    color: var(--gray-600);
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+
+/* 두 번째 라벨 간격 */
+.auth-modal form label:not(:first-child) {
+    margin-top: 12px !important;
+}
+
+
+/* 입력창 */
+.auth-modal form input {
+    display: block !important;
+
+    width: 100% !important;
+    height: 42px !important;
+
+    margin: 0 !important;
+    padding: 0 13px !important;
+
+    border: 1px solid var(--cheese-border) !important;
+    border-radius: 11px !important;
+
+    outline: none !important;
+
+    color: var(--text) !important;
+    background: var(--white) !important;
+
+    font-size: 12px !important;
+
+    box-sizing: border-box !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.auth-modal form input:focus {
+    border-color: #e8aa18 !important;
+
+    box-shadow:
+        0 0 0 3px rgba(246, 201, 69, 0.2) !important;
+}
+
+.auth-modal form input::placeholder {
+    color: var(--gray-400);
+}
+
+
+/* 오류 메시지 */
+.auth-modal .form-error {
+    min-height: 0 !important;
+
+    margin: 6px 0 0 !important;
+
+    color: #c74633;
+
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.auth-modal .form-error:empty {
+    display: none !important;
+}
+
+
+/* 로그인 버튼 */
+.auth-modal form .primary-button,
+.auth-modal form button[type="submit"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 100% !important;
+    height: 48px !important;
+
+    margin: 26px 0 0 !important;
+    padding: 0 18px !important;
+
+    border: 1px solid #dfa818 !important;
+    border-radius: 11px !important;
+
+    color: #3d2b1f !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffd85f 0%,
+            #f6c945 100%
+        ) !important;
+
+    box-shadow:
+        0 5px 12px rgba(223, 168, 24, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+
+    cursor: pointer !important;
+
+    appearance: none !important;
+    -webkit-appearance: none !important;
+
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.auth-modal form .primary-button:hover,
+.auth-modal form button[type="submit"]:hover {
+    transform: translateY(-1px);
+
+    border-color: #cf9410 !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffe277 0%,
+            #f8c537 100%
+        ) !important;
+
+    box-shadow:
+        0 7px 16px rgba(223, 168, 24, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
+}
+
+
+.social-login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin: 20px 0 14px;
+    color: #8a7446;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.social-login-divider::before,
+.social-login-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #ead79c;
+}
+
+.social-login-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+.social-login-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    border: 1px solid #ead79c;
+    border-radius: 11px;
+    color: #6f562c;
+    background: #fffdf7;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background-color 0.18s ease;
+}
+
+.social-login-button:hover {
+    transform: translateY(-1px);
+    border-color: #efbd38;
+    background: #fff8e8;
+}
+
+.social-login-google {
+    color: #4285f4;
+}
+
+.social-login-naver {
+    color: #03c75a;
+}
+
+.social-login-line {
+    color: #06c755;
+}
+
+#socialLoginError {
+    margin-top: 10px;
+}
+
+
+/* 회원가입 버튼 */
+.auth-modal .signup-page-link,
+.auth-modal .text-button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 100% !important;
+    min-height: 42px !important;
+
+    margin: 14px 0 0 !important;
+    padding: 0 16px !important;
+
+    border: 1px solid #efbd38 !important;
+    border-radius: 11px !important;
+
+    color: #8a5a12 !important;
+    background: #fff8e8 !important;
+
+    text-decoration: none !important;
+
+    font-size: 13px !important;
+    font-weight: 800 !important;
+
+    cursor: pointer !important;
+
+    box-sizing: border-box !important;
+
+    transition:
+        transform 0.18s ease,
+        color 0.18s ease,
+        border-color 0.18s ease,
+        background-color 0.18s ease;
+}
+
+.auth-modal .signup-page-link:hover,
+.auth-modal .text-button:hover {
+    transform: translateY(-1px);
+
+    color: #664229 !important;
+    border-color: #dfa818 !important;
+    background: #fff7d6 !important;
+}
+
+
+/* 닫기 버튼 */
+.auth-modal .modal-close {
+    position: absolute;
+
+    top: 12px;
+    right: 12px;
+
+    width: 36px;
+    height: 36px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+
+    border: 0;
+    border-radius: 11px;
+
+    color: var(--gray-600);
+    background: var(--gray-100);
+
+    font-size: 23px;
+    line-height: 1;
+}
+
+
+/* 다크 모드 */
+body.dark .auth-modal form input {
+    color: #fff4cf !important;
+    border-color: #565148 !important;
+    background: #252119 !important;
+}
+
+body.dark .auth-modal form .primary-button,
+body.dark .auth-modal form button[type="submit"] {
+    color: #31240f !important;
+}
+
+body.dark .auth-modal .signup-page-link,
+body.dark .auth-modal .text-button {
+    color: #f4cf68 !important;
+    border-color: #9f7c2b !important;
+    background: #302a20 !important;
+}
+
+
+/* =====================================================
+   마이페이지
+===================================================== */
+
+.mypage-modal {
+    width: min(520px, calc(100vw - 32px));
+}
+
+.mypage-profile {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    padding: 6px 0 18px;
+
+    border-bottom:
+        1px solid
+        var(--gray-200);
+}
+
+.mypage-avatar {
+    width: 68px;
+    height: 68px;
+
+    flex-shrink: 0;
+
+    font-size: 30px;
+}
+
+.mypage-profile h2 {
+    margin: 0 0 5px;
+}
+
+.mypage-profile strong,
+.mypage-profile span {
+    display: block;
+}
+
+.mypage-profile strong {
+    color: var(--text);
+
+    font-size: 17px;
+}
+
+.mypage-profile span {
+    margin-top: 3px;
+
+    color: var(--gray-400);
+
+    font-size: 14px;
+}
+/* 이메일 / 비밀번호 라벨과 입력칸 간격 */
+.auth-modal form label {
+    margin-bottom: 8px !important;
+}
+
+/* 두 번째 항목 위쪽 간격 */
+.auth-modal form label:not(:first-child) {
+    margin-top: 14px !important;
+}
+
+/* 입력창 아래 간격 */
+.auth-modal form label {
+    display: block !important;
+    margin-bottom: 0 !important;
+    line-height: 1 !important;
+}
+
+.auth-modal form input {
+    margin-top: 8px !important;
+}
+/* =====================================================
+   마이페이지 탭
+===================================================== */
+
+.mypage-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+
+    margin: 17px 0 14px;
+}
+
+.mypage-tabs button {
+    min-height: 42px;
+
+    padding: 10px;
+
+    border: 1px solid var(--cheese-border);
+    border-radius: 12px;
+
+    color: var(--cheese-brown);
+    background: #ffffff;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.mypage-tabs button:hover {
+    transform: translateY(-1px);
+
+    border-color: var(--cheese-deep);
+}
+
+.mypage-tabs button.active {
+    border-color: var(--cheese-deep);
+
+    color: var(--cheese-brown);
+    background: var(--cheese-yellow);
+}
+
+
+/* =====================================================
+   마이페이지 콘텐츠
+===================================================== */
+
+.mypage-content {
+    min-height: 180px;
+    max-height: 340px;
+
+    display: grid;
+    align-content: start;
+    gap: 10px;
+
+    overflow-y: auto;
+
+    padding-right: 3px;
+}
+
+.mypage-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mypage-content::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+
+    background: #dac78c;
+}
+
+.mypage-card {
+    padding: 14px;
+
+    border: 1px solid var(--cheese-border);
+    border-radius: 14px;
+
+    background: #fffdf6;
+
+    transition:
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.mypage-card:hover {
+    transform: none;
+
+    border-color: var(--cheese-deep);
+}
+
+.mypage-card strong,
+.mypage-card span {
+    display: block;
+}
+
+.mypage-card strong {
+    color: var(--text);
+
+    font-size: 14px;
+}
+
+.mypage-card span {
+    margin-top: 4px;
+
+    color: var(--cheese-deep);
+
+    font-size: 13px;
+}
+
+.mypage-card p {
+    margin: 9px 0 0;
+
+    color: var(--gray-600);
+
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+
+/* 마이페이지 장소 카드 공통 정보 - 리뷰/좋아요/즐겨찾기 동일 스타일 */
+.mypage-place-category {
+    margin-top: 5px !important;
+    color: var(--cheese-deep) !important;
+    font-size: 12px !important;
+    font-weight: 700;
+}
+
+.mypage-place-address {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    margin-top: 6px !important;
+    color: var(--gray-600) !important;
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+}
+
+.mypage-place-address i {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--cheese-deep);
+    font-size: 14px;
+}
+
+.mypage-review-place-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.mypage-review-place {
+    margin-top: 0;
+}
+
+.mypage-review-rating {
+    display: inline-block !important;
+    margin-top: 0 !important;
+    color: var(--cheese-deep) !important;
+    font-size: 13px !important;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.mypage-review-content {
+    padding-top: 8px;
+    border-top: 1px solid var(--gray-100);
+}
+
+.mypage-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+
+    margin-top: 11px;
+}
+
+.mypage-card-actions button {
+    padding: 6px 10px;
+
+    border: 1px solid var(--gray-200);
+    border-radius: 9px;
+
+    color: var(--gray-600);
+    background: var(--white);
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.mypage-card-actions button:hover {
+    border-color: var(--cheese-deep);
+
+    background: var(--cheese-cream);
+}
+
+.empty-state {
+    min-height: 180px;
+
+    display: grid;
+    place-items: center;
+
+    color: #8b7b5d;
+
+    text-align: center;
+}
+
+.empty-state i {
+    display: block;
+
+    margin-bottom: 9px;
+
+    color: var(--cheese-deep);
+
+    font-size: 34px;
+}
+
+.empty-state p {
+    margin: 0;
+
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+
+/* =====================================================
+   로그아웃 버튼
+===================================================== */
+
+.logout-button {
+    width: 100%;
+
+    margin-top: 14px;
+    padding: 11px;
+
+    border: 0;
+    border-radius: 12px;
+
+    color: #6b5b42;
+    background: #f2eee5;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease,
+        color 0.18s ease;
+}
+
+.logout-button:hover {
+    color: #ffffff;
+    background: #c85b45;
+}
+
+
+/* =====================================================
+   언어 변경 버튼
+===================================================== */
+
+.sidebar-footer #languageButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.sidebar-footer #languageButton i {
+    font-size: 15px;
+}
+
+
+/* =====================================================
+   좋아요 버튼 상태
+===================================================== */
+
+.heart-button.saved,
+#favoriteButton.saved {
+    color: #df5d4c;
+}
+
+.heart-button.saved {
+    background: #fff0eb;
+}
+
+#saveButton.saved {
+    border-color: #e49a86;
+
+    color: #c94f3e;
+    background: #fff0eb;
+}
+
+
+/* =====================================================
+   다크 모드 추가 대응
+===================================================== */
+
+body.dark .weather-icon {
+    color: #2d2415;
+}
+
+body.dark .profile-button,
+body.dark .header-message-button {
+    color: #f8e9b8;
+    background: #302a20;
+}
+
+body.dark .profile-button:hover,
+body.dark .header-message-button:hover {
+    background: #3d3527;
+}
+
+body.dark .auth-modal input {
+    color: #fff4cf;
+    background: #252119;
+}
+
+body.dark .mypage-tabs button {
+    color: #fff0bd;
+    background: #252119;
+}
+
+body.dark .mypage-tabs button.active {
+    color: #3c2e16;
+    background: var(--cheese-yellow);
+}
+
+body.dark .mypage-card {
+    color: #f8e9b8;
+    background: #302a20;
+}
+
+body.dark .mypage-card strong {
+    color: #fff3cc;
+}
+
+body.dark .mypage-card-actions button {
+    color: #e6dfd1;
+    background: #28251f;
+}
+
+body.dark .logout-button {
+    color: #e5ddcf;
+    background: #3a3730;
+}
+
+
+/* =====================================================
+   반응형
+===================================================== */
+
+@media (max-width: 850px) {
+    .profile-button {
+        display: none;
+    }
+
+    .loading-compass {
+        width: 112px;
+        height: 112px;
+    }
+
+    .loading-needle {
+        height: 62px;
+    }
+}
+
+@media (max-width: 600px) {
+    .auth-modal,
+    .mypage-modal {
+        padding: 24px 20px;
+    }
+
+    .mypage-avatar {
+        width: 58px;
+        height: 58px;
+
+        font-size: 25px;
+    }
+
+    .mypage-profile strong {
+        font-size: 15px;
+    }
+
+    .mypage-profile span {
+        font-size: 12px;
+    }
+
+    .mypage-content {
+        max-height: 300px;
+    }
+
+    .loading-content > strong {
+        font-size: 19px;
+    }
+
+    .loading-content > span {
+        font-size: 12px;
+    }
+}
+
+
+/* =====================================================
+   날씨 아이콘 보강
+===================================================== */
+
+.weather-icon {
+    width: auto;
+    height: auto;
+    min-width: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.weather-icon i {
+    font-size: 17px;
+    color: #c58b21;
+    transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.weather-button:hover .weather-icon i {
+    transform: scale(1.08);
+}
+
+.weather-condition {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.weather-detail-item > i {
+    flex-shrink: 0;
+    color: #c58b21;
+    font-size: 15px;
+}
+
+.weather-detail-item > span {
+    color: var(--gray-600);
+    font-size: 11px;
+}
+
+.weather-button.is-loading .weather-icon i {
+    animation: weather-icon-loading 1s linear infinite;
+}
+
+@keyframes weather-icon-loading {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+body.dark .weather-icon {
+    background: transparent;
+    box-shadow: none;
+}
+
+body.dark .weather-icon i,
+body.dark .weather-detail-item > i {
+    color: #ffd76b;
+}
+
+
+
+
+/* =====================================================
+   날씨 아이콘 최종본
+===================================================== */
+.weather-button .weather-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    height: 22px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    color: #d49315 !important;
+    overflow: visible !important;
+    line-height: 1 !important;
+}
+
+.weather-button .weather-icon::before,
+.weather-button .weather-icon::after {
+    content: none !important;
+    display: none !important;
+}
+
+.weather-button .weather-icon svg {
+    display: block !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    fill: none !important;
+    stroke: currentColor !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+.weather-button > time {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
+
+.weather-button.is-loading .weather-icon,
+.weather-button.is-loading .weather-icon svg {
+    animation: none !important;
+}
+
+body.dark .weather-button .weather-icon {
+    color: #ffd76b !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* =====================================================
+   다크 모드 최종 대비 보정
+   지도 위에 직접 지정된 라이트 색상을 덮어쓴다.
+===================================================== */
+
+body.dark .map-area {
+    background-color: #1d1c19;
+}
+
+body.dark .search-area input::placeholder,
+body.dark .auth-modal input::placeholder,
+body.dark .route-panel input::placeholder {
+    color: #aaa69b;
+    opacity: 1;
+}
+
+body.dark .filter-chip,
+body.dark .map-status-card,
+body.dark .map-controls button,
+body.dark .legend-card,
+body.dark .place-card,
+body.dark .route-panel,
+body.dark .recommend-panel {
+    border-color: rgba(246, 201, 69, 0.22);
+    background-color: rgba(46, 44, 39, 0.96);
+    color: #f5f2e9;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+}
+
+body.dark .filter-chip {
+    color: #e5dfd2;
+}
+
+body.dark .filter-chip:hover,
+body.dark .map-controls button:hover,
+body.dark #hideRecommendButton:hover {
+    background-color: #454032;
+}
+
+body.dark .filter-chip.active {
+    border-color: #f6c945;
+    background-color: #d8ad35;
+    color: #211c13;
+}
+
+body.dark .map-status-card small,
+body.dark .recommend-header small,
+body.dark .panel-header small,
+body.dark .place-category,
+body.dark .place-address,
+body.dark .mini-place small,
+body.dark .mini-place span,
+body.dark .route-result,
+body.dark .legend-card span {
+    color: #c7c0b2;
+}
+
+body.dark .map-status-card strong,
+body.dark .recommend-header h2,
+body.dark .legend-card strong,
+body.dark .panel-header h2,
+body.dark .place-card h2,
+body.dark .mini-place strong,
+body.dark .route-panel label,
+body.dark .route-panel label > span,
+body.dark .place-meta strong {
+    color: #fff5d6;
+}
+
+body.dark #hideRecommendButton,
+body.dark .close-panel {
+    color: #f2eadc;
+    background-color: #3a3730;
+}
+
+body.dark .mini-place {
+    border-color: #504b41;
+    background-color: #34312b;
+    color: #f5f2e9;
+}
+
+body.dark .mini-place:hover {
+    border-color: #d9b94d;
+    background-color: #3b372f;
+    box-shadow: 0 9px 18px rgba(0, 0, 0, 0.26);
+}
+
+body.dark .place-list::-webkit-scrollbar-thumb {
+    background-color: #655f53;
+}
+
+body.dark .route-panel input,
+body.dark .auth-modal input {
+    border-color: #565148;
+    color: #f8f3e7;
+    background-color: #25231f;
+}
+
+body.dark .route-panel input:focus,
+body.dark .auth-modal input:focus {
+    border-color: #d8ad35;
+    box-shadow: 0 0 0 4px rgba(246, 201, 69, 0.13);
+}
+
+body.dark .transport-tabs,
+body.dark .transport-tabs button,
+body.dark .place-action-button,
+body.dark .place-card button:not(.close-panel):not(.route-option):not(.simple-route-option):not(.route-back-button):not([data-transport]),
+body.dark .sidebar-footer button {
+    color: #ddd6c9;
+    background-color: #34312b;
+}
+
+body.dark .place-action-button:hover,
+body.dark .place-card button:not(.close-panel):not(.route-option):not(.simple-route-option):not(.route-back-button):not([data-transport]):hover {
+    color: #2d2515;
+    background-color: #d8ad35;
+}
+
+/* 위쪽 이동수단 탭: 선택된 것만 색칠 (경로 카드 hover와 분리) */
+body.dark .place-side-panel .transport-tabs button {
+    color: #ddd6c9;
+    background-color: #34312b;
+    border-color: #5a554b;
+}
+
+body.dark .place-side-panel .transport-tabs button i {
+    color: #d4b45a;
+}
+
+body.dark .place-side-panel .transport-tabs button.active {
+    color: #2d2515;
+    background-color: #d8ad35;
+    border-color: #efc84e;
+}
+
+body.dark .place-side-panel .transport-tabs button.active i {
+    color: #5b4026;
+}
+
+
+
+body.dark .weather-button:hover,
+body.dark .icon-button:hover,
+body.dark .header-message-button:hover,
+body.dark .login-button:hover,
+body.dark .profile-button:hover,
+body.dark .category-item:hover {
+    color: #fff5d6;
+    background-color: #454032;
+}
+
+body.dark .category-item.active {
+    color: #2d2515;
+    background-color: #d8ad35;
+}
+
+body.dark .category-item.active .category-icon,
+body.dark .side-item.active .side-icon {
+    color: #3f3024;
+}
+
+body.dark .switch-row,
+body.dark .sidebar-footer button,
+body.dark .weather-expanded-content,
+body.dark .weather-button > time {
+    color: #d5cec0;
+}
+
+body.dark .toast {
+    border: 1px solid rgba(246, 201, 69, 0.25);
+    color: #fff5d6;
+    background-color: #2e2c27;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
+}
+
+body.dark .modal-backdrop {
+    background-color: rgba(7, 7, 6, 0.72);
+}
+
+body.dark .auth-modal,
+body.dark .mypage-modal {
+    border: 1px solid #4f4b43;
+    color: #f5f2e9;
+    background-color: #2e2c27;
+}
+
+body.dark .auth-modal h2,
+body.dark .mypage-modal h2,
+body.dark .mypage-profile strong,
+body.dark .auth-modal label {
+    color: #fff5d6;
+}
+
+body.dark .auth-modal p,
+body.dark .mypage-profile span,
+body.dark .empty-state {
+    color: #c9c2b5;
+}
+
+
+/* =====================================================
+   Google 지도 기본 렌더링 유지
+   내부 타일에는 transform, zoom, filter를 강제로 적용하지 않는다.
+===================================================== */
+
+#googleMap {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    background-color: #f5f1e8;
+}
+
+body.dark #googleMap {
+    background-color: #1d1c19;
+}
+
+#googleMap img {
+    max-width: none;
+}
+
+
+/* =====================================================
+   로그인 / 회원가입 모달 보정
+===================================================== */
+
+.modal-backdrop {
+    padding: 20px;
+}
+
+.auth-modal {
+    position: relative;
+    width: min(420px, calc(100vw - 32px));
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+
+.modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    color: var(--gray-600);
+    background: var(--gray-100);
+    font-size: 24px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--text);
+    background: var(--yellow-light);
+}
+
+.auth-modal .text-button {
+    width: 100%;
+    margin-top: 12px;
+}
+
+body.dark .modal-close {
+    color: #f5f2e9;
+    background: #3a3730;
+}
+
+body.dark .modal-close:hover {
+    color: #2d2515;
+    background: #d8ad35;
+}
+
+
+/* 별도 회원가입 페이지 이동 링크 */
+.signup-page-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+
+/* =====================================================
+   마이페이지 최종 보정: 프로필 수정 + 3개 탭
+===================================================== */
+.mypage-profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mypage-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 5px;
+    padding-right: 42px;
+}
+
+.mypage-title-row h2 {
+    margin: 0;
+}
+
+.mypage-edit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--cheese-border);
+    border-radius: 10px;
+    color: var(--cheese-brown);
+    background: var(--white);
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.mypage-edit-button:hover {
+    border-color: var(--cheese-deep);
+    background: var(--cheese-cream);
+}
+
+.mypage-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body.dark .mypage-edit-button {
+    color: #f4cf68;
+    border-color: #766331;
+    background: #302a20;
+}
+
+@media (max-width: 480px) {
+    .mypage-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 7px;
+        padding-right: 38px;
+    }
+
+    .mypage-edit-button {
+        min-height: 30px;
+    }
+
+    .mypage-tabs button {
+        padding-inline: 4px;
+        font-size: 11px;
+    }
+}
+
+
+/* 경로 검색 전 안내 문구 */
+.route-empty-message {
+    margin: 0;
+    padding: 14px 4px 2px;
+    color: var(--gray-600);
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+
+/* Transitous 대중교통 경로 */
+.transit-data-credit {
+    margin:10px 0 0;
+    padding-top:10px;
+    border-top:1px solid var(--gray-200);
+    color:var(--gray-600);
+    font-size:10px;
+    line-height:1.5;
+    text-align:center
+}
+.transit-data-credit a {
+    color:var(--brown);
+    font-weight:700;
+    text-underline-offset:2px
+}
+.transit-route-option {
+    width:100%;
+    margin:0 0 10px;
+    padding:12px;
+    border:1px solid var(--gray-200);
+    border-radius:13px;
+    background:var(--white);
+    color:var(--text);
+    text-align:left;
+    cursor:pointer
+}
+/* MR.EUM수정부분 - 대중교통 경로 hover/active 노란색 제거 */
+body.dark .transit-route-option:hover,
+body.dark .transit-route-option.active {
+    background: #34312b;
+    border-color: #5a554b;
+}
+.transit-route-option .route-summary {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px
+}
+.transit-route-option .route-summary span {
+    color:var(--gray-600);
+    font-size:11px;
+    text-align:right
+}
+.transit-route-option .route-line p {
+    overflow-wrap:anywhere
+}
+
+
+
+
+/* 길찾기 패널이 열린 상태에서 지도 아이콘/위치 선택 */
+body:has(#routePanel.show) #googleMap {
+    cursor: crosshair;
+}
+
+
+/* 장소 상세카드에서 출발지 A 지정 */
+#placeRouteButton {
+    border-color: var(--line);
+    background: #ffffff;
+    color: var(--brown-dark);
+    font-weight: 800;
+}
+
+#placeRouteButton:hover {
+    border-color: #ead8a3;
+    background: #fffaf0;
+}
+
+body:has(#routePanel.show) #placeRouteButton {
+    border-color: #efd98a;
+    background: #fff6cf;
+    color: var(--brown-dark);
+}
+
+body:has(#routePanel.show) #placeRouteButton:hover {
+    background: #fff0b2;
+}
+
+
+
+
+
+
+/* =========================================================
+   홈 화면 우측 프로필 사진
+========================================================= */
+.profile-avatar {
+    overflow: hidden;
+}
+
+.profile-avatar.has-photo {
+    padding: 0;
+    background: #f3f0e9;
+}
+
+.header-profile-avatar-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+
+/* =========================================================
+   마이페이지 프로필 사진
+========================================================= */
+.mypage-avatar {
+    overflow: hidden;
+}
+
+.mypage-avatar.has-photo {
+    padding: 0;
+    background: #f3f0e9;
+}
+
+.mypage-avatar-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+
+/* 마이페이지 리뷰 empty 상태 - 좋아요/즐겨찾기와 동일한 중앙 정렬 */
+.mypage-empty {
+    min-height: 180px;
+    display: grid;
+    place-items: center;
+    color: #8b7b5d;
+    text-align: center;
+}
+.mypage-empty > div { display: grid; justify-items: center; }
+.mypage-empty i { display: block; margin-bottom: 9px; color: var(--cheese-deep); font-size: 34px; }
+.mypage-empty p { margin: 0; font-size: 13px; line-height: 1.6; }
+body.dark .mypage-empty { color: #bcb5a8; }
+
+/* =====================================================
+   MR.EUM 수정부분
+   다크모드 주변 추천 장소 스크롤바
+===================================================== */
+
+/* 주변 추천 장소 가로 스크롤바 */
+body.dark .place-list::-webkit-scrollbar {
+    height: 6px;
+}
+
+/* 스크롤바 배경 */
+body.dark .place-list::-webkit-scrollbar-track {
+    background: #25231f;
+    border-radius: 10px;
+}
+
+/* 실제 움직이는 스크롤바 */
+body.dark .place-list::-webkit-scrollbar-thumb {
+    background-color: #6b675e;
+    border-radius: 10px;
+}
+
+/* 마우스를 올렸을 때 */
+body.dark .place-list::-webkit-scrollbar-thumb:hover {
+    background-color: #8a8478;
+}
+
+/* Firefox */
+body.dark .place-list {
+    scrollbar-width: thin;
+    scrollbar-color: #6b675e #25231f;
+}
+
+/* mr.eum수정부분
+   마이페이지 리뷰 수정 토글/모달 디자인
+*/
+.mypage-review-edit-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+}
+.mypage-review-edit-modal[hidden] { display: none; }
+.mypage-review-edit-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(35, 30, 20, .48);
+    backdrop-filter: blur(3px);
+}
+.mypage-review-edit-dialog {
+    position: relative;
+    width: min(540px, 100%);
+    max-height: min(760px, calc(100vh - 40px));
+    overflow-y: auto;
+    padding: 22px;
+    border: 1px solid var(--cheese-border);
+    border-radius: 20px;
+    background: #fffdf6;
+    box-shadow: 0 24px 70px rgba(45, 36, 18, .18);
+}
+.mypage-review-edit-header {
+    display: flex; justify-content: space-between; gap: 18px; align-items: flex-start;
+    padding-bottom: 16px; border-bottom: 1px solid var(--gray-100);
+}
+.mypage-review-edit-label { font-size: 10px; font-weight: 800; letter-spacing: .12em; color: var(--cheese-deep); }
+.mypage-review-edit-header h2 { margin: 5px 0 4px; font-size: 20px; color: var(--text); }
+.mypage-review-edit-place { margin: 0; color: var(--gray-500); font-size: 12px; font-weight: 700; }
+.mypage-review-edit-close { width: 32px; height: 32px; border: 1px solid var(--gray-200); border-radius: 10px; background: var(--white); color: var(--gray-600); font-size: 20px; cursor: pointer; }
+.mypage-review-edit-section { margin-top: 18px; }
+.mypage-review-edit-section-title { margin-bottom: 9px; color: var(--gray-700); font-size: 12px; font-weight: 800; }
+.mypage-review-edit-stars { display: flex; gap: 3px; }
+.mypage-review-edit-stars button { padding: 0; border: 0; background: transparent; color: #d9d2c5; font-size: 27px; line-height: 1; cursor: pointer; }
+.mypage-review-edit-stars button.selected { color: var(--cheese-deep); }
+.mypage-review-edit-textarea { width: 100%; min-height: 130px; resize: vertical; box-sizing: border-box; padding: 12px; border: 1px solid var(--cheese-border); border-radius: 12px; outline: none; background: var(--white); color: var(--text); font: inherit; font-size: 13px; line-height: 1.6; }
+.mypage-review-edit-textarea:focus { border-color: var(--cheese-deep); box-shadow: 0 0 0 3px rgba(218, 181, 66, .12); }
+.mypage-review-edit-character-count { margin-top: 5px; text-align: right; color: var(--gray-500); font-size: 10px; }
+.mypage-review-edit-photo-header { display: flex; justify-content: space-between; align-items: center; }
+.mypage-review-edit-photo-header > span { color: var(--gray-500); font-size: 11px; }
+.mypage-review-edit-photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; min-height: 78px; margin-top: 9px; }
+.mypage-review-edit-photo { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 11px; border: 1px solid var(--cheese-border); background: var(--cheese-cream); }
+.mypage-review-edit-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mypage-review-edit-photo-delete { position: absolute; top: 5px; right: 5px; width: 23px; height: 23px; border: 0; border-radius: 50%; background: rgba(30, 27, 20, .72); color: white; font-size: 15px; line-height: 1; cursor: pointer; }
+.mypage-review-edit-photo-empty { display: grid; place-items: center; grid-column: 1 / -1; min-height: 76px; border: 1px dashed var(--cheese-border); border-radius: 12px; color: var(--gray-500); font-size: 11px; }
+.mypage-review-edit-add-photo { margin-top: 9px; padding: 8px 11px; border: 1px solid var(--cheese-border); border-radius: 10px; background: var(--cheese-cream); color: var(--brown-dark); font-size: 11px; font-weight: 800; cursor: pointer; }
+.mypage-review-edit-add-photo:hover { border-color: var(--cheese-deep); }
+.mypage-review-edit-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; padding-top: 15px; border-top: 1px solid var(--gray-100); }
+.mypage-review-edit-footer button { padding: 9px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer; }
+.mypage-review-edit-cancel { border: 1px solid var(--gray-200); background: var(--white); color: var(--gray-600); }
+.mypage-review-edit-save { border: 0; background: var(--yellow-light); color: var(--brown-dark); }
+.mypage-review-edit-save:hover { filter: brightness(.98); }
+body.dark .mypage-review-edit-dialog { background: #24221e; border-color: #514a3d; }
+body.dark .mypage-review-edit-header, body.dark .mypage-review-edit-footer { border-color: #3d3932; }
+body.dark .mypage-review-edit-header h2, body.dark .mypage-review-edit-section-title { color: #f2eee5; }
+body.dark .mypage-review-edit-textarea, body.dark .mypage-review-edit-close, body.dark .mypage-review-edit-cancel { background: #2d2a25; border-color: #514a3d; color: #eee8dc; }
+
+/* mr.eum수정부분
+   마이페이지 리뷰 본문은 카드 폭 안에서 자연스럽게 줄바꿈합니다.
+*/
+.mypage-review-content {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+
+/* =========================================================
+   MR.EUM 수정부분
+   마이페이지 내 리뷰 수정 모달 디자인 개선
+   - 기본 브라우저 스크롤바를 치즈맵 스타일로 변경
+   - 다크모드 사진 추가 / 수정 완료 버튼 가독성 개선
+   ========================================================= */
+
+/* 리뷰 수정 모달 스크롤바 */
+.mypage-review-edit-dialog {
+    scrollbar-width: thin;
+    scrollbar-color: #b8a98b #f1eee7;
+}
+
+.mypage-review-edit-dialog::-webkit-scrollbar {
+    width: 8px;
+}
+
+.mypage-review-edit-dialog::-webkit-scrollbar-track {
+    background: #f1eee7;
+    border-radius: 10px;
+}
+
+.mypage-review-edit-dialog::-webkit-scrollbar-thumb {
+    background: #b8a98b;
+    border-radius: 10px;
+    border: 2px solid #f1eee7;
+}
+
+.mypage-review-edit-dialog::-webkit-scrollbar-thumb:hover {
+    background: #8f8065;
+}
+
+/* 다크모드 리뷰 수정 모달 스크롤바 */
+body.dark .mypage-review-edit-dialog {
+    scrollbar-color: #746b5b #25231f;
+}
+
+body.dark .mypage-review-edit-dialog::-webkit-scrollbar-track {
+    background: #25231f;
+}
+
+body.dark .mypage-review-edit-dialog::-webkit-scrollbar-thumb {
+    background: #746b5b;
+    border-color: #25231f;
+}
+
+body.dark .mypage-review-edit-dialog::-webkit-scrollbar-thumb:hover {
+    background: #9b907c;
+}
+
+/* 다크모드 - 사진 추가 버튼 */
+body.dark .mypage-review-edit-add-photo {
+    background: #3a352c;
+    color: #f7e9a8;
+    border: 1px solid #c5a84b;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+body.dark .mypage-review-edit-add-photo:hover {
+    background: #4a4337;
+    color: #fff4bd;
+    border-color: #e0c45f;
+}
+
+/* 다크모드 - 수정 완료 버튼 */
+body.dark .mypage-review-edit-save {
+    background: #d6b94f;
+    color: #211e18;
+    border: 1px solid #f0d66a;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    font-weight: 700;
+}
+
+body.dark .mypage-review-edit-save:hover {
+    background: #e5ca61;
+    color: #171510;
+    border-color: #f5df83;
+}
+
+/* 키보드 포커스 시에도 버튼 위치와 가독성 유지 */
+body.dark .mypage-review-edit-add-photo:focus-visible,
+body.dark .mypage-review-edit-save:focus-visible {
+    outline: 2px solid #f5df83;
+    outline-offset: 2px;
+}

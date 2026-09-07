@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 | CHEESE MAP</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <link rel="stylesheet" href="/css/signup.css">
+</head>
+<body>
+    <main class="signup-page">
+        <section class="signup-visual" aria-label="CHEESE MAP 소개">
+            <a href="/" class="signup-brand" aria-label="CHEESE MAP 메인으로 이동">
+                <img src="/png/cheese-map-logo.png" alt="CHEESE MAP 로고">
+                <span>
+                    <strong>CHEESE MAP</strong>
+                    <small>チーズマップ</small>
+                </span>
+            </a>
+
+            <div class="visual-copy">
+                <span class="eyebrow">JOIN CHEESE MAP</span>
+                <h1 data-i18n-html="visualTitle">도쿄의 좋은 장소를<br>나만의 지도에 담아보세요.</h1>
+                <p data-i18n="visualDescription">좋아요한 장소와 리뷰를 저장하고, 나중에 다시 편하게 찾아볼 수 있어요.</p>
+            </div>
+
+            <div class="visual-cheese" aria-hidden="true">
+                <i class="ti ti-map-pin-filled"></i>
+            </div>
+        </section>
+
+        <section class="signup-panel">
+            <div class="signup-card">
+                <div class="signup-topbar">
+                    <div class="mobile-brand">
+                        <a href="/" id="brandHomeLink" aria-label="메인으로 돌아가기">
+                            <img src="/png/cheese-map-logo.png" alt="">
+                            <strong>CHEESE MAP</strong>
+                        </a>
+                    </div>
+
+                    <div class="language-switcher" role="group" aria-label="Language">
+                        <button type="button" class="language-option" data-language="ko">한국어</button>
+                        <button type="button" class="language-option" data-language="ja">日本語</button>
+                        <button type="button" class="language-option" data-language="en">EN</button>
+                    </div>
+                </div>
+
+                <div class="signup-heading">
+                    <span>CREATE ACCOUNT</span>
+                    <h2 data-i18n="signupTitle">회원가입</h2>
+                    <p data-i18n="signupDescription">치즈맵에서 사용할 정보를 입력해주세요.</p>
+                </div>
+
+                <form id="signupForm" novalidate>
+                    <div class="form-grid">
+                        <label class="field">
+                            <span><span data-i18n="name">이름</span> <b>*</b></span>
+                            <div class="input-wrap">
+                                <i class="ti ti-user"></i>
+                                <input type="text" id="userName" name="userName" maxlength="30" placeholder="이름을 입력하세요" data-i18n-placeholder="namePlaceholder" autocomplete="name" required>
+                            </div>
+                            <small class="field-error" data-error-for="userName"></small>
+                        </label>
+
+                        <label class="field">
+                            <span><span data-i18n="nickname">닉네임</span> <b>*</b></span>
+                            <div class="input-wrap">
+                                <i class="ti ti-mood-smile"></i>
+                                <input type="text" id="userNickname" name="userNickname" maxlength="20" placeholder="닉네임을 입력하세요" data-i18n-placeholder="nicknamePlaceholder" required>
+                            </div>
+                            <small class="field-error" data-error-for="userNickname"></small>
+                        </label>
+
+                        <label class="field full">
+                            <span><span data-i18n="email">이메일</span> <b>*</b></span>
+                            <div class="input-wrap">
+                                <i class="ti ti-mail"></i>
+                                <input type="email" id="email" name="email" placeholder="cheese@example.com" autocomplete="email" required>
+                            </div>
+                            <small class="field-error" data-error-for="email"></small>
+                        </label>
+
+                        <label class="field">
+                            <span><span data-i18n="password">비밀번호</span> <b>*</b></span>
+                            <div class="input-wrap">
+                                <i class="ti ti-lock"></i>
+                                <input type="password" id="password" name="password" minlength="6" placeholder="6자 이상 입력하세요" data-i18n-placeholder="passwordPlaceholder" autocomplete="new-password" required>
+                                <button type="button" class="password-toggle" data-toggle-password="password" aria-label="비밀번호 표시 전환">
+                                    <i class="ti ti-eye"></i>
+                                </button>
+                            </div>
+                            <small class="field-error" data-error-for="password"></small>
+                        </label>
+
+                        <label class="field">
+                            <span><span data-i18n="passwordConfirm">비밀번호 확인</span> <b>*</b></span>
+                            <div class="input-wrap">
+                                <i class="ti ti-lock-check"></i>
+                                <input type="password" id="passwordConfirm" name="passwordConfirm" minlength="6" placeholder="비밀번호를 다시 입력하세요" data-i18n-placeholder="passwordConfirmPlaceholder" autocomplete="new-password" required>
+                                <button type="button" class="password-toggle" data-toggle-password="passwordConfirm" aria-label="비밀번호 표시 전환">
+                                    <i class="ti ti-eye"></i>
+                                </button>
+                            </div>
+                            <small class="field-error" data-error-for="passwordConfirm"></small>
+                        </label>
+
+                        <label class="field">
+                            <span><span data-i18n="phone">전화번호</span> <b>*</b></span>
+                            <div class="input-wrap">
+                                <i class="ti ti-phone"></i>
+                                <input type="tel" id="phone" name="phone" maxlength="13" placeholder="010-0000-0000" autocomplete="tel" required>
+                            </div>
+                            <small class="field-error" data-error-for="phone"></small>
+                        </label>
+
+                        <label class="field">
+                            <span><span data-i18n="birth">생년월일</span> <b>*</b></span>
+                            <div class="input-wrap">
+                                <i class="ti ti-calendar"></i>
+                                <input type="date" id="birth" name="birth" required>
+                            </div>
+                            <small class="field-error" data-error-for="birth"></small>
+                        </label>
+
+                        <fieldset class="field full sex-field">
+                            <legend><span data-i18n="gender">성별</span> <b>*</b></legend>
+                            <div class="sex-options">
+                                <label>
+                                    <input type="radio" name="SEX" value="true">
+                                    <span><i class="ti ti-gender-male"></i><span data-i18n="male">남성</span></span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="SEX" value="false">
+                                    <span><i class="ti ti-gender-female"></i><span data-i18n="female">여성</span></span>
+                                </label>
+                            </div>
+                            <small class="field-error sex-error" data-error-for="SEX"></small>
+                        </fieldset>
+                    </div>
+
+                    <label class="agree-row">
+                        <input type="checkbox" id="agreeTerms" required>
+                        <span class="custom-check"><i class="ti ti-check"></i></span>
+                        <span><b data-i18n="required">필수</b> <span data-i18n="termsAgreement">이용약관과 개인정보 처리방침에 동의합니다.</span></span>
+                    </label>
+                    <small class="field-error terms-error" data-error-for="agreeTerms"></small>
+
+                    <p class="form-message" id="formMessage" aria-live="polite"></p>
+
+                    <button type="submit" class="signup-submit">
+                        <span data-i18n="signupButton">회원가입</span>
+                        <i class="ti ti-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div class="login-guide">
+                    <span data-i18n="alreadyAccount">이미 계정이 있나요?</span>
+                    <a href="/?login=1" id="signupLoginLink" data-i18n="login">로그인</a>
+                </div>
+
+                <a href="/" class="back-home">
+                    <i class="ti ti-arrow-left"></i>
+                    <span data-i18n="backHome">치즈맵으로 돌아가기</span>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <script src="/js/signup.js"></script>
+</body>
+</html>

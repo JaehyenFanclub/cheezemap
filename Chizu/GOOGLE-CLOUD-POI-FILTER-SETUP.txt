@@ -1,0 +1,24 @@
+CHEESE MAP - Google 기본 POI 카테고리 필터 설정
+
+이 프로젝트는 커스텀 마커를 만들지 않고 Google 기본 POI 아이콘/라벨을 그대로 사용합니다.
+카테고리 버튼을 누르면 해당 카테고리에 연결된 Map ID로 지도를 다시 생성합니다.
+
+Google Cloud Console에서 Map Style + Map ID를 만든 뒤 아래 파일에 ID만 붙여 넣으세요.
+src/main/resources/static/js/map-style-config.js
+
+필요한 6개 Map ID
+1) all               : 기본 POI 전체 표시
+2) food              : 음식점 계열만 표시
+3) cafe              : 카페 계열만 표시
+4) convenienceMedical: 편의점 + 약국 + 병원 표시
+5) tour              : 관광지/박물관/공원 등 표시
+6) transport         : 교통/역 계열 표시
+
+각 Cloud Map Style에서 Points of interest의 Visibility를 조정하고 Map ID에 연결합니다.
+카테고리 외 POI는 숨기고 필요한 하위 항목만 표시하세요.
+
+주의
+- Map ID는 Google Maps 객체 생성 후 변경할 수 없어서 버튼 클릭 시 center/zoom을 보존한 채 지도 객체를 재생성합니다.
+- Map ID가 비어 있으면 기존 지도 스타일을 유지하고 콘솔/토스트로 설정 필요 메시지를 냅니다.
+- 기존 Nearby Search 커스텀 마커 기능은 사용하지 않습니다.
+- Google 기본 POI 클릭은 기존 handleGoogleMapClick 로직을 그대로 사용합니다.
