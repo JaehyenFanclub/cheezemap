@@ -144,6 +144,7 @@ const translations = {
         "toast.loginRequired": "로그인이 필요한 기능입니다.",
         "toast.loginSuccess": "로그인했습니다.",
         "toast.logoutSuccess": "로그아웃했습니다.",
+        "toast.sessionExpired": "세션이 만료되어 로그아웃되었습니다. 다시 로그인해주세요.",
         "toast.signupSuccess": "회원가입이 완료되었습니다.",
         "toast.saved": "좋아요에 저장했습니다.",
         "toast.removed": "좋아요에서 삭제했습니다.",
@@ -283,6 +284,7 @@ const translations = {
         "toast.loginRequired": "Please log in first.",
         "toast.loginSuccess": "Logged in.",
         "toast.logoutSuccess": "Logged out.",
+        "toast.sessionExpired": "Your session has expired. Please log in again.",
         "toast.signupSuccess": "Account created.",
         "toast.saved": "Saved to likes.",
         "toast.removed": "Removed from likes.",
@@ -443,6 +445,7 @@ const translations = {
         "toast.loginRequired": "ログインが必要です。",
         "toast.loginSuccess": "ログインしました。",
         "toast.logoutSuccess": "ログアウトしました。",
+        "toast.sessionExpired": "セッションが期限切れのためログアウトしました。再度ログインしてください。",
         "toast.signupSuccess": "新規登録が完了しました。",
         "toast.saved": "お気に入りに保存しました。",
         "toast.removed": "お気に入りから削除しました。",
@@ -1337,8 +1340,30 @@ window.addEventListener("load", () => {
    언어 변환
 ===================================================== */
 
+function getGoogleMapsLanguage(language = currentLanguage) {
+    return ["ko", "ja", "en"].includes(language)
+        ? language
+        : "ko";
+}
+
 function applyLanguage(language) {
-    currentLanguage = ["ko", "ja", "en"].includes(language) ? language : "ko";
+    const nextLanguage = getGoogleMapsLanguage(language);
+
+    // Google Maps JS API의 language는 로드 후 변경할 수 없어,
+    // 상단 언어가 지도 로드 언어와 다르면 저장 후 새로고침합니다.
+    if (
+        window.googleMapsApiLanguage &&
+        window.googleMapsApiLanguage !== nextLanguage
+    ) {
+        localStorage.setItem(
+            STORAGE_KEYS.language,
+            nextLanguage
+        );
+        location.reload();
+        return;
+    }
+
+    currentLanguage = nextLanguage;
 
     document.documentElement.lang = currentLanguage;
     localStorage.setItem(STORAGE_KEYS.language, currentLanguage);

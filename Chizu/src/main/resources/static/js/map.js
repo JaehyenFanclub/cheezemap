@@ -340,7 +340,7 @@ async function resolveNearbyTransitPoi(position) {
                 ],
                 maxResultCount: 20,
                 rankPreference: "DISTANCE",
-                language: currentLanguage === "ko" ? "ko" : "ja",
+                language: getGoogleMapsLanguage(),
                 region: "JP"
             });
 
@@ -364,7 +364,7 @@ async function resolveNearbyTransitPoi(position) {
                     center: { lat, lng },
                     radius: 250
                 },
-                language: "ja",
+                language: getGoogleMapsLanguage(),
                 region: "JP",
                 maxResultCount: 20
             });
@@ -979,7 +979,9 @@ function initGoogleMap() {
                 startPointInput.value =
                     currentLanguage === "ko"
                         ? "도쿄역"
-                        : "東京駅";
+                        : currentLanguage === "ja"
+                            ? "東京駅"
+                            : "Tokyo Station";
             }
 
             hideLoadingScreen();
@@ -2648,12 +2650,7 @@ async function searchGoogleNearbyRecommendationPlaces() {
         },
         maxResultCount: 20,
         rankPreference: SearchNearbyRankPreference.POPULARITY,
-        language:
-            currentLanguage === "ja"
-                ? "ja"
-                : currentLanguage === "en"
-                    ? "en"
-                    : "ko"
+        language: getGoogleMapsLanguage()
     });
 
     const places = (result.places || []).filter(place => {
@@ -5977,7 +5974,7 @@ async function searchPlace() {
                 "userRatingCount",
                 "formattedAddress"
             ],
-            language: currentLanguage === "ko" ? "ko" : "ja",
+            language: getGoogleMapsLanguage(),
             region: "JP",
             maxResultCount: 20
         };

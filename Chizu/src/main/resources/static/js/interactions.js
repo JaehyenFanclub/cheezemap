@@ -2306,9 +2306,7 @@ async function loadWheelchairAccessiblePlaces() {
             maxResultCount: 20,
             rankPreference:
                 SearchNearbyRankPreference.POPULARITY,
-            language: currentLanguage === "ja"
-                ? "ja"
-                : "ko",
+            language: getGoogleMapsLanguage(),
             region: "JP"
         };
 

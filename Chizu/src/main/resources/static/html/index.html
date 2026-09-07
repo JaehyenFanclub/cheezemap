@@ -2201,10 +2201,22 @@
                 return;
             }
 
+            // Maps JS API language는 스크립트 로드 시점에 고정됩니다.
+            // 상단 언어(cheeseMapLanguage)와 맞춰 로드하고, 전환 시 페이지를 다시 불러옵니다.
+            const storedLanguage =
+                localStorage.getItem("cheeseMapLanguage");
+            const mapsLanguage = ["ko", "ja", "en"].includes(
+                storedLanguage
+            )
+                ? storedLanguage
+                : "ko";
+
+            window.googleMapsApiLanguage = mapsLanguage;
+
             const script = document.createElement("script");
             script.src =
                 `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}` +
-                "&callback=initGoogleMap&loading=async&libraries=places,routes&language=ja&region=JP&v=weekly";
+                `&callback=initGoogleMap&loading=async&libraries=places,routes&language=${encodeURIComponent(mapsLanguage)}&region=JP&v=weekly`;
             script.async = true;
             script.defer = true;
             document.head.appendChild(script);
