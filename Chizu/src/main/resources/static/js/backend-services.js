@@ -8,7 +8,11 @@ window.CheeseApi = {
     user: {
         signup: body => apiRequest("/user/signup", { method: "POST", body }),
         login: body => apiRequest("/user/auth/login", { method: "POST", body }),
-        logout: () => apiRequest("/user/auth/logout", { method: "POST", auth: true }),
+        logout: () => apiRequest("/user/auth/logout", {
+            method: "POST",
+            auth: true,
+            skipSessionLogout: true
+        }),
         mypage: () => apiRequest("/user/mypage", { auth: true }),
         myReviews: () => apiRequest("/user/me/reviews", { auth: true }),
         edit: formData => apiRequest("/user/mypage/edit", { method: "PUT", auth: true, body: formData }),

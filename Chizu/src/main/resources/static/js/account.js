@@ -156,6 +156,11 @@ function renderMyPageProfilePhoto() {
 
 
 function updateHeaderAuthState() {
+    if (getAuthToken() && isAuthTokenExpired()) {
+        forceSessionLogout({ showMessage: true });
+        return;
+    }
+
     const loginButton =
         document.getElementById(
             "loginButton"
@@ -178,7 +183,9 @@ function updateHeaderAuthState() {
 
 
     const loggedIn =
-        Boolean(currentUser);
+        Boolean(currentUser) &&
+        Boolean(getAuthToken()) &&
+        !isAuthTokenExpired();
 
 
     if (loginButton) {
@@ -409,8 +416,13 @@ document.getElementById("loginForm")?.addEventListener("submit", async event => 
 
 document.getElementById("logoutButton")?.addEventListener("click", async () => {
     try {
-        if (getAuthToken()) {
-            await apiRequest("/user/auth/logout", { method: "POST", auth: true });
+        const token = getAuthToken();
+        if (token && !isAuthTokenExpired(token)) {
+            await apiRequest("/user/auth/logout", {
+                method: "POST",
+                auth: true,
+                skipSessionLogout: true
+            });
         }
     } catch (error) {
         console.warn("로그아웃 API:", error);
@@ -1235,6 +1247,12 @@ async function handleOAuthCallback() {
         }
         return;
     }
+
+    if (isAuthTokenExpired()) {
+        forceSessionLogout({ showMessage: true });
+        return;
+    }
+
     try {
         const restoredUser = await fetchCurrentUser();
         const onCompleteProfile =
@@ -1249,10 +1267,7 @@ async function handleOAuthCallback() {
         if (typeof applyCheeseSettings === "function") applyCheeseSettings();
     } catch (error) {
         console.warn("로그인 복원 실패:", error);
-        clearAuthToken();
-        currentUser = null;
-        localStorage.removeItem(STORAGE_KEYS.user);
-        updateHeaderAuthState();
+        forceSessionLogout({ showMessage: false });
     }
 })();
 

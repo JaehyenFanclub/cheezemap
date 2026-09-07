@@ -517,6 +517,12 @@ async function updateMessageBadge() {
         return;
     }
 
+    if (isAuthTokenExpired()) {
+        badge.hidden = true;
+        forceSessionLogout({ showMessage: true });
+        return;
+    }
+
     try {
         const unread = Number(await apiRequest("/message/check", { auth: true })) || 0;
         badge.textContent = unread;
