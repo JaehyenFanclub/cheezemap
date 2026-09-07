@@ -6037,3 +6037,21 @@ small {
     }
 }
 
+
+/* =====================================================
+   쪽지함 - 다크모드 삭제 버튼 hover 보정
+   - hover 시 흰색/아이보리 배경으로 변하지 않음
+===================================================== */
+
+body.dark .message-mini-button.danger {
+    color: #e08b7d !important;
+    border-color: #6b4a45 !important;
+    background: #2f2b27 !important;
+}
+
+body.dark .message-mini-button.danger:hover {
+    color: #f09a8c !important;
+    border-color: #8a5a52 !important;
+    background: #3a2d2a !important;
+}
+
