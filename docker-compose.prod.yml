@@ -25,6 +25,8 @@ services:
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8080}:8080"
+    env_file:
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-cheezemap_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-cheezemap}
@@ -32,6 +34,7 @@ services:
       FILE_UPLOAD_DIR: /app/uploads
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
+      NAVITIME_API_KEY: ${NAVITIME_API_KEY:-}
       OAUTH2_GOOGLE_CLIENT_ID: ${OAUTH2_GOOGLE_CLIENT_ID:-}
       OAUTH2_GOOGLE_CLIENT_SECRET: ${OAUTH2_GOOGLE_CLIENT_SECRET:-}
       OAUTH2_GOOGLE_REDIRECT_URI: ${OAUTH2_GOOGLE_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/google}
