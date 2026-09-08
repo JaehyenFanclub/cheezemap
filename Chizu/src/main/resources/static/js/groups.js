@@ -1083,15 +1083,6 @@ async function savePlaceToSelectedGroup() {
 }
 
 
-function escapeGroupHtml(value) {
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
 function formatGroupDate(value) {
     if (!value) return "-";
     const date = new Date(String(value).replace(" ", "T"));
@@ -1112,6 +1103,58 @@ function toInputDate(value) {
     return String(value).replace(" ", "T").slice(0, 16);
 }
 
+/*
+    그룹 날짜 입력 UI는 사용하지 않습니다.
+
+    - 새 그룹: 현재 로컬 날짜/시간 자동 저장
+    - 그룹 수정: 기존 groupDate 유지
+*/
+let groupFormStoredDate = "";
+
+
+function removeGroupDateFieldFromEditor() {
+    const dateInput =
+        document.getElementById(
+            "groupDate"
+        );
+
+    if (!dateInput) {
+        return;
+    }
+
+    const field =
+        dateInput.closest("label") ||
+        dateInput.closest(".group-form-field") ||
+        dateInput.parentElement;
+
+    if (
+        field &&
+        field !== document.getElementById("groupForm")
+    ) {
+        field.remove();
+        return;
+    }
+
+    dateInput.remove();
+}
+
+
+// datetime-local에는 UTC(toISOString)가 아니라
+// 브라우저의 실제 로컬 시간을 그대로 넣어야 합니다.
+// 한국/일본 환경에서는 현재 UTC+9 시간이 그대로 표시됩니다.
+function getLocalDateTimeInputValue(date = new Date()) {
+    const pad = value =>
+        String(value).padStart(2, "0");
+
+    return (
+        `${date.getFullYear()}-` +
+        `${pad(date.getMonth() + 1)}-` +
+        `${pad(date.getDate())}T` +
+        `${pad(date.getHours())}:` +
+        `${pad(date.getMinutes())}`
+    );
+}
+
 async function hydrateGroup(raw) {
     const placeBackendIds = []
         .concat(raw.placeIds ?? raw.placeId ?? [])
@@ -1119,24 +1162,96 @@ async function hydrateGroup(raw) {
         .filter(id => Number.isFinite(id) && id > 0);
 
     const placeIds = [];
+    const unresolvedPlaceBackendIds = [];
+
     for (const backendId of placeBackendIds) {
         try {
-            const data = await getBackendPlaceById(backendId);
-            const key = typeof registerFrontendPlaceFromBackend === "function"
-                ? registerFrontendPlaceFromBackend(data)
-                : await backendPlaceIdToFrontendKey(backendId);
-            if (key) placeIds.push(key);
+            const data =
+                await getBackendPlaceById(
+                    backendId
+                );
+
+            const key =
+                typeof registerFrontendPlaceFromBackend ===
+                    "function"
+                    ? registerFrontendPlaceFromBackend(
+                        data
+                    )
+                    : await backendPlaceIdToFrontendKey(
+                        backendId
+                    );
+
+            if (!key) {
+                unresolvedPlaceBackendIds.push(
+                    backendId
+                );
+                continue;
+            }
+
+            /*
+                중요:
+                그룹은 백의 placeId가 진짜 원본입니다.
+
+                프론트 placeKey는 화면 표시용일 뿐이므로
+                어떤 경로로 복원됐든 반드시 정확한 backend placeId를
+                해당 places 객체에 같이 저장합니다.
+
+                이렇게 해두면 수정 시 ensureBackendPlace()로
+                다른 장소를 다시 찾거나 새 장소로 연결하지 않습니다.
+            */
+            if (places?.[key]) {
+                places[key].backendPlaceId =
+                    backendId;
+            }
+
+            placeIds.push(
+                key
+            );
+
         } catch (error) {
-            console.warn("그룹 장소 로드 실패:", backendId, error);
+            /*
+                일시적인 장소 조회 실패 때문에
+                그룹 수정 시 해당 placeId가 삭제되면 안 됩니다.
+                백의 원래 placeId는 unresolved 목록에 보존합니다.
+            */
+            unresolvedPlaceBackendIds.push(
+                backendId
+            );
+
+            console.warn(
+                "그룹 장소 로드 실패:",
+                backendId,
+                error
+            );
         }
     }
+
+    const rawCloneCount = Number(
+        raw.cloneCount ??
+        raw.shareCount ??
+        raw.importCount ??
+        0
+    );
+
     return {
         groupId: raw.groupId,
         groupDate: raw.groupDate,
         groupMemo: raw.groupMemo || "",
         groupName: raw.groupName,
+
+        /*
+            placeBackendIds는 백에서 내려온 원본 전체 목록 그대로 유지.
+            placeIds는 화면에서 정상 복원된 frontend key 목록.
+        */
         placeIds,
-        placeBackendIds
+        placeBackendIds,
+        unresolvedPlaceBackendIds,
+
+        cloneCount:
+            Number.isFinite(rawCloneCount) &&
+            rawCloneCount >= 0
+                ? rawCloneCount
+                : 0
     };
 }
 
@@ -1171,19 +1286,36 @@ function getGroupPlaces(group) {
     const frontendKeys =
         group.placeIds || [];
 
-    const backendIds =
-        group.placeBackendIds || [];
-
     return frontendKeys
-        .map((placeKey, index) => ({
-            placeKey,
-            place:
-                places[placeKey],
-            backendPlaceId:
+        .map(placeKey => {
+            const place =
+                places[placeKey];
+
+            /*
+                절대 배열 index로 backend placeId를 맞추지 않습니다.
+
+                예:
+                backend ids = [10, 20, 30]
+                place 20 로드 실패
+                frontend keys = [key10, key30]
+
+                예전 방식은 key30에 20을 붙여버렸습니다.
+                이게 수정/지도보기에서 "다른 장소로 바뀌는" 핵심 원인이 될 수 있습니다.
+
+                이제 hydrateGroup에서 각 place 객체에 직접 심어둔
+                backendPlaceId만 사용합니다.
+            */
+            const backendPlaceId =
                 Number(
-                    backendIds[index]
-                ) || null
-        }))
+                    place?.backendPlaceId
+                ) || null;
+
+            return {
+                placeKey,
+                place,
+                backendPlaceId
+            };
+        })
         .filter(item =>
             item.place
         );
@@ -1236,7 +1368,14 @@ async function renderGroupManager() {
         <button type="button" class="group-list-item ${String(group.groupId) === String(selectedGroupId) ? "active" : ""}" data-group-id="${group.groupId}">
             <span class="group-list-icon"><i class="ti ti-users-group"></i></span>
             <span class="group-list-copy"><strong>${escapeGroupHtml(group.groupName)}</strong><small>${formatGroupDate(group.groupDate)}</small></span>
-            <span class="group-list-count">${(group.placeIds || []).length}</span>
+            <span
+                class="group-list-count"
+                title="저장된 장소 ${(group.placeIds || []).length}곳"
+                aria-label="저장된 장소 ${(group.placeIds || []).length}곳"
+            >
+                <i class="ti ti-map-pin"></i>
+                <span>${(group.placeIds || []).length}</span>
+            </span>
         </button>`).join("");
 
     groupList.querySelectorAll("[data-group-id]").forEach(button => {
@@ -1264,6 +1403,8 @@ function renderSelectedGroup() {
     if (!group) return renderEmptyGroupDetail();
 
     const groupPlaces = getGroupPlaces(group);
+    const cloneCount = Number(group.cloneCount) || 0;
+
     panel.innerHTML = `
         <div class="group-detail-header">
             <div>
@@ -1277,6 +1418,17 @@ function renderSelectedGroup() {
                 <button type="button" class="danger" data-group-action="delete"><i class="ti ti-trash"></i>삭제</button>
             </div>
         </div>
+
+        <div class="group-detail-meta">
+            <span
+                class="group-detail-meta-chip group-clone-count"
+                title="다른 사용자가 공유 링크를 통해 이 그룹을 저장한 횟수"
+            >
+                <i class="ti ti-download"></i>
+                공유 저장 ${cloneCount}회
+            </span>
+        </div>
+
         <div class="group-place-summary"><strong>저장된 장소</strong><span>${groupPlaces.length}곳</span></div>
         <div class="group-place-list">
             ${groupPlaces.length ? groupPlaces.map(({ placeKey, place, backendPlaceId }) => {
@@ -1358,11 +1510,107 @@ function renderSelectedGroup() {
                             "function"
                     ) {
                         try {
+                            /*
+                                backend placeId로 장소를 여는 데 성공했다면
+                                여기서 끝냅니다.
+
+                                openBackendPlaceById()
+                                → googlePlaceId
+                                → openGooglePoi()
+
+                                흐름에서 Google Places의 실제 대표 좌표가
+                                이미 적용되므로, 뒤에서 DB의 placeLatitude /
+                                placeLongitude로 마커와 panTo를 다시 덮어쓰지 않습니다.
+
+                                특히 역/전철 POI는 DB 저장 좌표와 Google 대표 좌표가
+                                조금 다를 수 있어서 이전 코드에서는 위치가 옆으로
+                                틀어져 보일 수 있었습니다.
+                            */
                             await openBackendPlaceById(
                                 backendPlaceId
                             );
 
+                            /*
+                                Google Places로 장소를 연 뒤에는
+                                DB 좌표가 아니라 "실제로 열린 Google 장소의 좌표"에
+                                마커를 표시합니다.
+
+                                우선순위:
+                                1) selectedGooglePoi.position
+                                2) 현재 selectedPlaceKey의 places[position]
+
+                                둘 다 Google 상세 열기 이후 갱신된 값이므로
+                                역/전철 POI도 DB 좌표로 다시 틀어지지 않습니다.
+                            */
+                            const googlePosition =
+                                selectedGooglePoi
+                                    ?.position ||
+                                (
+                                    selectedPlaceKey &&
+                                    places?.[selectedPlaceKey]
+                                        ?.position
+                                );
+
+                            const markerPosition = {
+                                lat:
+                                    Number(
+                                        googlePosition
+                                            ?.lat
+                                    ),
+                                lng:
+                                    Number(
+                                        googlePosition
+                                            ?.lng
+                                    )
+                            };
+
+                            if (
+                                Number.isFinite(
+                                    markerPosition.lat
+                                ) &&
+                                Number.isFinite(
+                                    markerPosition.lng
+                                )
+                            ) {
+                                if (
+                                    typeof showMyReviewPlaceMarker ===
+                                    "function"
+                                ) {
+                                    await showMyReviewPlaceMarker(
+                                        markerPosition,
+                                        selectedGooglePoi
+                                            ?.name ||
+                                        places?.[
+                                            selectedPlaceKey
+                                        ]?.name?.ko ||
+                                        places?.[
+                                            selectedPlaceKey
+                                        ]?.name?.ja ||
+                                        places?.[
+                                            selectedPlaceKey
+                                        ]?.name?.en ||
+                                        "장소"
+                                    );
+                                }
+
+                                googleMap?.panTo(
+                                    markerPosition
+                                );
+
+                                if (
+                                    (
+                                        googleMap?.getZoom() ||
+                                        0
+                                    ) < 15
+                                ) {
+                                    googleMap?.setZoom(
+                                        15
+                                    );
+                                }
+                            }
+
                             return;
+
                         } catch (error) {
                             console.error(
                                 "그룹 장소 상세 열기 실패:",
@@ -1553,19 +1801,45 @@ function ensureGroupSearchPlace(candidate) {
     return placeKey;
 }
 
+let groupPickerSelectedKeysState =
+    new Set();
+
+
 function getGroupPickerSelectedKeys() {
+    /*
+        더보기 팝오버는 닫힐 때 DOM에서 제거됩니다.
+        따라서 document.querySelectorAll(...)만으로 선택값을 모으면
+        팝오버에서 체크한 장소가 그룹 저장 시 사라집니다.
+
+        선택 상태를 별도 Set으로 유지하고,
+        현재 DOM의 체크 상태도 마지막으로 동기화합니다.
+    */
+    document
+        .querySelectorAll(
+            'input[name="groupPlace"]'
+        )
+        .forEach(input => {
+            const key =
+                String(
+                    input.value
+                );
+
+            if (input.checked) {
+                groupPickerSelectedKeysState.add(
+                    key
+                );
+            } else {
+                groupPickerSelectedKeysState.delete(
+                    key
+                );
+            }
+        });
+
     return new Set(
-        Array
-            .from(
-                document.querySelectorAll(
-                    'input[name="groupPlace"]:checked'
-                )
-            )
-            .map(input =>
-                String(input.value)
-            )
+        groupPickerSelectedKeysState
     );
 }
+
 
 function groupPickerPlaceOptionHtml(
     placeKey,
@@ -1615,12 +1889,31 @@ function groupPickerPlaceOptionHtml(
     `;
 }
 
+
 function bindGroupPickerCheckedStyle(container) {
     container
         ?.querySelectorAll(
             '.group-place-option input[name="groupPlace"]'
         )
         .forEach(input => {
+            const key =
+                String(
+                    input.value
+                );
+
+            /*
+                HTML이 예전에 선택된 상태로 렌더돼 있어도
+                실제 현재 선택 상태 Set을 기준으로 강제 동기화합니다.
+
+                그룹 수정에서 기존 장소를 체크 해제한 뒤
+                다른 그룹 팝업/검색 결과를 열었을 때
+                삭제 예정 장소가 다시 체크되는 문제를 막습니다.
+            */
+            input.checked =
+                groupPickerSelectedKeysState.has(
+                    key
+                );
+
             const option =
                 input.closest(
                     ".group-place-option"
@@ -1634,10 +1927,49 @@ function bindGroupPickerCheckedStyle(container) {
             input.addEventListener(
                 "change",
                 () => {
+                    if (input.checked) {
+                        groupPickerSelectedKeysState.add(
+                            key
+                        );
+                    } else {
+                        groupPickerSelectedKeysState.delete(
+                            key
+                        );
+                    }
+
                     option?.classList.toggle(
                         "selected",
                         input.checked
                     );
+
+                    /*
+                        같은 장소가 검색 결과/기존 그룹 팝업 등
+                        다른 위치에도 동시에 보이면 체크 상태를 맞춥니다.
+                    */
+                    document
+                        .querySelectorAll(
+                            'input[name="groupPlace"]'
+                        )
+                        .forEach(otherInput => {
+                            if (
+                                otherInput === input ||
+                                String(otherInput.value) !== key
+                            ) {
+                                return;
+                            }
+
+                            otherInput.checked =
+                                input.checked;
+
+                            otherInput
+                                .closest(
+                                    ".group-place-option"
+                                )
+                                ?.classList.toggle(
+                                    "selected",
+                                    input.checked
+                                );
+                        });
                 }
             );
         });
@@ -1714,11 +2046,747 @@ async function searchGroupPickerPlaces(query) {
                 "JP",
 
             maxResultCount:
-                12
+                14
         });
 
     return response?.places || [];
 }
+
+
+const GROUP_PICKER_PRIMARY_RESULT_LIMIT = 4;
+const GROUP_PICKER_MORE_RESULT_LIMIT = 10;
+
+let groupPickerMorePopoverCleanup = null;
+
+
+function normalizeGroupPickerSearchText(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[_\s]+/g, " ");
+}
+
+
+function getGroupPickerSearchAliases(query) {
+    const normalized =
+        normalizeGroupPickerSearchText(
+            query
+        );
+
+    const aliasGroups = [
+        [
+            "카페", "까페", "커피",
+            "cafe", "café", "coffee",
+            "カフェ", "喫茶"
+        ],
+        [
+            "라멘", "라면",
+            "ramen", "ラーメン"
+        ],
+        [
+            "음식점", "식당", "맛집",
+            "restaurant", "レストラン", "飲食店"
+        ],
+        [
+            "베이커리", "빵집",
+            "bakery", "パン"
+        ],
+        [
+            "바", "술집",
+            "bar", "バー", "居酒屋"
+        ],
+        [
+            "공원",
+            "park", "公園"
+        ],
+        [
+            "박물관", "미술관",
+            "museum", "gallery",
+            "博物館", "美術館"
+        ],
+        [
+            "호텔", "숙박",
+            "hotel", "lodging",
+            "ホテル", "宿泊"
+        ],
+        [
+            "쇼핑", "쇼핑몰",
+            "shopping", "mall",
+            "ショッピング"
+        ]
+    ];
+
+    const matchedGroup =
+        aliasGroups.find(group =>
+            group.some(alias =>
+                normalizeGroupPickerSearchText(
+                    alias
+                ) ===
+                normalized
+            )
+        );
+
+    return new Set(
+        (
+            matchedGroup ||
+            [query]
+        )
+            .map(
+                normalizeGroupPickerSearchText
+            )
+            .filter(Boolean)
+    );
+}
+
+
+function groupPickerBackendRowMatchesQuery(
+    row,
+    query
+) {
+    const aliases =
+        getGroupPickerSearchAliases(
+            query
+        );
+
+    const searchableValues =
+        [
+            row?.placeName,
+            row?.placeCategory,
+            row?.placeAddress
+        ]
+            .map(
+                normalizeGroupPickerSearchText
+            )
+            .filter(Boolean);
+
+    return Array
+        .from(aliases)
+        .some(alias =>
+            searchableValues.some(value =>
+                value.includes(alias)
+            )
+        );
+}
+
+
+function ensureGroupBackendSearchPlace(row) {
+    const backendPlaceId =
+        Number(
+            row?.placeId
+        );
+
+    if (
+        !Number.isFinite(
+            backendPlaceId
+        ) ||
+        backendPlaceId <= 0
+    ) {
+        return null;
+    }
+
+    /*
+        추천 API 응답에는 googlePlaceId가 없기 때문에
+        registerFrontendPlaceFromBackend()에 억지로 맡기지 않습니다.
+
+        DB placeId를 직접 들고 있는 그룹검색 전용 frontend key를 만들고
+        그룹 저장 시에는 이 backendPlaceId를 그대로 사용합니다.
+    */
+    const placeKey =
+        `groupdb_${backendPlaceId}`;
+
+    const name =
+        String(
+            row?.placeName ||
+            `장소 #${backendPlaceId}`
+        ).trim();
+
+    const category =
+        String(
+            row?.placeCategory ||
+            "장소"
+        ).trim();
+
+    const address =
+        String(
+            row?.placeAddress ||
+            ""
+        ).trim();
+
+    const lat =
+        Number(
+            row?.placeLatitude
+        );
+
+    const lng =
+        Number(
+            row?.placeLongitude
+        );
+
+    places[placeKey] = {
+        ...(places[placeKey] || {}),
+
+        backendPlaceId,
+
+        groupSearchSource:
+            "backend",
+
+        groupSearchScore:
+            Number(
+                row?.score
+            ) || 0,
+
+        groupSearchHitCount:
+            Number(
+                row?.hitCount
+            ) || 0,
+
+        name: {
+            ko: name,
+            ja: name,
+            en: name
+        },
+
+        category: {
+            ko: category,
+            ja: category,
+            en: category
+        },
+
+        address: {
+            ko: address,
+            ja: address,
+            en: address
+        },
+
+        type:
+            "tour",
+
+        rating:
+            Number(
+                row?.avgRating
+            ) || 0,
+
+        reviewCount:
+            Number(
+                row?.reviewCount
+            ) || 0,
+
+        crowd: {
+            ko: "인기",
+            ja: "人気",
+            en: "Popular"
+        },
+
+        icon:
+            "ti-map-pin",
+
+        color:
+            "linear-gradient(135deg, #ffe5a7, #f4bc45)",
+
+        position: {
+            lat:
+                Number.isFinite(lat)
+                    ? lat
+                    : null,
+
+            lng:
+                Number.isFinite(lng)
+                    ? lng
+                    : null
+        }
+    };
+
+    return placeKey;
+}
+
+
+async function searchGroupPickerBackendPlaces(
+    query
+) {
+    /*
+        백엔드는 수정하지 않습니다.
+        이미 존재하는 추천장소 API를 그대로 사용합니다.
+
+        이 API가 내려주는 score에는
+        평점 + 리뷰 수 + hit_count가 반영되어 있으므로
+        응답 순서를 그대로 CHEESE MAP 인기순으로 사용합니다.
+    */
+    try {
+        const center =
+            googleMap
+                ?.getCenter
+                ?.()
+                ?.toJSON
+                ?.() ||
+            {
+                lat: 35.6895,
+                lng: 139.6917
+            };
+
+        const params =
+            new URLSearchParams({
+                lat:
+                    String(
+                        center.lat
+                    ),
+
+                lng:
+                    String(
+                        center.lng
+                    ),
+
+                radius:
+                    "30000",
+
+                limit:
+                    "20"
+            });
+
+        const response =
+            await apiRequest(
+                `/place/recommend?${params.toString()}`,
+                {
+                    auth:
+                        true
+                }
+            );
+
+        return (
+            Array.isArray(
+                response
+            )
+                ? response
+                : []
+        )
+            .filter(row =>
+                groupPickerBackendRowMatchesQuery(
+                    row,
+                    query
+                )
+            );
+
+    } catch (error) {
+        console.warn(
+            "CHEESE MAP 추천 장소 검색 실패 - Google 검색으로 보충:",
+            error
+        );
+
+        return [];
+    }
+}
+
+
+function groupPickerPlaceDedupeKey(
+    place
+) {
+    const name =
+        normalizeGroupPickerSearchText(
+            localizedValue(
+                place?.name
+            )
+        );
+
+    const address =
+        normalizeGroupPickerSearchText(
+            localizedValue(
+                place?.address
+            )
+        );
+
+    return `${name}|${address}`;
+}
+
+
+function closeGroupPickerMorePopover() {
+    if (
+        typeof groupPickerMorePopoverCleanup ===
+        "function"
+    ) {
+        const cleanup =
+            groupPickerMorePopoverCleanup;
+
+        groupPickerMorePopoverCleanup =
+            null;
+
+        cleanup();
+    }
+
+    document
+        .querySelectorAll(
+            ".group-picker-more-popover"
+        )
+        .forEach(element =>
+            element.remove()
+        );
+
+    document
+        .querySelectorAll(
+            "[data-group-picker-more-button]"
+        )
+        .forEach(button => {
+            button.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+        });
+}
+
+
+function openGroupPickerMorePopover(
+    button,
+    query,
+    moreItems
+) {
+    closeGroupPickerMorePopover();
+
+    if (
+        !button ||
+        !Array.isArray(
+            moreItems
+        ) ||
+        !moreItems.length
+    ) {
+        return;
+    }
+
+    const section =
+        button.closest(
+            ".group-picker-section"
+        );
+
+    if (!section) {
+        return;
+    }
+
+    const selected =
+        getGroupPickerSelectedKeys();
+
+    const moreRows =
+        moreItems
+            .slice(
+                0,
+                GROUP_PICKER_MORE_RESULT_LIMIT
+            )
+            .map(item => {
+                const place =
+                    places[
+                        item.placeKey
+                    ];
+
+                if (!place) {
+                    return "";
+                }
+
+                return groupPickerPlaceOptionHtml(
+                    item.placeKey,
+                    place,
+                    selected.has(
+                        String(
+                            item.placeKey
+                        )
+                    ),
+                    item.source === "backend"
+                        ? "group-picker-search-option is-cheese-priority"
+                        : "group-picker-search-option"
+                );
+            })
+            .filter(Boolean);
+
+    if (!moreRows.length) {
+        return;
+    }
+
+    const popover =
+        document.createElement(
+            "div"
+        );
+
+    popover.className =
+        "group-picker-more-popover";
+
+    popover.innerHTML = `
+        <div class="group-picker-more-popover-header">
+            <div>
+                <strong>
+                    ${escapeGroupHtml(query)} 더보기
+                </strong>
+
+                <small>
+                    최대 ${GROUP_PICKER_MORE_RESULT_LIMIT}곳
+                </small>
+            </div>
+
+            <button
+                type="button"
+                class="group-picker-more-close"
+                data-group-picker-more-close
+                aria-label="닫기"
+            >
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        <div class="group-picker-more-list">
+            ${moreRows.join("")}
+        </div>
+    `;
+
+    section.appendChild(
+        popover
+    );
+
+    button.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    bindGroupPickerCheckedStyle(
+        popover
+    );
+
+    const positionPopover =
+        () => {
+            const buttonRect =
+                button.getBoundingClientRect();
+
+            const modal =
+                section.closest(
+                    ".group-form-modal"
+                );
+
+            const modalRect =
+                modal
+                    ?.getBoundingClientRect();
+
+            const viewportPadding =
+                14;
+
+            const availableWidth =
+                Math.max(
+                    280,
+                    Math.min(
+                        520,
+                        (
+                            modalRect?.width ||
+                            window.innerWidth
+                        ) -
+                        36
+                    )
+                );
+
+            const width =
+                Math.min(
+                    500,
+                    availableWidth
+                );
+
+            /*
+                더보기 패널은 문서 흐름에 넣지 않고
+                viewport 위에 fixed 팝오버로 띄웁니다.
+                따라서 아래 폼 영역을 밀어내지 않습니다.
+            */
+            let left =
+                buttonRect.left +
+                (
+                    buttonRect.width -
+                    width
+                ) /
+                2;
+
+            left =
+                Math.max(
+                    viewportPadding,
+                    Math.min(
+                        left,
+                        window.innerWidth -
+                        width -
+                        viewportPadding
+                    )
+                );
+
+            const estimatedHeight =
+                Math.min(
+                    390,
+                    96 +
+                    Math.ceil(
+                        Math.min(
+                            moreRows.length,
+                            GROUP_PICKER_MORE_RESULT_LIMIT
+                        ) /
+                        2
+                    ) *
+                    66
+                );
+
+            const spaceBelow =
+                window.innerHeight -
+                buttonRect.bottom -
+                viewportPadding;
+
+            const spaceAbove =
+                buttonRect.top -
+                viewportPadding;
+
+            const openAbove =
+                spaceBelow <
+                    Math.min(
+                        estimatedHeight,
+                        310
+                    ) &&
+                spaceAbove >
+                    spaceBelow;
+
+            let top =
+                openAbove
+                    ? buttonRect.top -
+                        estimatedHeight -
+                        10
+                    : buttonRect.bottom +
+                        10;
+
+            top =
+                Math.max(
+                    viewportPadding,
+                    Math.min(
+                        top,
+                        window.innerHeight -
+                        estimatedHeight -
+                        viewportPadding
+                    )
+                );
+
+            popover.classList.toggle(
+                "opens-up",
+                openAbove
+            );
+
+            popover.style.width =
+                `${width}px`;
+
+            popover.style.left =
+                `${left}px`;
+
+            popover.style.top =
+                `${top}px`;
+        };
+
+    positionPopover();
+
+    const closeButton =
+        popover.querySelector(
+            "[data-group-picker-more-close]"
+        );
+
+    const modal =
+        section.closest(
+            ".group-form-modal"
+        );
+
+    const outsideHandler =
+        event => {
+            if (
+                popover.contains(
+                    event.target
+                ) ||
+                button.contains(
+                    event.target
+                )
+            ) {
+                return;
+            }
+
+            closeGroupPickerMorePopover();
+        };
+
+    const keyHandler =
+        event => {
+            if (
+                event.key ===
+                "Escape"
+            ) {
+                closeGroupPickerMorePopover();
+            }
+        };
+
+    const resizeHandler =
+        () =>
+            positionPopover();
+
+    closeButton?.addEventListener(
+        "click",
+        closeGroupPickerMorePopover
+    );
+
+    document.addEventListener(
+        "pointerdown",
+        outsideHandler
+    );
+
+    document.addEventListener(
+        "keydown",
+        keyHandler
+    );
+
+    window.addEventListener(
+        "resize",
+        resizeHandler
+    );
+
+    window.addEventListener(
+        "scroll",
+        resizeHandler,
+        true
+    );
+
+    groupPickerMorePopoverCleanup =
+        () => {
+            document.removeEventListener(
+                "pointerdown",
+                outsideHandler
+            );
+
+            document.removeEventListener(
+                "keydown",
+                keyHandler
+            );
+
+            window.removeEventListener(
+                "resize",
+                resizeHandler
+            );
+
+            window.removeEventListener(
+                "scroll",
+                resizeHandler,
+                true
+            );
+
+            popover.remove();
+
+            button.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+        };
+}
+
+
+function setGroupEditorSearchScrollState(
+    resultContainer,
+    hasResults
+) {
+    const modal =
+        resultContainer
+            ?.closest(
+                ".group-form-modal"
+            );
+
+    modal?.classList.toggle(
+        "has-search-results",
+        Boolean(hasResults)
+    );
+}
+
 
 async function renderGroupPickerSearchResults(
     query
@@ -1736,11 +2804,24 @@ async function renderGroupPickerSearchResults(
         String(query || "")
             .trim();
 
+    closeGroupPickerMorePopover();
+
     if (!text) {
-        resultContainer.innerHTML = "";
+        resultContainer.innerHTML =
+            "";
+
+        setGroupEditorSearchScrollState(
+            resultContainer,
+            false
+        );
 
         return;
     }
+
+    setGroupEditorSearchScrollState(
+        resultContainer,
+        false
+    );
 
     resultContainer.innerHTML = `
         <div class="group-picker-search-empty">
@@ -1750,57 +2831,254 @@ async function renderGroupPickerSearchResults(
     `;
 
     try {
+        const [
+            backendRows,
+            googleCandidates
+        ] =
+            await Promise.all([
+                searchGroupPickerBackendPlaces(
+                    text
+                ),
+                searchGroupPickerPlaces(
+                    text
+                )
+            ]);
+
         const selected =
             getGroupPickerSelectedKeys();
 
-        const candidates =
-            await searchGroupPickerPlaces(
-                text
-            );
+        const items = [];
+        const dedupeKeys =
+            new Set();
 
-        if (!candidates.length) {
+        /*
+            1순위:
+            CHEESE MAP DB 추천 결과를 직접 넣습니다.
+            Google 검색 상위 결과에 포함되지 않아도 사라지지 않습니다.
+        */
+        backendRows.forEach(row => {
+            if (
+                items.length >=
+                (
+                    GROUP_PICKER_PRIMARY_RESULT_LIMIT +
+                    GROUP_PICKER_MORE_RESULT_LIMIT
+                )
+            ) {
+                return;
+            }
+
+            const placeKey =
+                ensureGroupBackendSearchPlace(
+                    row
+                );
+
+            if (
+                !placeKey ||
+                !places[placeKey]
+            ) {
+                return;
+            }
+
+            const dedupeKey =
+                groupPickerPlaceDedupeKey(
+                    places[placeKey]
+                );
+
+            if (
+                dedupeKey &&
+                dedupeKeys.has(
+                    dedupeKey
+                )
+            ) {
+                return;
+            }
+
+            if (dedupeKey) {
+                dedupeKeys.add(
+                    dedupeKey
+                );
+            }
+
+            items.push({
+                placeKey,
+                source:
+                    "backend"
+            });
+        });
+
+        /*
+            2순위:
+            CHEESE MAP DB 결과로 14곳이 안 차면
+            Google Places 검색 결과를 뒤에 보충합니다.
+        */
+        googleCandidates.forEach(
+            candidate => {
+                if (
+                    items.length >=
+                    (
+                        GROUP_PICKER_PRIMARY_RESULT_LIMIT +
+                        GROUP_PICKER_MORE_RESULT_LIMIT
+                    )
+                ) {
+                    return;
+                }
+
+                const placeKey =
+                    ensureGroupSearchPlace(
+                        candidate
+                    );
+
+                if (
+                    !placeKey ||
+                    !places[placeKey]
+                ) {
+                    return;
+                }
+
+                const dedupeKey =
+                    groupPickerPlaceDedupeKey(
+                        places[placeKey]
+                    );
+
+                if (
+                    dedupeKey &&
+                    dedupeKeys.has(
+                        dedupeKey
+                    )
+                ) {
+                    return;
+                }
+
+                if (dedupeKey) {
+                    dedupeKeys.add(
+                        dedupeKey
+                    );
+                }
+
+                items.push({
+                    placeKey,
+                    source:
+                        "google"
+                });
+            }
+        );
+
+        if (!items.length) {
             resultContainer.innerHTML = `
                 <div class="group-picker-search-empty">
                     검색 결과가 없습니다.
                 </div>
             `;
 
+            setGroupEditorSearchScrollState(
+                resultContainer,
+                false
+            );
+
             return;
         }
 
-        const rows =
-            candidates
-                .map(candidate => {
-                    const placeKey =
-                        ensureGroupSearchPlace(
-                            candidate
-                        );
+        const primaryItems =
+            items.slice(
+                0,
+                GROUP_PICKER_PRIMARY_RESULT_LIMIT
+            );
 
-                    if (
-                        !placeKey ||
-                        !places[placeKey]
-                    ) {
+        const moreItems =
+            items.slice(
+                GROUP_PICKER_PRIMARY_RESULT_LIMIT,
+                GROUP_PICKER_PRIMARY_RESULT_LIMIT +
+                GROUP_PICKER_MORE_RESULT_LIMIT
+            );
+
+        const primaryRows =
+            primaryItems
+                .map(item => {
+                    const place =
+                        places[
+                            item.placeKey
+                        ];
+
+                    if (!place) {
                         return "";
                     }
 
                     return groupPickerPlaceOptionHtml(
-                        placeKey,
-                        places[placeKey],
+                        item.placeKey,
+                        place,
                         selected.has(
-                            placeKey
+                            String(
+                                item.placeKey
+                            )
                         ),
-                        "group-picker-search-option"
+                        item.source === "backend"
+                            ? "group-picker-search-option is-cheese-priority"
+                            : "group-picker-search-option"
                     );
                 })
-                .filter(Boolean)
-                .join("");
+                .filter(Boolean);
 
-        resultContainer.innerHTML =
-            rows;
+        resultContainer.innerHTML = `
+            ${primaryRows.join("")}
+
+            ${
+                moreItems.length
+                    ? `
+                        <div class="group-picker-more-trigger-wrap">
+                            <button
+                                type="button"
+                                class="group-picker-more-trigger"
+                                data-group-picker-more-button
+                                aria-expanded="false"
+                            >
+                                <span>
+                                    ${escapeGroupHtml(text)} 더보기
+                                </span>
+
+                                <i class="ti ti-chevron-down"></i>
+                            </button>
+                        </div>
+                    `
+                    : ""
+            }
+        `;
+
+        setGroupEditorSearchScrollState(
+            resultContainer,
+            true
+        );
 
         bindGroupPickerCheckedStyle(
             resultContainer
         );
+
+        const moreButton =
+            resultContainer.querySelector(
+                "[data-group-picker-more-button]"
+            );
+
+        moreButton?.addEventListener(
+            "click",
+            () => {
+                const isOpen =
+                    moreButton.getAttribute(
+                        "aria-expanded"
+                    ) ===
+                    "true";
+
+                if (isOpen) {
+                    closeGroupPickerMorePopover();
+                    return;
+                }
+
+                openGroupPickerMorePopover(
+                    moreButton,
+                    text,
+                    moreItems
+                );
+            }
+        );
+
     } catch (error) {
         console.error(
             "그룹 장소 검색 실패:",
@@ -1815,9 +3093,17 @@ async function renderGroupPickerSearchResults(
                 )}
             </div>
         `;
+
+        setGroupEditorSearchScrollState(
+            resultContainer,
+            false
+        );
     }
 }
 
+/* mr.eum수정부분 */
+/* 기존 그룹을 2열 카드로 표시하고,
+   그룹 클릭 시 저장된 장소 선택 팝업을 표시 */
 function renderExistingGroupPicker(
     selectedKeys,
     currentGroupId = null
@@ -1848,6 +3134,8 @@ function renderExistingGroupPicker(
         return;
     }
 
+    /* mr.eum수정부분 */
+    /* 기존 그룹은 장소를 바로 펼치지 않고 2열 카드로만 표시 */
     list.innerHTML =
         groups
             .map(group => {
@@ -1855,73 +3143,140 @@ function renderExistingGroupPicker(
                     getGroupPlaces(group);
 
                 return `
-                    <section
+                    <button
+                        type="button"
                         class="group-picker-existing-group"
-                        data-picker-group="${group.groupId}"
+                        data-picker-group-open="${escapeGroupHtml(group.groupId)}"
                     >
-                        <button
-                            type="button"
-                            class="group-picker-existing-group-toggle"
-                            data-picker-group-toggle="${group.groupId}"
-                            aria-expanded="false"
-                        >
-                            <span class="group-picker-existing-group-icon">
-                                <i class="ti ti-users-group"></i>
-                            </span>
+                        <span class="group-picker-existing-group-icon">
+                            <i class="ti ti-users-group"></i>
+                        </span>
 
-                            <span class="group-picker-existing-group-copy">
-                                <strong>
-                                    ${escapeGroupHtml(group.groupName)}
-                                </strong>
+                        <span class="group-picker-existing-group-copy">
+                            <strong>
+                                ${escapeGroupHtml(group.groupName)}
+                            </strong>
 
-                                <small>
-                                    ${groupPlaces.length}곳
-                                </small>
-                            </span>
+                            <small>
+                                ${groupPlaces.length}곳
+                            </small>
+                        </span>
 
-                            <i
-                                class="ti ti-chevron-down group-picker-chevron"
-                            ></i>
-                        </button>
-
-                        <div
-                            class="group-picker-existing-places"
-                            data-picker-group-places="${group.groupId}"
-                            hidden
-                        >
-                            ${
-                                groupPlaces.length
-                                    ? groupPlaces
-                                        .map(
-                                            ({
-                                                placeKey,
-                                                place
-                                            }) =>
-                                                groupPickerPlaceOptionHtml(
-                                                    placeKey,
-                                                    place,
-                                                    selectedKeys.has(
-                                                        String(placeKey)
-                                                    ),
-                                                    "group-picker-existing-place"
-                                                )
-                                        )
-                                        .join("")
-                                    : `
-                                        <div class="group-picker-empty-groups">
-                                            저장된 장소가 없습니다.
-                                        </div>
-                                    `
-                            }
-                        </div>
-                    </section>
+                        <i class="ti ti-chevron-right group-picker-chevron"></i>
+                    </button>
                 `;
             })
             .join("");
 
+    /* mr.eum수정부분 */
+    /* 그룹 클릭 시 표시할 저장 장소 팝업을 최초 1회 생성 */
+    let placeModal =
+        document.getElementById(
+            "groupPickerPlaceModal"
+        );
+
+    if (!placeModal) {
+        placeModal =
+            document.createElement("div");
+
+        placeModal.id =
+            "groupPickerPlaceModal";
+
+        placeModal.className =
+            "group-picker-place-modal-backdrop";
+
+        placeModal.hidden = true;
+
+        placeModal.innerHTML = `
+            <div
+                class="group-picker-place-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="groupPickerPlaceModalTitle"
+            >
+                <button
+                    type="button"
+                    class="group-picker-place-modal-close"
+                    aria-label="닫기"
+                >
+                    ×
+                </button>
+
+                <div class="group-picker-place-modal-heading">
+                    <span class="group-eyebrow">
+                        GROUP PLACES
+                    </span>
+
+                    <h3 id="groupPickerPlaceModalTitle">
+                        저장된 장소
+                    </h3>
+
+                    <p id="groupPickerPlaceModalCount"></p>
+                </div>
+
+                <div
+                    class="group-picker-place-modal-list"
+                    id="groupPickerPlaceModalList"
+                ></div>
+
+                <div class="group-picker-place-modal-actions">
+                    <button
+                        type="button"
+                        class="primary-button"
+                        id="groupPickerPlaceModalDone"
+                    >
+                        선택 완료
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(
+            placeModal
+        );
+
+        const closePlaceModal =
+            () => {
+                placeModal.hidden = true;
+            };
+
+        placeModal
+            .querySelector(
+                ".group-picker-place-modal-close"
+            )
+            ?.addEventListener(
+                "click",
+                closePlaceModal
+            );
+
+        placeModal
+            .querySelector(
+                "#groupPickerPlaceModalDone"
+            )
+            ?.addEventListener(
+                "click",
+                closePlaceModal
+            );
+
+        /* 팝업 바깥 클릭 시 닫기 */
+        placeModal.addEventListener(
+            "click",
+            event => {
+                if (
+                    event.target ===
+                    placeModal
+                ) {
+                    closePlaceModal();
+                }
+            }
+        );
+    }
+
+    /* mr.eum수정부분 */
+    /* 그룹 카드 클릭 → 해당 그룹의 저장 장소 팝업 */
     list
         .querySelectorAll(
-            "[data-picker-group-toggle]"
+            "[data-picker-group-open]"
         )
         .forEach(button => {
             button.addEventListener(
@@ -1929,27 +3284,84 @@ function renderExistingGroupPicker(
                 () => {
                     const groupId =
                         button.dataset
-                            .pickerGroupToggle;
+                            .pickerGroupOpen;
 
-                    const placesPanel =
-                        list.querySelector(
-                            `[data-picker-group-places="${groupId}"]`
+                    const group =
+                        groups.find(item =>
+                            String(
+                                item.groupId
+                            ) ===
+                            String(groupId)
                         );
 
-                    const expanded =
-                        button.getAttribute(
-                            "aria-expanded"
-                        ) === "true";
-
-                    button.setAttribute(
-                        "aria-expanded",
-                        String(!expanded)
-                    );
-
-                    if (placesPanel) {
-                        placesPanel.hidden =
-                            expanded;
+                    if (!group) {
+                        return;
                     }
+
+                    const groupPlaces =
+                        getGroupPlaces(
+                            group
+                        );
+
+                    const modalList =
+                        placeModal.querySelector(
+                            "#groupPickerPlaceModalList"
+                        );
+
+                    const title =
+                        placeModal.querySelector(
+                            "#groupPickerPlaceModalTitle"
+                        );
+
+                    const count =
+                        placeModal.querySelector(
+                            "#groupPickerPlaceModalCount"
+                        );
+
+                    if (title) {
+                        title.textContent =
+                            `${group.groupName} · 저장된 장소`;
+                    }
+
+                    if (count) {
+                        count.textContent =
+                            `${groupPlaces.length}곳`;
+                    }
+
+                    if (modalList) {
+                        modalList.innerHTML =
+                            groupPlaces.length
+                                ? groupPlaces
+                                    .map(
+                                        ({
+                                            placeKey,
+                                            place
+                                        }) =>
+                                            groupPickerPlaceOptionHtml(
+                                                placeKey,
+                                                place,
+                                                selectedKeys.has(
+                                                    String(
+                                                        placeKey
+                                                    )
+                                                ),
+                                                "group-picker-existing-place"
+                                            )
+                                    )
+                                    .join("")
+                                : `
+                                    <div class="group-picker-empty-groups">
+                                        저장된 장소가 없습니다.
+                                    </div>
+                                `;
+
+                        bindGroupPickerCheckedStyle(
+                            modalList
+                        );
+                    }
+
+                    placeModal.hidden =
+                        false;
                 }
             );
         });
@@ -1959,10 +3371,101 @@ function renderExistingGroupPicker(
     );
 }
 
+function renderCurrentGroupSavedPlaces(
+    selectedKeys,
+    currentGroupId
+) {
+    const section =
+        document.getElementById(
+            "groupCurrentSavedSection"
+        );
+
+    const list =
+        document.getElementById(
+            "groupCurrentSavedPlaces"
+        );
+
+    const count =
+        document.getElementById(
+            "groupCurrentSavedCount"
+        );
+
+    if (
+        !section ||
+        !list ||
+        !currentGroupId
+    ) {
+        return;
+    }
+
+    const currentGroup =
+        groupCache.find(group =>
+            String(group.groupId) ===
+            String(currentGroupId)
+        );
+
+    const groupPlaces =
+        currentGroup
+            ? getGroupPlaces(
+                currentGroup
+            )
+            : [];
+
+    if (count) {
+        count.textContent =
+            `${groupPlaces.length}곳`;
+    }
+
+    if (!groupPlaces.length) {
+        list.innerHTML = `
+            <div class="group-picker-current-empty">
+                현재 저장된 장소가 없습니다.
+            </div>
+        `;
+
+        return;
+    }
+
+    list.innerHTML =
+        groupPlaces
+            .map(
+                ({
+                    placeKey,
+                    place
+                }) =>
+                    groupPickerPlaceOptionHtml(
+                        placeKey,
+                        place,
+                        selectedKeys.has(
+                            String(placeKey)
+                        ),
+                        "group-picker-current-place"
+                    )
+            )
+            .join("");
+
+    bindGroupPickerCheckedStyle(
+        list
+    );
+}
+
+
 function renderGroupPlaceOptions(
     selectedPlaceIds = [],
     options = {}
 ) {
+    groupFormModal?.classList.remove(
+        "has-search-results"
+    );
+
+    closeGroupPickerMorePopover();
+
+    groupPickerSelectedKeysState =
+        new Set(
+            (selectedPlaceIds || [])
+                .map(String)
+        );
+
     const container =
         document.getElementById(
             "groupPlaceOptions"
@@ -2069,6 +3572,40 @@ function renderGroupPlaceOptions(
 
     container.innerHTML = `
         <div class="group-picker">
+
+            ${
+                options.currentGroupId
+                    ? `
+                        <section
+                            class="group-picker-section group-picker-current-section"
+                            id="groupCurrentSavedSection"
+                        >
+                            <div class="group-picker-section-heading">
+                                <div>
+                                    <strong>
+                                        현재 저장된 장소
+                                    </strong>
+
+                                    <small>
+                                        체크를 해제하면 저장할 때 그룹에서 삭제됩니다.
+                                    </small>
+                                </div>
+
+                                <span
+                                    class="group-picker-current-count"
+                                    id="groupCurrentSavedCount"
+                                ></span>
+                            </div>
+
+                            <div
+                                class="group-picker-current-places"
+                                id="groupCurrentSavedPlaces"
+                            ></div>
+                        </section>
+                    `
+                    : ""
+            }
+
             <section class="group-picker-section">
                 <div class="group-picker-section-heading">
                     <div>
@@ -2082,9 +3619,7 @@ function renderGroupPlaceOptions(
                 ></div>
             </section>
 
-            <div class="group-picker-divider">
-                <span>또는</span>
-            </div>
+
 
             <section class="group-picker-section">
                 <div class="group-picker-section-heading">
@@ -2119,6 +3654,13 @@ function renderGroupPlaceOptions(
             </section>
         </div>
     `;
+
+    if (options.currentGroupId) {
+        renderCurrentGroupSavedPlaces(
+            selected,
+            options.currentGroupId
+        );
+    }
 
     renderExistingGroupPicker(
         selected,
@@ -2188,11 +3730,6 @@ async function openGroupForm(
             "groupName"
         );
 
-    const date =
-        document.getElementById(
-            "groupDate"
-        );
-
     const memo =
         document.getElementById(
             "groupMemo"
@@ -2215,15 +3752,11 @@ async function openGroupForm(
             group?.groupName || "";
     }
 
-    if (date) {
-        date.value =
-            toInputDate(
-                group?.groupDate
-            ) ||
-            new Date()
-                .toISOString()
-                .slice(0, 16);
-    }
+    groupFormStoredDate =
+        group?.groupDate ||
+        getLocalDateTimeInputValue();
+
+    removeGroupDateFieldFromEditor();
 
     if (memo) {
         memo.value =
@@ -2232,7 +3765,6 @@ async function openGroupForm(
 
     /*
         새 그룹/그룹 수정 창을 열 때 서버의 실제 내 그룹 목록을 다시 읽습니다.
-        기존 하드코딩 장소 목록은 사용하지 않습니다.
     */
     if (!options.placeKey) {
         try {
@@ -2250,8 +3782,30 @@ async function openGroupForm(
         }
     }
 
+    /*
+        중요:
+        loadGroupsFromServer()는 groupCache 전체를 새 객체로 교체합니다.
+
+        그런데 예전 코드는 reload 전에 클릭했던 '옛 group 객체'의
+        placeIds를 그대로 renderGroupPlaceOptions()에 넘겼습니다.
+        이러면 최신 places 매핑과 오래된 frontend key가 섞여서
+        수정 저장 시 다른 placeId로 재해석될 수 있습니다.
+
+        reload 후에는 반드시 최신 groupCache의 그룹을 다시 잡습니다.
+    */
+    const refreshedGroup =
+        group
+            ? (
+                groupCache.find(item =>
+                    String(item.groupId) ===
+                    String(group.groupId)
+                ) ||
+                group
+            )
+            : null;
+
     renderGroupPlaceOptions(
-        group?.placeIds ||
+        refreshedGroup?.placeIds ||
         (
             options.placeKey
                 ? [options.placeKey]
@@ -2259,13 +3813,14 @@ async function openGroupForm(
         ),
         {
             lockedPlaceKey:
-                !group &&
+                !refreshedGroup &&
                 options.placeKey
                     ? options.placeKey
                     : null,
 
             currentGroupId:
-                group?.groupId || null
+                refreshedGroup?.groupId ||
+                null
         }
     );
 
@@ -2281,11 +3836,54 @@ async function openGroupForm(
 
 async function resolveSelectedPlaceIds(frontendKeys) {
     const ids = [];
+
     for (const key of frontendKeys) {
-        const p = await ensureBackendPlace(key);
-        ids.push(Number(p.placeId));
+        const backendPlaceId =
+            Number(
+                places?.[key]
+                    ?.backendPlaceId
+            );
+
+        /*
+            CHEESE MAP 추천 API에서 온 장소는 이미 DB placeId가 있습니다.
+            다시 ensureBackendPlace()를 호출하지 않고 기존 ID를 그대로 씁니다.
+        */
+        if (
+            Number.isFinite(
+                backendPlaceId
+            ) &&
+            backendPlaceId > 0
+        ) {
+            ids.push(
+                backendPlaceId
+            );
+
+            continue;
+        }
+
+        const p =
+            await ensureBackendPlace(
+                key
+            );
+
+        const placeId =
+            Number(
+                p?.placeId
+            );
+
+        if (
+            Number.isFinite(placeId) &&
+            placeId > 0
+        ) {
+            ids.push(
+                placeId
+            );
+        }
     }
-    return ids;
+
+    return Array.from(
+        new Set(ids)
+    );
 }
 
 async function syncGroupPlaces(groupId, oldIds, newIds) {
@@ -2324,25 +3922,21 @@ async function submitGroupForm(event) {
             ?.value.trim();
 
     const groupDate =
-        document.getElementById("groupDate")
-            ?.value;
+        groupFormStoredDate ||
+        getLocalDateTimeInputValue();
 
     const groupMemo =
         document.getElementById("groupMemo")
             ?.value.trim() || "";
 
     const frontendKeys =
-        Array
-            .from(
-                document.querySelectorAll(
-                    'input[name="groupPlace"]:checked'
-                )
-            )
-            .map(input => input.value);
+        Array.from(
+            getGroupPickerSelectedKeys()
+        );
 
-    if (!groupName || !groupDate) {
+    if (!groupName) {
         showToast(
-            "그룹 이름과 날짜를 입력해 주세요."
+            "그룹 이름을 입력해 주세요."
         );
 
         return;
@@ -2402,10 +3996,37 @@ async function submitGroupForm(event) {
                         frontendKeys
                     );
 
+                /*
+                    화면에 복원하지 못한 기존 장소는
+                    사용자가 체크 해제한 것이 아닙니다.
+
+                    일시적인 조회 실패 때문에 백에서 삭제되는 일을 막기 위해
+                    unresolved placeId는 새 목록에 자동으로 유지합니다.
+                */
+                const preservedUnresolvedIds =
+                    Array.isArray(
+                        target?.unresolvedPlaceBackendIds
+                    )
+                        ? target.unresolvedPlaceBackendIds
+                            .map(Number)
+                            .filter(id =>
+                                Number.isFinite(id) &&
+                                id > 0
+                            )
+                        : [];
+
+                const finalBackendPlaceIds =
+                    Array.from(
+                        new Set([
+                            ...backendPlaceIds,
+                            ...preservedUnresolvedIds
+                        ])
+                    );
+
                 await syncGroupPlaces(
                     Number(editId),
                     target?.placeBackendIds || [],
-                    backendPlaceIds
+                    finalBackendPlaceIds
                 );
 
             } catch (placeError) {
@@ -2534,10 +4155,24 @@ async function deleteGroup(groupId) {
 
 async function shareGroup(group) {
     try {
-        await apiRequest(`/group/${group.groupId}/share`, { auth: true });
-        const url = new URL(window.location.href);
-        url.searchParams.set("sharedGroup", group.groupId);
-        await navigator.clipboard.writeText(url.toString());
+        // 백의 share API 호출은 그대로 수행하되,
+        // 복사되는 링크 형식은 백 라우트와 동일하게
+        // 반드시 /group/{groupId} 로 고정합니다.
+        await apiRequest(
+            `/group/${group.groupId}/share`,
+            { auth: true }
+        );
+
+        const groupId = Number(group?.groupId);
+
+        if (!Number.isFinite(groupId) || groupId <= 0) {
+            throw new Error("올바른 그룹 ID가 없습니다.");
+        }
+
+        const shareUrl =
+            `${window.location.origin}/group/${groupId}`;
+
+        await navigator.clipboard.writeText(shareUrl);
         showToast("공유 링크를 복사했습니다.");
     } catch (error) {
         showToast(error.message);
@@ -2546,32 +4181,92 @@ async function shareGroup(group) {
 
 async function submitSharedGroup(event) {
     event.preventDefault();
-    const sharedUrl = document.getElementById("sharedGroupUrl")?.value.trim();
-    if (!sharedUrl) return;
+
+    // async/await 이후에는 event.currentTarget이 null이 될 수 있으므로
+    // submit 시점의 form 참조를 미리 보관합니다.
+    const form = event.currentTarget;
+
+    const sharedUrl =
+        document
+            .getElementById("sharedGroupUrl")
+            ?.value
+            .trim();
+
+    if (!sharedUrl) {
+        return;
+    }
+
     let groupId;
-    try {
-        const url = new URL(sharedUrl);
-        groupId = url.searchParams.get("sharedGroup") || url.pathname.match(/\/group\/(\d+)/)?.[1];
-    } catch { return showToast("올바른 공유 링크를 입력해 주세요."); }
-    if (!groupId) return showToast("그룹 ID를 찾을 수 없습니다.");
 
     try {
-        const original = await apiRequest(`/group/${groupId}`, { auth: true });
-        await apiRequest(`/group/${groupId}/clone`, {
-            method: "POST",
-            auth: true,
-            body: {
-                groupDate: toBackendDate(document.getElementById("sharedGroupDate")?.value || new Date().toISOString().slice(0,16)),
-                groupMemo: document.getElementById("sharedGroupMemo")?.value.trim() || original.groupMemo,
-                groupName: document.getElementById("sharedGroupName")?.value.trim() || original.groupName
+        const url = new URL(
+            sharedUrl,
+            window.location.origin
+        );
+
+        // 백에서 내려주는 공유 URL 형식:
+        // http://host/group/{groupId}
+        groupId =
+            url.pathname.match(
+                /\/group\/(\d+)\/?$/
+            )?.[1];
+    } catch {
+        return showToast(
+            "올바른 공유 링크를 입력해 주세요."
+        );
+    }
+
+    if (!groupId || !/^\d+$/.test(String(groupId))) {
+        return showToast(
+            "그룹 ID를 찾을 수 없습니다."
+        );
+    }
+
+    try {
+        // 원본 그룹 GET은 제거합니다.
+        // 현재 백의 clone API가 원본 그룹을 직접 조회하고,
+        // groupName/groupMemo가 빈 문자열이면 원본 값을 그대로 복사합니다.
+        await apiRequest(
+            `/group/${groupId}/clone`,
+            {
+                method: "POST",
+                auth: true,
+                body: {
+                    groupDate: toBackendDate(
+                        document
+                            .getElementById("sharedGroupDate")
+                            ?.value ||
+                        getLocalDateTimeInputValue()
+                    ),
+                    groupMemo:
+                        document
+                            .getElementById("sharedGroupMemo")
+                            ?.value
+                            .trim() || "",
+                    groupName:
+                        document
+                            .getElementById("sharedGroupName")
+                            ?.value
+                            .trim() || ""
+                }
             }
-        });
+        );
+
         closeModal(sharedGroupModal);
         openModal(groupModal);
-        event.currentTarget.reset();
+
+        if (form && typeof form.reset === "function") {
+            form.reset();
+        }
+
         await renderGroupManager();
-        showToast("공유 그룹을 내 그룹으로 저장했습니다.");
-    } catch (error) { showToast(error.message); }
+
+        showToast(
+            "공유 그룹을 내 그룹으로 저장했습니다."
+        );
+    } catch (error) {
+        showToast(error.message);
+    }
 }
 
 document.getElementById("openGroupCreateButton")?.addEventListener("click", () => openGroupForm());
@@ -2675,9 +4370,3 @@ document
         "click",
         savePlaceToSelectedGroup
     );
-
-const sharedGroupIdFromUrl = new URLSearchParams(window.location.search).get("sharedGroup");
-if (sharedGroupIdFromUrl) {
-    const input = document.getElementById("sharedGroupUrl");
-    if (input) input.value = window.location.href;
-}

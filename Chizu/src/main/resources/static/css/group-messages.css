@@ -57,6 +57,8 @@
     gap: 7px;
 }
 
+/* mr.eum수정부분 */
+/* 기존 그룹 모달 크기를 유지하기 위해 레이아웃 높이를 고정 */
 .group-layout {
     display: grid;
     grid-template-columns: 290px minmax(0, 1fr);
@@ -98,6 +100,7 @@
 .group-list {
     display: grid;
     gap: 8px;
+    padding: 3px;
     overflow-y: auto;
 }
 
@@ -115,13 +118,13 @@
     transition:
         border-color 0.16s ease,
         background 0.16s ease,
-        transform 0.16s ease;
+        box-shadow 0.16s ease;
 }
 
 .group-list-item:hover {
     border-color: var(--line);
     background: #ffffff;
-    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(237, 194, 82, 0.08);
 }
 
 .group-list-item.active {
@@ -163,15 +166,112 @@
 }
 
 .group-list-count {
-    min-width: 24px;
+    min-width: 34px;
     height: 24px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    color: var(--gray-600);
-    background: rgba(255, 255, 255, 0.72);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 7px;
+    border: 1px solid rgba(166, 119, 22, 0.14);
+    border-radius: 999px;
+    color: var(--cheese-brown);
+    background: rgba(255, 255, 255, 0.82);
     font-size: 10px;
     font-weight: 800;
+    line-height: 1;
+}
+
+.group-list-count i {
+    font-size: 11px;
+}
+
+.group-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+
+    /* 가져가기 영역과 저장된 장소 영역 사이 구분선 */
+    margin: 0 0 18px;
+    padding: 0 0 18px;
+    border-bottom: 1px solid #e8e3d8;
+}
+
+.group-detail-meta-chip {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--gray-700);
+    background: #fbfaf7;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.group-detail-meta-chip i {
+    color: var(--cheese-brown);
+    font-size: 13px;
+}
+
+.group-members-section {
+    margin: 0 0 20px;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fbfaf7;
+}
+
+.group-members-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.group-members-heading strong {
+    color: var(--text);
+    font-size: 12px;
+}
+
+.group-members-heading span {
+    color: var(--gray-500);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.group-members-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.group-member-chip {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 9px 6px 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--gray-700);
+    background: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.group-member-avatar {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--cheese-brown);
+    background: var(--cheese-soft);
 }
 
 .group-share-save-open {
@@ -190,9 +290,12 @@
     font-weight: 800;
 }
 
+/* mr.eum수정부분 */
+/* 오른쪽 상세 패널 전체 스크롤 제거.
+   저장된 장소 목록에서만 스크롤되도록 처리 */
 .group-detail-panel {
     min-width: 0;
-    overflow-y: auto;
+    overflow: hidden;
     padding: 26px 28px;
     background: #ffffff;
 }
@@ -304,9 +407,37 @@
     font-size: 11px;
 }
 
+/* mr.eum수정부분 */
+/* 저장된 장소 목록만 세로 스크롤 */
 .group-place-list {
     display: grid;
     gap: 10px;
+    height: 310px;
+    overflow-y: auto;
+    align-content: start;
+    padding-right: 6px;
+    
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+/* mr.eum수정부분 */
+/* 치즈맵 스타일 스크롤바 */
+.group-place-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-place-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-place-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-place-list::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
 }
 
 .group-place-card {
@@ -581,6 +712,39 @@ body.dark .group-place-option {
 
 body.dark .group-list-item.active {
     background: #4a4029;
+}
+
+body.dark .group-list-count {
+    border-color: rgba(255, 215, 104, 0.28);
+    color: #fff1b8;
+    background: #3c382f;
+}
+
+body.dark .group-list-item.active .group-list-count {
+    border-color: rgba(255, 215, 104, 0.42);
+    color: #fff5cf;
+    background: #5a4d2d;
+}
+
+body.dark .group-detail-meta-chip,
+body.dark .group-members-section {
+    border-color: #4a463d;
+    color: #e8e2d4;
+    background: #292722;
+}
+
+body.dark .group-member-chip {
+    border-color: #4a463d;
+    color: #e8e2d4;
+    background: #34312b;
+}
+
+body.dark .group-members-heading strong {
+    color: #f3efe6;
+}
+
+body.dark .group-members-heading span {
+    color: #b8b0a2;
 }
 
 body.dark .group-list-icon,
@@ -1067,7 +1231,6 @@ body.dark .group-message-header {
 }
 
 body.dark .group-message-open,
-body.dark .message-list-item:hover,
 body.dark .message-list-item.active,
 body.dark .message-tabs button.active {
     color: #f4dca4;
@@ -1212,10 +1375,10 @@ body.dark .message-tabs button.active {
     box-shadow: 0 3px 10px rgba(79, 59, 30, 0.04);
 }
 
-.message-list-item:hover {
-    border-color: #e6bb50;
-    background: #fff9e9;
-    transform: translateY(-1px);
+/* mr.eum수정부분 */
+/* 쪽지 대화목록은 hover 없이 기본 테두리 유지 */
+.message-list-item {
+    border: 1px solid #d8d0c2;
 }
 
 .message-list-item.active {
@@ -1345,6 +1508,45 @@ body.dark .message-detail-panel,
 body.dark .message-tabs,
 body.dark .message-compose-modal {
     background: #292722;
+}
+
+body.dark .message-compose-modal {
+    border-color: #4d4538;
+}
+
+body.dark .message-compose-modal h2 {
+    color: #f5f2e9;
+}
+
+body.dark .message-compose-modal label {
+    color: #e6ddcf;
+}
+
+body.dark .message-compose-modal input,
+body.dark .message-compose-modal select,
+body.dark .message-compose-modal textarea {
+    border-color: #4b463c;
+    color: #f5f2e9;
+    background: #312e28;
+}
+
+body.dark .message-compose-modal input::placeholder,
+body.dark .message-compose-modal textarea::placeholder {
+    color: #aaa69b;
+    opacity: 1;
+}
+
+body.dark .message-compose-modal input:focus,
+body.dark .message-compose-modal select:focus,
+body.dark .message-compose-modal textarea:focus {
+    border-color: #dfa818;
+    box-shadow: 0 0 0 4px rgba(246, 201, 69, 0.18);
+}
+
+body.dark .message-compose-modal .secondary-button {
+    border-color: #514b40;
+    color: #e4ddd2;
+    background: #34312b;
 }
 
 body.dark .group-message-header {
@@ -2225,6 +2427,30 @@ body.dark .group-save-memo-field > span {
     padding: 4px 2px 12px;
 }
 
+/* mr.eum수정부분 */
+/* 쪽지 대화창 스크롤바 - 치즈맵 스타일 */
+.message-conversation-thread {
+    scrollbar-width: thin;
+    scrollbar-color: #c9a45a transparent;
+}
+
+.message-conversation-thread::-webkit-scrollbar {
+    width: 6px;
+}
+
+.message-conversation-thread::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.message-conversation-thread::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c9a45a;
+}
+
+.message-conversation-thread::-webkit-scrollbar-thumb:hover {
+    background: #a98232;
+}
+
 .message-conversation-row {
     display: flex;
 }
@@ -2742,6 +2968,30 @@ body.dark .group-create-place-detail-icon {
     background: #fffdf7;
 }
 
+.message-translation {
+    margin-top: 8px;
+    margin-bottom: 2px;
+}
+
+.message-conversation-bubble .place-review-translate-toggle {
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.message-conversation-bubble .place-review-translated-box {
+    margin-top: 8px;
+}
+
+.message-conversation-row.mine .place-review-translated-box {
+    border-color: #efd98a;
+    background: #fffbeb;
+}
+
+.message-source-text {
+    display: none;
+}
+
 .message-inline-edit {
     display: grid;
     gap: 10px;
@@ -2805,6 +3055,22 @@ body.dark .message-mini-button {
     color: var(--text);
     border-color: var(--gray-200);
     background: var(--gray-50);
+}
+
+body.dark .message-conversation-row.mine .place-review-translated-box {
+    border-color: rgba(246, 201, 69, 0.35);
+    background: rgba(246, 201, 69, 0.08);
+}
+
+body.dark .message-conversation-bubble .place-review-translate-toggle {
+    border-color: #4b463d;
+    background: #2b2924;
+    color: #ddd4c4;
+}
+
+body.dark .message-conversation-bubble .place-review-translate-toggle:hover {
+    border-color: #8f7436;
+    background: #373126;
 }
 
 
@@ -2936,12 +3202,38 @@ body.dark .message-mini-button {
     transform: rotate(180deg);
 }
 
+/* mr.eum수정부분 */
+/* 펼쳐진 그룹의 장소 목록만 독립적으로 스크롤 */
 .group-picker-existing-places {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
+    max-height: 150px;
+    overflow-y: auto;
     padding: 0 10px 10px;
     border-top: 1px solid #f2ecdf;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+/* mr.eum수정부분 */
+/* 기존 그룹 내부 장소 목록 치즈맵 스크롤바 */
+.group-picker-existing-places::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-picker-existing-places::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-existing-places::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-picker-existing-places::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
 }
 
 .group-picker-existing-places[hidden] {
@@ -3016,13 +3308,38 @@ body.dark .message-mini-button {
     background: #ffd85f;
 }
 
+/* mr.eum수정부분 */
+/* 장소 검색 결과 영역만 독립적으로 스크롤 */
 .group-picker-search-results {
     max-height: 225px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
+    overflow-x: hidden;
     overflow-y: auto;
-    padding: 1px 3px 1px 1px;
+    padding: 1px 6px 1px 1px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+/* mr.eum수정부분 */
+/* 장소 검색 결과 치즈맵 스크롤바 */
+.group-picker-search-results::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-picker-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-search-results::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-picker-search-results::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
 }
 
 .group-picker-search-empty,
@@ -3088,3 +3405,2653 @@ body.dark .group-place-option.selected {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+/* =====================================================
+   쪽지함 UI - 그룹 모달과 동일한 레이아웃/톤으로 통일
+===================================================== */
+
+.group-message-modal {
+    width: min(980px, calc(100vw - 36px)) !important;
+    max-height: min(760px, calc(100vh - 36px)) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 24px !important;
+    background: #ffffff !important;
+    box-shadow: 0 24px 60px rgba(54, 42, 24, 0.20) !important;
+}
+
+.group-message-header {
+    min-height: 0 !important;
+    padding: 28px 30px 22px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 24px !important;
+    border-bottom: 1px solid var(--line) !important;
+    background:
+        linear-gradient(
+            135deg,
+            #fffdf7 0%,
+            #fff6d8 100%
+        ) !important;
+}
+
+.group-message-header .group-eyebrow {
+    color: var(--cheese-deep) !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.16em !important;
+}
+
+.group-message-header h2 {
+    margin: 5px 0 4px !important;
+    color: var(--text) !important;
+    font-size: 25px !important;
+    letter-spacing: normal !important;
+}
+
+.group-message-header p {
+    margin: 0 !important;
+    color: var(--gray-500) !important;
+    font-size: 13px !important;
+}
+
+#openMessageComposeButton {
+    width: auto !important;
+    min-width: 118px !important;
+    min-height: 42px !important;
+    padding: 0 16px !important;
+    border: 1px solid #d49a17 !important;
+    border-radius: 13px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    color: #4b341d !important;
+    background: var(--yellow) !important;
+    box-shadow: none !important;
+    font-weight: 800 !important;
+}
+
+#openMessageComposeButton:hover {
+    border-color: #c98b19 !important;
+    background: #ffd75c !important;
+    transform: translateY(-1px);
+}
+
+.message-detail [data-conversation-reply] {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 6px 9px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    color: var(--brown-dark) !important;
+    background: var(--yellow-light) !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+}
+
+.message-detail [data-conversation-reply]:hover {
+    border-color: transparent !important;
+    background: #ffe9a5 !important;
+    transform: none;
+}
+
+body.dark .message-detail [data-conversation-reply] {
+    border-color: #5d574b !important;
+    color: #eee7db !important;
+    background: #34312b !important;
+}
+
+body.dark .message-detail [data-conversation-reply]:hover {
+    border-color: #d6ad43 !important;
+    color: #fff5d4 !important;
+    background: #403b31 !important;
+}
+
+/* 기존 상단 탭은 사이드바 제목으로 대체 */
+.message-tabs {
+    display: none !important;
+}
+
+.message-tab-compat {
+    display: none !important;
+}
+
+.message-layout {
+    display: grid !important;
+    grid-template-columns: 290px minmax(0, 1fr) !important;
+    min-height: 520px !important;
+    max-height: calc(100vh - 190px) !important;
+    background: #ffffff !important;
+}
+
+.message-list-panel {
+    min-width: 0 !important;
+    padding: 20px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-right: 1px solid var(--line) !important;
+    background: #fbfaf7 !important;
+}
+
+.message-panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px 12px;
+    color: var(--text);
+    font-size: 13px;
+}
+
+.message-panel-title strong {
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.message-panel-title > span {
+    display: grid;
+    min-width: 25px;
+    height: 25px;
+    place-items: center;
+    padding: 0 7px;
+    border-radius: 999px;
+    color: var(--cheese-brown);
+    background: var(--cheese-soft);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.message-list {
+    display: grid !important;
+    gap: 8px !important;
+    overflow-y: auto !important;
+}
+
+.message-list-item {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 38px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    border: 1px solid transparent !important;
+    border-radius: 15px !important;
+    color: var(--text) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-align: left !important;
+    transition:
+        border-color 0.16s ease,
+        background 0.16s ease,
+        transform 0.16s ease !important;
+}
+
+.message-list-item:hover {
+    border-color: var(--line) !important;
+    background: #ffffff;
+}
+
+.message-list-item.active {
+    border-color: #edc252 !important;
+    background: #fff2ba !important;
+    box-shadow: none !important;
+}
+
+.message-avatar {
+    width: 38px !important;
+    height: 38px !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    color: var(--cheese-brown) !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+}
+
+.message-list-copy {
+    min-width: 0 !important;
+    display: grid !important;
+    gap: 4px !important;
+}
+
+.message-list-copy strong {
+    overflow: hidden !important;
+    color: var(--text) !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+}
+
+.message-list-copy b,
+.message-list-copy small {
+    overflow: hidden !important;
+    color: var(--gray-500) !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+}
+
+.message-detail-panel {
+    min-width: 0 !important;
+    overflow-y: auto !important;
+    padding: 26px 28px !important;
+    background: #ffffff !important;
+}
+/* mr.eum수정부분 */
+/* 대화 상세 영역 전체를 입력창까지 세로로 사용 */
+.message-detail {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* mr.eum수정부분 */
+/* 메시지 영역만 남은 공간을 사용하고 입력창은 최하단으로 이동 */
+.message-conversation-thread {
+    flex: 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+}
+
+.message-empty-state {
+    min-height: 430px !important;
+    display: grid !important;
+    place-content: center !important;
+    justify-items: center !important;
+    gap: 8px !important;
+    color: var(--gray-500) !important;
+    text-align: center !important;
+}
+
+.message-empty-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 5px;
+    border-radius: 18px;
+    color: var(--cheese-brown);
+    background: var(--cheese-soft);
+    font-size: 27px;
+}
+
+.message-empty-state > i {
+    display: none !important;
+}
+
+.message-empty-state strong {
+    color: var(--text) !important;
+    font-size: 17px !important;
+}
+
+.message-empty-state p {
+    margin: 0 !important;
+    color: var(--gray-500) !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+}
+
+.message-list-empty {
+    min-height: 180px !important;
+    display: grid !important;
+    place-content: center !important;
+    justify-items: center !important;
+    gap: 7px !important;
+    color: var(--gray-500) !important;
+    text-align: center !important;
+}
+
+.message-list-empty i {
+    color: #aaa59a !important;
+    font-size: 28px !important;
+}
+
+.message-list-empty p {
+    margin: 0 !important;
+    color: var(--gray-500) !important;
+    font-size: 11px !important;
+}
+
+body.dark .group-message-modal,
+body.dark .message-layout,
+body.dark .message-detail-panel {
+    background: #2b2924 !important;
+}
+
+body.dark .group-message-header {
+    border-color: rgba(255,255,255,.10) !important;
+    background:
+        linear-gradient(
+            135deg,
+            #302d26 0%,
+            #413821 100%
+        ) !important;
+}
+
+body.dark .message-list-panel {
+    border-color: rgba(255,255,255,.10) !important;
+    background: #24221e !important;
+}
+
+body.dark .message-list-item:hover {
+    border-color: var(--yellow-dark) !important;
+    color: var(--brown-dark) !important;
+}
+
+body.dark .message-list-item.active {
+    border-color: #b88a27 !important;
+    background: #4a4029 !important;
+}
+
+body.dark .message-avatar {
+    color: #f1d278 !important;
+    background: #34312b !important;
+}
+
+body.dark .message-panel-title,
+body.dark .message-panel-title strong,
+body.dark .message-empty-state strong,
+body.dark .message-list-copy strong {
+    color: #f2eee4 !important;
+}
+
+body.dark .message-empty-icon {
+    color: #f1d278 !important;
+    background: rgba(246, 201, 69, .12) !important;
+}
+
+@media (max-width: 720px) {
+    .group-message-header {
+        padding: 22px 20px 18px !important;
+        align-items: flex-start !important;
+    }
+
+    .message-layout {
+        grid-template-columns: 1fr !important;
+        min-height: 0 !important;
+    }
+
+    .message-list-panel {
+        max-height: 260px !important;
+        border-right: 0 !important;
+        border-bottom: 1px solid var(--line) !important;
+    }
+
+    .message-detail-panel {
+        min-height: 330px !important;
+    }
+}
+
+/* mr.eum수정부분 */
+/* 대화목록 프로필 이미지를 원형 영역에 맞게 표시 */
+.message-avatar {
+    overflow: hidden !important;
+}
+
+.message-avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    object-fit: cover !important;
+    border-radius: inherit !important;
+}
+
+/* mr.eum수정부분 */
+/* 대화방 하단 바로 답장할 수 있는 입력창 */
+.message-conversation-compose {
+    display: flex !important;
+    align-items: flex-end !important;
+    gap: 10px !important;
+    margin-top: auto !important;
+    padding-top: 14px !important;
+    border-top: 1px solid var(--line) !important;
+}
+
+.message-conversation-compose textarea {
+    flex: 1 !important;
+    min-height: 46px !important;
+    max-height: 120px !important;
+    resize: vertical !important;
+    box-sizing: border-box !important;
+    padding: 13px 15px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 15px !important;
+    color: var(--text) !important;
+    background: var(--surface, #fffdf7) !important;
+    font: inherit !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    outline: none !important;
+}
+
+.message-conversation-compose textarea:focus {
+    border-color: #dca91e !important;
+    box-shadow: 0 0 0 3px rgba(246, 201, 69, .14) !important;
+}
+
+.message-conversation-send {
+    width: 46px !important;
+    height: 46px !important;
+    flex: 0 0 46px !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 1px solid #d49a17 !important;
+    border-radius: 14px !important;
+    color: #4b341d !important;
+    background: var(--yellow) !important;
+    cursor: pointer !important;
+}
+
+.message-conversation-send:hover {
+    background: #ffd75c !important;
+    transform: translateY(-1px) !important;
+}
+
+/* mr.eum수정부분 */
+/* 다크모드 대화 입력창 */
+body.dark .message-conversation-compose {
+    border-color: rgba(255,255,255,.10) !important;
+}
+
+body.dark .message-conversation-compose textarea {
+    border-color: #4b463c !important;
+    color: #f2eee4 !important;
+    background: #24221e !important;
+}
+
+body.dark .message-conversation-compose textarea::placeholder {
+    color: #8f8a80 !important;
+}
+
+/* mr.eum수정부분 */
+/* 대화 상세 영역을 입력창과 함께 세로로 배치 */
+.message-detail {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* mr.eum수정부분 */
+/* 메시지 목록이 남은 공간을 차지하도록 설정 */
+.message-conversation-thread {
+    flex: 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+}
+
+/* =====================================================
+   쪽지함 최종 UI 정리
+   - 대화 메시지는 위, 입력창은 항상 아래
+   - 왼쪽 대화목록 하단에 내 프로필 표시
+   - 프로필 사진이 없거나 로딩 실패 시 기본 프로필 아이콘 사용
+===================================================== */
+.message-list-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+.message-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    align-content: start !important;
+    padding-right: 2px;
+}
+
+/* mr.eum수정부분 */
+/* 쪽지함 대화목록 스크롤바 - 치즈맵 스타일 */
+.message-list {
+    scrollbar-width: thin;
+    scrollbar-color: #c9a45a transparent;
+}
+
+.message-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.message-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.message-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c9a45a;
+}
+
+.message-list::-webkit-scrollbar-thumb:hover {
+    background: #a98232;
+}
+
+.message-my-profile-wrap {
+    flex: 0 0 auto;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e8dfcf;
+
+    display: none !important;
+}
+
+.message-my-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 11px;
+    border: 1px solid #e8dfcf;
+    border-radius: 14px;
+    background: #fffefb;
+}
+
+.message-my-profile-avatar {
+    flex: 0 0 42px;
+}
+
+.message-my-profile-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.message-my-profile-copy strong {
+    overflow: hidden;
+    color: #3e3024;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.message-my-profile-copy span {
+    color: #9b9081;
+    font-size: 10px;
+}
+
+.message-avatar > i {
+    font-size: 19px;
+    line-height: 1;
+}
+
+.message-avatar.has-photo {
+    background: transparent !important;
+}
+
+.message-detail-panel {
+    overflow: hidden !important;
+    min-height: 0 !important;
+}
+
+.message-detail {
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.message-conversation-thread {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    margin-top: 18px !important;
+    padding: 4px 6px 14px 2px !important;
+}
+
+.message-conversation-compose {
+    flex: 0 0 auto !important;
+    margin-top: 0 !important;
+}
+
+body.dark .message-my-profile-wrap {
+    border-color: rgba(255,255,255,.10) !important;
+}
+
+body.dark .message-my-profile {
+    border-color: #4b463c !important;
+    background: #302e29 !important;
+}
+
+body.dark .message-my-profile-copy strong {
+    color: #f2eee4 !important;
+}
+
+body.dark .message-my-profile-copy span {
+    color: #a8a296 !important;
+}
+
+@media (max-width: 720px) {
+    .message-list-panel {
+        overflow: hidden !important;
+    }
+
+    .message-my-profile-wrap {
+        margin-top: 10px;
+        padding-top: 10px;
+    }
+}
+
+body.dark .group-detail-meta {
+    border-bottom-color: #4a4740;
+}
+
+/* mr.eum수정부분 */
+/* 그룹 생성 모달 전체 스크롤을 치즈맵 스타일로 변경 */
+.group-form-modal {
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal::-webkit-scrollbar {
+    width: 7px;
+}
+
+.group-form-modal::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+/* mr.eum수정부분 */
+/* 기존 그룹 선택 영역을 2열 카드로 변경 */
+.group-picker-existing-groups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    max-height: 235px;
+    overflow-y: auto;
+    padding: 1px 5px 1px 1px;
+}
+
+/* mr.eum수정부분 */
+/* 그룹 카드를 버튼 형태로 사용 */
+.group-picker-existing-group {
+    width: 100%;
+    min-width: 0;
+    min-height: 64px;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    color: var(--text);
+    background: #fffdfa;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition:
+        border-color .16s ease,
+        background .16s ease,
+        transform .16s ease;
+}
+
+.group-picker-existing-group:hover {
+    border-color: #e3c564;
+    background: #fff8df;
+    transform: translateY(-1px);
+}
+
+/* mr.eum수정부분 */
+/* 기존 그룹 아이콘 */
+.group-picker-existing-group-icon {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--cheese-brown);
+    background: #fff0b0;
+    font-size: 16px;
+}
+
+/* mr.eum수정부분 */
+/* 그룹 이름/장소 수 */
+.group-picker-existing-group-copy {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+.group-picker-existing-group-copy strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.group-picker-existing-group-copy small {
+    color: var(--gray-500);
+    font-size: 9px;
+    font-weight: 600;
+}
+
+/* mr.eum수정부분 */
+/* 기존 펼침용 화살표 대신 오른쪽 이동 아이콘 */
+.group-picker-existing-group .group-picker-chevron {
+    color: var(--gray-500);
+    font-size: 15px;
+}
+
+/* mr.eum수정부분 */
+/* 기존 인라인 장소 영역은 더 이상 사용하지 않음 */
+.group-picker-existing-places {
+    display: none !important;
+}
+
+/* =====================================================
+   그룹 저장 장소 선택 팝업
+===================================================== */
+
+/* mr.eum수정부분 */
+/* 그룹 카드 클릭 시 표시되는 장소 선택 팝업 배경 */
+.group-picker-place-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(24, 20, 14, 0.52);
+}
+
+.group-picker-place-modal-backdrop[hidden] {
+    display: none;
+}
+
+/* mr.eum수정부분 */
+/* 저장 장소 팝업 */
+.group-picker-place-modal {
+    position: relative;
+    width: min(560px, calc(100vw - 40px));
+    max-height: min(620px, calc(100vh - 40px));
+    display: flex;
+    flex-direction: column;
+    padding: 26px;
+    border: 1px solid rgba(178, 140, 64, 0.22);
+    border-radius: 22px;
+    color: var(--text);
+    background: #292722;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+    box-sizing: border-box;
+}
+
+/* mr.eum수정부분 */
+/* 팝업 닫기 */
+.group-picker-place-modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 10px;
+    color: #eee8dc;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.group-picker-place-modal-close:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+/* mr.eum수정부분 */
+/* 팝업 제목 */
+.group-picker-place-modal-heading {
+    padding-right: 40px;
+    margin-bottom: 16px;
+}
+
+.group-picker-place-modal-heading .group-eyebrow {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.group-picker-place-modal-heading h3 {
+    margin: 0;
+    color: #f7f2e8;
+    font-size: 18px;
+}
+
+.group-picker-place-modal-heading p {
+    margin: 5px 0 0;
+    color: #aaa297;
+    font-size: 10px;
+}
+
+/* mr.eum수정부분 */
+/* 저장된 장소만 내부 스크롤 */
+.group-picker-place-modal-list {
+    min-height: 0;
+    max-height: 390px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 2px 6px 4px 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #c9a45a transparent;
+}
+
+/* mr.eum수정부분 */
+/* 저장 장소 팝업 스크롤바 */
+.group-picker-place-modal-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-picker-place-modal-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-place-modal-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c9a45a;
+}
+
+.group-picker-place-modal-list::-webkit-scrollbar-thumb:hover {
+    background: #a98232;
+}
+
+/* mr.eum수정부분 */
+/* 팝업 장소 카드 */
+.group-picker-place-modal-list .group-place-option {
+    min-width: 0;
+    min-height: 54px;
+}
+
+/* mr.eum수정부분 */
+/* 팝업 하단 선택 완료 */
+.group-picker-place-modal-actions {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.group-picker-place-modal-actions .primary-button {
+    min-width: 110px;
+    min-height: 42px;
+    border-radius: 12px;
+}
+
+/* =====================================================
+   장소 검색 결과 내부 스크롤
+===================================================== */
+
+/* mr.eum수정부분 */
+/* 검색 결과 영역만 고정 높이 + 자체 스크롤 */
+.group-picker-search-results {
+    min-height: 0;
+    height: 180px;
+    max-height: 180px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 2px 6px 2px 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #c9a45a transparent;
+}
+
+/* mr.eum수정부분 */
+/* 장소 검색 결과 치즈 스크롤바 */
+.group-picker-search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-picker-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-search-results::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c9a45a;
+}
+
+.group-picker-search-results::-webkit-scrollbar-thumb:hover {
+    background: #a98232;
+}
+
+/* mr.eum수정부분 */
+/* 다크모드 기존 그룹 카드 */
+body.dark .group-picker-existing-group {
+    border-color: #4b463c;
+    background: #292722;
+}
+
+body.dark .group-picker-existing-group:hover {
+    border-color: #8e7335;
+    background: #3b3427;
+}
+
+/* mr.eum수정부분 */
+/* 모바일에서는 그룹 카드와 장소를 1열로 */
+@media (max-width: 760px) {
+    .group-picker-existing-groups,
+    .group-picker-place-modal-list,
+    .group-picker-search-results {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* =====================================================
+   새 그룹 장소 검색
+   - 기본 결과 4곳
+   - 더보기는 별도 팝오버
+   - 팝오버 내부 최대 10곳
+===================================================== */
+
+.group-picker-section {
+    position: relative;
+}
+
+/* 기본 결과는 2 x 2 네 곳까지만 보여줌 */
+.group-picker-search-results {
+    max-height: none;
+    overflow: visible;
+    padding: 1px;
+}
+
+.group-picker-search-option.is-cheese-priority {
+    border-color: rgba(224, 182, 65, .52);
+    background:
+        linear-gradient(
+            135deg,
+            #fffdfa 0%,
+            #fff8df 100%
+        );
+}
+
+.group-picker-more-trigger-wrap {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    padding-top: 2px;
+}
+
+.group-picker-more-trigger {
+    width: auto;
+    min-width: 132px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 13px;
+    border: 1px solid #e3c66f;
+    border-radius: 10px;
+    color: #65491f;
+    background: #fff9e8;
+    font-size: 10px;
+    font-weight: 900;
+    cursor: pointer;
+    transition:
+        background .16s ease,
+        border-color .16s ease,
+        transform .16s ease;
+}
+
+.group-picker-more-trigger:hover {
+    transform: translateY(-1px);
+    border-color: #d7aa2c;
+    background: #fff1bd;
+}
+
+.group-picker-more-trigger[aria-expanded="true"] {
+    border-color: #d7aa2c;
+    background: #ffefad;
+}
+
+.group-picker-more-trigger i {
+    font-size: 13px;
+    transition: transform .16s ease;
+}
+
+.group-picker-more-trigger[aria-expanded="true"] i {
+    transform: rotate(180deg);
+}
+
+/* 클릭해도 폼 아래가 밀리지 않는 독립 팝오버 */
+.group-picker-more-popover {
+    position: absolute;
+    z-index: 80;
+    max-height: 360px;
+    overflow: hidden;
+    border: 1px solid #e5d6ad;
+    border-radius: 16px;
+    background: #fffefb;
+    box-shadow:
+        0 18px 48px rgba(76, 58, 24, .18),
+        0 4px 14px rgba(76, 58, 24, .08);
+}
+
+.group-picker-more-popover::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    border-top: 1px solid #e5d6ad;
+    border-left: 1px solid #e5d6ad;
+    background: #fffefb;
+    transform:
+        translateX(-50%)
+        rotate(45deg);
+}
+
+.group-picker-more-popover-header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 14px 11px;
+    border-bottom: 1px solid #eee4ca;
+    background:
+        linear-gradient(
+            135deg,
+            #fffdf8 0%,
+            #fff6d6 100%
+        );
+}
+
+.group-picker-more-popover-header > div {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+.group-picker-more-popover-header strong {
+    overflow: hidden;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.group-picker-more-popover-header small {
+    color: var(--gray-500);
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.group-picker-more-close {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #e6dac0;
+    border-radius: 9px;
+    color: #79694e;
+    background: rgba(255, 255, 255, .82);
+    cursor: pointer;
+}
+
+.group-picker-more-close:hover {
+    border-color: #d8b34a;
+    color: #5d421c;
+    background: #fff;
+}
+
+.group-picker-more-list {
+    max-height: 300px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    overflow-y: auto;
+    padding: 10px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-picker-more-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-picker-more-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-more-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-picker-more-list::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+.group-picker-more-list .group-place-option {
+    margin: 0;
+}
+
+body.dark .group-picker-search-option.is-cheese-priority {
+    border-color: #716039;
+    background: #383326;
+}
+
+body.dark .group-picker-more-trigger {
+    border-color: #6e603d;
+    color: #f0dfad;
+    background: #3c372b;
+}
+
+body.dark .group-picker-more-trigger:hover,
+body.dark .group-picker-more-trigger[aria-expanded="true"] {
+    border-color: #a98a3a;
+    background: #49402b;
+}
+
+body.dark .group-picker-more-popover {
+    border-color: #514a3b;
+    background: #292722;
+    box-shadow:
+        0 18px 48px rgba(0, 0, 0, .34),
+        0 4px 14px rgba(0, 0, 0, .22);
+}
+
+body.dark .group-picker-more-popover::before {
+    border-color: #514a3b;
+    background: #292722;
+}
+
+body.dark .group-picker-more-popover-header {
+    border-bottom-color: #4a4539;
+    background:
+        linear-gradient(
+            135deg,
+            #312e28 0%,
+            #3d3525 100%
+        );
+}
+
+body.dark .group-picker-more-close {
+    border-color: #4f493d;
+    color: #d8cfbd;
+    background: #37332c;
+}
+
+@media (max-width: 760px) {
+    .group-picker-more-popover {
+        width: 100% !important;
+        left: 0 !important;
+    }
+
+    .group-picker-more-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* =====================================================
+   GROUP EDITOR 안정화 최종
+   DOM 구조는 건드리지 않고 취소/저장을 sticky 처리
+===================================================== */
+
+/* 날짜 입력 UI 제거 */
+.group-form-modal label:has(#groupDate),
+.group-form-modal .group-form-field:has(#groupDate),
+.group-form-modal #groupDate {
+    display: none !important;
+}
+
+/* 날짜 제거 후 기본 모달 크기/비율 */
+.group-form-modal {
+    width: min(640px, calc(100vw - 36px));
+    max-height: min(820px, calc(100vh - 32px));
+    padding: 30px 28px 26px;
+
+    /* 검색 전에는 바깥 스크롤 없음 */
+    overflow-y: hidden !important;
+}
+
+/*
+   검색 결과가 생긴 이후에만 auto.
+   실제 내용이 max-height를 넘는 경우에만 스크롤바가 나타납니다.
+*/
+.group-form-modal.has-search-results {
+    overflow-y: auto !important;
+}
+
+/* 폼 원래 구조 유지 */
+.group-form-modal #groupForm {
+    display: grid !important;
+    gap: 18px !important;
+}
+
+/* 그룹 이름 */
+.group-form-modal #groupName {
+    min-height: 48px;
+}
+
+/* 그룹 메모 */
+.group-form-modal #groupMemo {
+    min-height: 92px;
+    max-height: 130px;
+}
+
+/* 날짜 제거 후 장소선택 쪽 간격 */
+.group-form-modal .group-place-fieldset {
+    margin-top: 2px;
+}
+
+.group-form-modal .group-place-fieldset > legend {
+    margin-bottom: 10px;
+}
+
+/* 기존 그룹 목록은 너무 길어지지 않게 내부만 스크롤 */
+.group-form-modal .group-picker-existing-groups {
+    max-height: 170px;
+    overflow-y: auto;
+    gap: 8px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal .group-picker-existing-groups::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-form-modal .group-picker-existing-groups::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+/* 장소 검색 */
+.group-form-modal .group-picker-search-bar {
+    min-height: 48px;
+    padding: 5px 6px 5px 12px;
+}
+
+.group-form-modal .group-picker-search-bar input,
+.group-form-modal .group-picker-search-bar button {
+    height: 38px;
+}
+
+/*
+   핵심:
+   취소/저장 영역은 DOM을 옮기지 않고 원래 위치에서 sticky.
+   그래서 폼 내용이 정상적으로 보이면서,
+   검색 이후 스크롤 시에도 하단에 계속 붙어 있습니다.
+*/
+.group-form-modal .group-form-actions {
+    position: sticky !important;
+    bottom: -26px;
+    z-index: 60;
+
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin: 4px -28px -26px !important;
+    padding: 14px 28px 18px !important;
+
+    border-top: 1px solid #eee5d6;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255, 253, 248, .96) 0%,
+            #fffdf8 22%,
+            #fffdf8 100%
+        );
+
+    box-shadow:
+        0 -8px 18px rgba(74, 55, 26, .035);
+}
+
+.group-form-modal .group-form-actions button {
+    min-width: 96px;
+}
+
+/* 더보기 팝오버는 기존대로 자체 스크롤 */
+.group-form-modal .group-picker-more-popover {
+    overflow: hidden;
+}
+
+.group-form-modal .group-picker-more-list {
+    overflow-y: auto;
+}
+
+/* 다크모드 */
+body.dark .group-form-modal .group-form-actions {
+    border-top-color: #49443b;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(41, 39, 34, .96) 0%,
+            #292722 22%,
+            #292722 100%
+        );
+}
+
+/* 모바일 */
+@media (max-width: 760px) {
+    .group-form-modal {
+        width: calc(100vw - 18px);
+        max-height: calc(100vh - 18px);
+        padding: 22px 18px 20px;
+    }
+
+    .group-form-modal #groupForm {
+        gap: 15px !important;
+    }
+
+    .group-form-modal .group-picker-existing-groups {
+        max-height: 150px;
+    }
+
+    .group-form-modal .group-form-actions {
+        bottom: -20px;
+        grid-template-columns: 1fr 1fr;
+        margin: 2px -18px -20px !important;
+        padding: 12px 18px 16px !important;
+    }
+}
+
+
+/* =====================================================
+   GROUP EDITOR - 최신본 기준 최종 안정화
+   1) 취소/저장 항상 보임
+   2) 검색 전 스크롤 없음
+   3) 검색 결과 생긴 뒤 장소 선택 영역만 스크롤
+   4) 모달 전체는 스크롤하지 않음
+===================================================== */
+
+/*
+   이전 sticky/footer 실험 규칙 무효화.
+   액션 버튼은 원래 DOM 위치 그대로 사용한다.
+*/
+.group-form-modal .group-form-actions {
+    position: static !important;
+    bottom: auto !important;
+    z-index: auto !important;
+
+    min-height: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin: 8px 0 0 !important;
+    padding: 14px 0 0 !important;
+
+    border-top: 1px solid #eee5d6;
+    background: transparent !important;
+    box-shadow: none !important;
+
+    flex: 0 0 auto;
+}
+
+.group-form-modal .group-form-actions button {
+    width: auto;
+    min-width: 96px;
+}
+
+/*
+   모달 자체에는 스크롤을 만들지 않는다.
+   그래서 검색 전부터 오른쪽 스크롤바가 뜨지 않고,
+   취소/저장 버튼도 모달 밖으로 밀리지 않는다.
+*/
+.group-form-modal,
+.group-form-modal.has-search-results {
+    overflow: hidden !important;
+}
+
+/*
+   날짜 제거 후 전체 높이 안에
+   이름 + 메모 + 장소선택 + 액션이 들어오도록 비율 정리.
+*/
+.group-form-modal {
+    width: min(640px, calc(100vw - 36px));
+    max-height: min(820px, calc(100vh - 32px));
+    padding: 30px 28px 24px;
+}
+
+.group-form-modal #groupForm {
+    display: grid !important;
+    gap: 16px !important;
+    min-height: 0;
+}
+
+.group-form-modal #groupName {
+    min-height: 46px;
+}
+
+.group-form-modal #groupMemo {
+    min-height: 88px;
+    max-height: 110px;
+}
+
+/*
+   핵심:
+   스크롤 대상은 전체 모달이 아니라 '장소 선택' 내부(group-picker).
+   검색 전에는 overflow:hidden이라 스크롤바 없음.
+*/
+.group-form-modal .group-picker {
+    max-height: 300px;
+    overflow-y: hidden;
+    overflow-x: visible;
+    padding-right: 2px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+/*
+   검색 결과가 실제로 생긴 뒤에만
+   JS가 .has-search-results 클래스를 붙인다.
+   그때부터 장소선택 내부만 스크롤 가능.
+*/
+.group-form-modal.has-search-results .group-picker {
+    overflow-y: auto;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+/*
+   기존 그룹 목록은 자체 높이 제한을 유지해서
+   검색 전에도 아래 액션 버튼을 밀어내지 않는다.
+*/
+.group-form-modal .group-picker-existing-groups {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+/* 장소검색 결과 기본 4곳은 group-picker 안에서 표시 */
+.group-form-modal .group-picker-search-results {
+    max-height: none;
+    overflow: visible;
+}
+
+/* 더보기는 기존 독립 팝오버 유지 */
+.group-form-modal .group-picker-more-popover {
+    overflow: hidden;
+}
+
+.group-form-modal .group-picker-more-list {
+    overflow-y: auto;
+}
+
+/* 다크모드 */
+body.dark .group-form-modal .group-form-actions {
+    border-top-color: #49443b;
+}
+
+/* 모바일 */
+@media (max-width: 760px) {
+    .group-form-modal {
+        width: calc(100vw - 18px);
+        max-height: calc(100vh - 18px);
+        padding: 22px 18px 18px;
+    }
+
+    .group-form-modal #groupForm {
+        gap: 14px !important;
+    }
+
+    .group-form-modal .group-picker {
+        max-height: 250px;
+    }
+
+    .group-form-modal .group-picker-existing-groups {
+        max-height: 120px;
+    }
+
+    .group-form-modal .group-form-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 6px !important;
+        padding-top: 12px !important;
+    }
+
+    .group-form-modal .group-form-actions button {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+
+/* =====================================================
+   그룹 장소검색 더보기 - 진짜 떠있는 토글 팝오버
+   아래 레이아웃을 절대 밀지 않음
+===================================================== */
+
+.group-picker-more-popover {
+    position: fixed !important;
+    z-index: 12050 !important;
+
+    width: min(500px, calc(100vw - 28px));
+    max-height: min(390px, calc(100vh - 28px));
+
+    overflow: hidden;
+
+    border: 1px solid #e3cf98;
+    border-radius: 16px;
+
+    background: #fffefb;
+
+    box-shadow:
+        0 22px 60px rgba(65, 48, 19, .24),
+        0 6px 18px rgba(65, 48, 19, .10);
+
+    transform-origin: top center;
+    animation: groupMorePopoverIn .14s ease-out;
+}
+
+/* fixed 팝오버라 기존 section 기준 화살표 위치값을 쓰지 않음 */
+.group-picker-more-popover::before {
+    display: none !important;
+}
+
+.group-picker-more-popover.opens-up {
+    transform-origin: bottom center;
+}
+
+@keyframes groupMorePopoverIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px) scale(.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.group-picker-more-popover-header {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+.group-picker-more-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* 더보기 팝오버가 떠도 원래 검색결과/폼 높이는 변하지 않음 */
+.group-picker-more-trigger-wrap {
+    position: relative;
+    z-index: 2;
+}
+
+/* 다크모드 떠있는 팝오버 */
+body.dark .group-picker-more-popover {
+    border-color: #5a523f;
+    background: #292722;
+
+    box-shadow:
+        0 22px 60px rgba(0, 0, 0, .46),
+        0 6px 18px rgba(0, 0, 0, .28);
+}
+
+
+/* =====================================================
+   기존 그룹 저장 장소 팝업 - 선택 완료 버튼
+   라이트 / 다크모드 별도 스타일
+===================================================== */
+
+/* 라이트모드 */
+body:not(.dark)
+.group-picker-place-modal-actions
+#groupPickerPlaceModalDone {
+    min-width: 112px;
+    min-height: 42px;
+
+    padding: 0 18px;
+
+    border: 1px solid #d6a62b !important;
+    border-radius: 12px;
+
+    color: #4f3710 !important;
+    background:
+        linear-gradient(
+            180deg,
+            #ffd866 0%,
+            #f5c443 100%
+        ) !important;
+
+    box-shadow:
+        0 4px 10px rgba(154, 109, 23, .16);
+
+    font-size: 12px;
+    font-weight: 900;
+
+    cursor: pointer;
+
+    transition:
+        transform .16s ease,
+        border-color .16s ease,
+        background .16s ease,
+        box-shadow .16s ease;
+}
+
+body:not(.dark)
+.group-picker-place-modal-actions
+#groupPickerPlaceModalDone:hover {
+    transform: translateY(-1px);
+
+    border-color: #bd8913 !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffdc6f 0%,
+            #efb82f 100%
+        ) !important;
+
+    box-shadow:
+        0 7px 15px rgba(154, 109, 23, .22);
+}
+
+body:not(.dark)
+.group-picker-place-modal-actions
+#groupPickerPlaceModalDone:active {
+    transform: translateY(0);
+    box-shadow:
+        0 2px 6px rgba(154, 109, 23, .16);
+}
+
+
+/* 다크모드 */
+body.dark
+.group-picker-place-modal-actions
+#groupPickerPlaceModalDone {
+    min-width: 112px;
+    min-height: 42px;
+
+    padding: 0 18px;
+
+    border: 1px solid #d5aa42 !important;
+    border-radius: 12px;
+
+    color: #261c0b !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            #f4cb5a 0%,
+            #dcae38 100%
+        ) !important;
+
+    box-shadow:
+        0 5px 14px rgba(0, 0, 0, .24);
+
+    font-size: 12px;
+    font-weight: 900;
+
+    cursor: pointer;
+
+    transition:
+        transform .16s ease,
+        border-color .16s ease,
+        background .16s ease,
+        box-shadow .16s ease;
+}
+
+body.dark
+.group-picker-place-modal-actions
+#groupPickerPlaceModalDone:hover {
+    transform: translateY(-1px);
+
+    border-color: #f0ca62 !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffd96c 0%,
+            #e6b944 100%
+        ) !important;
+
+    box-shadow:
+        0 7px 17px rgba(0, 0, 0, .32);
+}
+
+body.dark
+.group-picker-place-modal-actions
+#groupPickerPlaceModalDone:active {
+    transform: translateY(0);
+    box-shadow:
+        0 2px 7px rgba(0, 0, 0, .26);
+}
+
+
+/* 라이트모드에서 기존 그룹 장소 팝업의 하단선과 버튼이 자연스럽게 보이도록 */
+body:not(.dark) .group-picker-place-modal-actions {
+    border-top-color: #e9dfcd;
+}
+
+/*
+   팝업 자체가 기존 CSS에서 항상 dark로 고정되어 있어도
+   라이트모드의 선택완료 버튼은 명확하게 구분되도록 스타일링.
+*/
+@media (max-width: 760px) {
+    .group-picker-more-popover {
+        width: calc(100vw - 20px) !important;
+        max-height: min(420px, calc(100vh - 20px));
+    }
+
+    .group-picker-more-list {
+        grid-template-columns: 1fr;
+        max-height: 330px;
+    }
+}
+
+
+/* =====================================================
+   기존 그룹 저장 장소 팝업 - 라이트/다크 테마 최종 보정
+   기존 CSS가 .group-picker-place-modal 자체를 #292722로 고정해
+   라이트모드에서도 검게 보이던 문제 수정
+===================================================== */
+
+/* ---------- LIGHT MODE ---------- */
+body:not(.dark) .group-picker-place-modal {
+    color: #2f2b24 !important;
+    background: #fffdf8 !important;
+    border-color: #e7dcc8 !important;
+    box-shadow:
+        0 24px 70px rgba(70, 52, 24, 0.20) !important;
+}
+
+body:not(.dark) .group-picker-place-modal-close {
+    color: #6d665c !important;
+    background: #f3f1ec !important;
+}
+
+body:not(.dark) .group-picker-place-modal-close:hover {
+    color: #4f473d !important;
+    background: #ebe7de !important;
+}
+
+body:not(.dark) .group-picker-place-modal-heading .group-eyebrow {
+    color: #c98712 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-heading h3 {
+    color: #2c2822 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-heading p {
+    color: #8c8276 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option {
+    border-color: #e5ddcf !important;
+    background: #ffffff !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option:hover {
+    border-color: #dfbd61 !important;
+    background: #fff9e8 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option.selected {
+    border-color: #d5a832 !important;
+    background: #fff3c5 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option strong {
+    color: #302c26 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-option small {
+    color: #8d8378 !important;
+}
+
+body:not(.dark) .group-picker-place-modal-list .group-place-check {
+    border-color: #d8d1c7 !important;
+    background: #ffffff !important;
+}
+
+body:not(.dark)
+.group-picker-place-modal-list
+.group-place-option input:checked + .group-place-check {
+    border-color: #d3a72f !important;
+    color: #6c4b11 !important;
+    background: #ffd95f !important;
+}
+
+body:not(.dark) .group-picker-place-modal-actions {
+    border-top-color: #e9dfcd !important;
+}
+
+
+/* ---------- DARK MODE ---------- */
+body.dark .group-picker-place-modal {
+    color: #f2ede5 !important;
+    background: #292722 !important;
+    border-color: rgba(178, 140, 64, 0.22) !important;
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, 0.35) !important;
+}
+
+body.dark .group-picker-place-modal-close {
+    color: #eee8dc !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark .group-picker-place-modal-close:hover {
+    background: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.dark .group-picker-place-modal-heading h3 {
+    color: #f7f2e8 !important;
+}
+
+body.dark .group-picker-place-modal-heading p {
+    color: #aaa297 !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option {
+    border-color: #3b3832 !important;
+    background: #34312c !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option:hover {
+    border-color: #6f603c !important;
+    background: #3d382d !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option.selected {
+    border-color: #a8873a !important;
+    background: #493f28 !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option strong {
+    color: #f0ebe3 !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-option small {
+    color: #aaa297 !important;
+}
+
+body.dark .group-picker-place-modal-list .group-place-check {
+    border-color: #5a554b !important;
+    background: #2c2924 !important;
+}
+
+body.dark
+.group-picker-place-modal-list
+.group-place-option input:checked + .group-place-check {
+    border-color: #d5aa42 !important;
+    color: #2d210d !important;
+    background: #e9bc45 !important;
+}
+
+body.dark .group-picker-place-modal-actions {
+    border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* mr.eum수정부분 */
+/* 내 그룹 목록이 많아지면 해당 목록만 스크롤 */
+.group-list {
+    min-height: 0;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 3px 6px 3px 3px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+/* 그룹 목록 치즈맵 스타일 스크롤바 */
+.group-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-list::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+
+/* =====================================================
+   그룹 수정 - 현재 저장된 장소
+   체크 해제 후 저장하면 그룹에서 삭제
+===================================================== */
+
+.group-picker-current-section {
+    padding-bottom: 2px;
+}
+
+.group-picker-current-section
+.group-picker-section-heading {
+    align-items: flex-start;
+}
+
+.group-picker-current-section
+.group-picker-section-heading > div {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.group-picker-current-section
+.group-picker-section-heading small {
+    color: var(--gray-500);
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.group-picker-current-count {
+    flex: 0 0 auto;
+    min-width: 31px;
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    border-radius: 999px;
+    color: var(--cheese-brown);
+    background: var(--cheese-soft);
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.group-picker-current-places {
+    max-height: 176px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    overflow-y: auto;
+    padding: 2px 5px 2px 2px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-picker-current-places::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-picker-current-places::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-picker-current-places::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-picker-current-places::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+.group-picker-current-place {
+    border-color: #e8d6a5 !important;
+    background: #fffaf0 !important;
+}
+
+.group-picker-current-place.selected {
+    border-color: #e0b63e !important;
+    background: #fff1b9 !important;
+}
+
+/* 체크 해제 상태는 삭제 예정임을 은은하게 표시 */
+.group-picker-current-place:not(.selected) {
+    opacity: .58;
+}
+
+.group-picker-current-empty {
+    grid-column: 1 / -1;
+    padding: 14px;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    color: var(--gray-500);
+    background: #fbfaf7;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* 다크모드 */
+body.dark .group-picker-current-count {
+    color: #f1dfad;
+    background: #4a4029;
+}
+
+body.dark .group-picker-current-place {
+    border-color: #5d5135 !important;
+    background: #332f26 !important;
+}
+
+body.dark .group-picker-current-place.selected {
+    border-color: #a98735 !important;
+    background: #493f28 !important;
+}
+
+body.dark .group-picker-current-empty {
+    border-color: #4a463d;
+    color: #aaa297;
+    background: #292722;
+}
+
+@media (max-width: 760px) {
+    .group-picker-current-places {
+        grid-template-columns: 1fr;
+        max-height: 190px;
+    }
+}
+
+
+/* =====================================================
+   GROUP EDITOR - 그룹 수정 장소선택 잘림 보정
+   - 새 그룹: 기존처럼 검색 전 스크롤 없음
+   - 그룹 수정: 현재 저장된 장소가 추가되므로 장소선택 영역 자체 스크롤
+   - 취소/저장 버튼은 기존 위치 유지
+===================================================== */
+
+/*
+   기본 새 그룹 화면은 기존 정책 유지:
+   검색 결과가 생기기 전에는 group-picker 스크롤바를 만들지 않는다.
+*/
+.group-form-modal .group-picker {
+    max-height: 300px;
+    overflow-y: hidden;
+}
+
+/*
+   그룹 수정 화면에는 "현재 저장된 장소" 섹션이 추가되기 때문에
+   같은 300px에서 overflow:hidden이면
+   기존 그룹/장소 검색 영역이 아래에서 잘려 버립니다.
+
+   현재 저장 장소 섹션이 있을 때만
+   group-picker 자체를 스크롤 영역으로 전환합니다.
+*/
+.group-form-modal
+.group-picker:has(.group-picker-current-section) {
+    max-height: min(370px, calc(100vh - 440px));
+    min-height: 250px;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    padding-right: 6px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal
+.group-picker:has(.group-picker-current-section)::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-form-modal
+.group-picker:has(.group-picker-current-section)::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal
+.group-picker:has(.group-picker-current-section)::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-form-modal
+.group-picker:has(.group-picker-current-section)::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+/*
+   현재 저장된 장소 자체도 너무 많은 경우
+   이 목록이 모달 높이를 전부 먹지 않도록 내부 높이 제한.
+*/
+.group-form-modal .group-picker-current-places {
+    max-height: 150px;
+}
+
+/*
+   수정 화면에서 장소 검색 제목/검색창까지
+   스크롤 끝에서 완전히 보이도록 하단 여유 추가.
+*/
+.group-form-modal
+.group-picker:has(.group-picker-current-section) {
+    padding-bottom: 10px;
+}
+
+/* 기존 그룹 목록도 수정 화면에서는 과하게 높아지지 않게 */
+.group-form-modal
+.group-picker:has(.group-picker-current-section)
+.group-picker-existing-groups {
+    max-height: 125px;
+}
+
+/* 모바일 */
+@media (max-width: 760px) {
+    .group-form-modal
+    .group-picker:has(.group-picker-current-section) {
+        max-height: min(330px, calc(100vh - 390px));
+        min-height: 220px;
+    }
+
+    .group-form-modal .group-picker-current-places {
+        max-height: 140px;
+    }
+
+    .group-form-modal
+    .group-picker:has(.group-picker-current-section)
+    .group-picker-existing-groups {
+        max-height: 110px;
+    }
+}
+
+
+/* =====================================================
+   GROUP EDITOR - 수정/저장 버튼 잘림 최종 보정
+   - 모달 전체는 고정 프레임
+   - 폼 내부에서 장소 선택 영역만 남은 높이를 사용
+   - 취소/저장 버튼은 항상 하단에 노출
+===================================================== */
+
+.group-form-modal {
+    overflow: hidden !important;
+}
+
+/*
+   헤더 아래의 실제 폼 높이를 화면 안에 제한.
+   form 자체를 flex column으로 바꿔
+   마지막 액션 버튼 영역이 항상 남도록 한다.
+*/
+.group-form-modal #groupForm {
+    min-height: 0;
+    max-height: calc(100vh - 205px);
+
+    display: flex !important;
+    flex-direction: column;
+    gap: 14px !important;
+
+    overflow: hidden;
+}
+
+/* 이름/메모는 고정 높이 유지 */
+.group-form-modal #groupForm > label {
+    flex: 0 0 auto;
+}
+
+/*
+   장소 선택 영역만 남은 높이를 먹도록 함.
+   내용이 길면 이 안에서만 스크롤.
+*/
+.group-form-modal .group-place-fieldset {
+    min-height: 0;
+    flex: 1 1 auto;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+}
+
+.group-form-modal .group-place-fieldset > legend {
+    flex: 0 0 auto;
+}
+
+/* 실제 장소 선택 UI */
+.group-form-modal .group-place-options {
+    min-height: 0;
+    flex: 1 1 auto;
+
+    max-height: none !important;
+    overflow: hidden !important;
+}
+
+/*
+   수정 화면의 picker만 내부 스크롤.
+   기존 '현재 저장된 장소 / 기존 그룹 / 장소 검색' 전부 이 안에서 스크롤된다.
+*/
+.group-form-modal .group-picker {
+    min-height: 0 !important;
+    max-height: none !important;
+    height: 100%;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    padding-right: 6px;
+    padding-bottom: 10px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-form-modal .group-picker::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+/*
+   취소 / 저장 버튼은 flex에서 마지막 고정 영역.
+   스크롤 대상이 아니므로 항상 보인다.
+*/
+.group-form-modal .group-form-actions {
+    position: static !important;
+    flex: 0 0 auto;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin: 0 !important;
+    padding: 14px 0 0 !important;
+
+    border-top: 1px solid #eee5d6;
+    background: #fffefb !important;
+    box-shadow: none !important;
+}
+
+.group-form-modal .group-form-actions button {
+    min-width: 96px;
+    min-height: 44px;
+}
+
+/* 다크모드 */
+body.dark .group-form-modal .group-form-actions {
+    border-top-color: #49443b;
+    background: #292722 !important;
+}
+
+/* 모바일 */
+@media (max-width: 760px) {
+    .group-form-modal #groupForm {
+        max-height: calc(100vh - 165px);
+        gap: 12px !important;
+    }
+
+    .group-form-modal .group-form-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding-top: 12px !important;
+    }
+
+    .group-form-modal .group-form-actions button {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+
+/* =====================================================
+   GROUP EDITOR - 전체 모달 스크롤 최종 보정
+   - 내용이 길면 모달 전체가 스크롤
+   - 현재 저장 장소 / 기존 그룹 / 장소 검색이 잘리지 않음
+   - 취소/저장 버튼은 하단 sticky로 항상 노출
+===================================================== */
+
+/*
+   기존에 form / fieldset / group-picker 각각 높이를 나눠 갖게 하면서
+   내용이 많은 수정 화면에서 중간 영역이 잘리는 문제가 있었습니다.
+
+   이제 그룹 수정 모달은 "전체 내용 스크롤 + 하단 액션 sticky" 구조로 통일합니다.
+*/
+.group-form-modal {
+    max-height: calc(100vh - 32px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-form-modal::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+.group-form-modal::-webkit-scrollbar-thumb:hover {
+    background: #c99f35;
+}
+
+/* form 자체의 높이/overflow 제한 해제 */
+.group-form-modal #groupForm {
+    display: grid !important;
+    gap: 16px !important;
+
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+
+    overflow: visible !important;
+}
+
+/* 장소 선택 fieldset도 전체 높이를 자연스럽게 사용 */
+.group-form-modal .group-place-fieldset {
+    display: block !important;
+
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+
+    overflow: visible !important;
+}
+
+/* 장소 선택 바깥 컨테이너 높이 제한 제거 */
+.group-form-modal .group-place-options {
+    display: block !important;
+
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+
+    overflow: visible !important;
+}
+
+/* group-picker도 화면을 잘라먹지 않게 전체 높이 사용 */
+.group-form-modal .group-picker,
+.group-form-modal
+.group-picker:has(.group-picker-current-section) {
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+
+    overflow: visible !important;
+
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/*
+   현재 저장 장소는 9~10곳 이상이어도
+   일단 모두 보이게 하고, 모달 전체 스크롤로 접근.
+   너무 길어지는 걸 막기 위해 이 목록만 최대 높이 320px.
+*/
+.group-form-modal .group-picker-current-places {
+    max-height: 320px !important;
+    overflow-y: auto !important;
+    padding-right: 5px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #d8b85c transparent;
+}
+
+.group-form-modal
+.group-picker-current-places::-webkit-scrollbar {
+    width: 5px;
+}
+
+.group-form-modal
+.group-picker-current-places::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #d8b85c;
+}
+
+/* 기존 그룹 목록도 너무 길면 자체 스크롤 */
+.group-form-modal .group-picker-existing-groups,
+.group-form-modal
+.group-picker:has(.group-picker-current-section)
+.group-picker-existing-groups {
+    max-height: 180px !important;
+    overflow-y: auto !important;
+}
+
+/* 검색 결과는 기본 4개 그대로, 더보기는 플로팅 팝오버 유지 */
+.group-form-modal .group-picker-search-results {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/*
+   취소 / 저장은 모달 스크롤 하단에 sticky.
+   아래로 내려가도 항상 화면 하단에 붙어 있게 함.
+*/
+.group-form-modal .group-form-actions {
+    position: sticky !important;
+    bottom: -1px;
+    z-index: 100;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+
+    min-height: 72px;
+
+    margin: 8px -28px -24px !important;
+    padding: 14px 28px 18px !important;
+
+    border-top: 1px solid #eee5d6;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255, 253, 248, .96) 0%,
+            #fffdf8 24%,
+            #fffdf8 100%
+        ) !important;
+
+    box-shadow:
+        0 -8px 20px rgba(71, 53, 24, .05) !important;
+}
+
+.group-form-modal .group-form-actions button {
+    min-width: 96px;
+    min-height: 44px;
+}
+
+/* 다크모드 */
+body.dark .group-form-modal .group-form-actions {
+    border-top-color: #49443b;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(41, 39, 34, .96) 0%,
+            #292722 24%,
+            #292722 100%
+        ) !important;
+}
+
+/* 모바일 */
+@media (max-width: 760px) {
+    .group-form-modal {
+        max-height: calc(100vh - 18px) !important;
+    }
+
+    .group-form-modal .group-picker-current-places {
+        max-height: 280px !important;
+    }
+
+    .group-form-modal .group-form-actions {
+        bottom: -1px;
+
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+
+        margin: 8px -18px -18px !important;
+        padding: 12px 18px 16px !important;
+    }
+
+    .group-form-modal .group-form-actions button {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+
+/* =====================================================
+   그룹 수정 - 현재 저장된 장소 컴팩트 4열
+   - 현재 저장된 장소에서 주소 숨김
+   - 4열 배치로 세로 공간 절약
+===================================================== */
+
+/* 현재 저장된 장소 카드만 4열 */
+.group-form-modal .group-picker-current-places {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+
+    max-height: 220px !important;
+}
+
+/*
+   현재 저장된 장소 카드 안의 보조 텍스트(주소/카테고리 줄) 숨김.
+   장소명만 남겨 높이를 줄입니다.
+*/
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place
+.group-picker-place-copy
+small {
+    display: none !important;
+}
+
+/* 카드 자체도 조금 더 낮고 촘촘하게 */
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place {
+    min-height: 46px;
+    padding: 8px !important;
+    gap: 7px !important;
+}
+
+/* 체크박스도 살짝 축소 */
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place
+.group-place-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+}
+
+/* 장소명 한 줄 처리 */
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place
+.group-picker-place-copy {
+    min-width: 0;
+}
+
+.group-form-modal
+.group-picker-current-places
+.group-picker-current-place
+.group-picker-place-copy strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 10px;
+}
+
+/* 중간 폭에서는 3열 */
+@media (max-width: 980px) {
+    .group-form-modal .group-picker-current-places {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+/* 모바일에서는 2열 */
+@media (max-width: 760px) {
+    .group-form-modal .group-picker-current-places {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        max-height: 220px !important;
+    }
+}
+
+
+/* =====================================================
+   쪽지함 - 다크모드 삭제 버튼 hover 보정
+   - hover 시 흰색/아이보리 배경으로 변하지 않음
+===================================================== */
+
+body.dark .message-mini-button.danger {
+    color: #e08b7d !important;
+    border-color: #6b4a45 !important;
+    background: #2f2b27 !important;
+}
+
+body.dark .message-mini-button.danger:hover {
+    color: #f09a8c !important;
+    border-color: #8a5a52 !important;
+    background: #3a2d2a !important;
+}
+

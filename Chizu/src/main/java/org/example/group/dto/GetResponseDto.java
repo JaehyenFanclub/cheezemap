@@ -21,7 +21,10 @@ public record GetResponseDto(
 
         @JsonProperty("placeIds")
         @Schema(description = "그룹에 저장된 장소 ID 목록", example = "[11, 12]")
-        List<Long> placeId
+        List<Long> placeId,
+
+        @Schema(description = "공유 링크를 통해 다른 사용자가 이 그룹을 저장한 횟수", example = "3")
+        Long cloneCount
 ) {
 
 }

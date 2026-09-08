@@ -33,6 +33,9 @@ public class Group {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(name = "cloneCount")
+    private Long cloneCount = 0L;
+
     @Builder
     private Group(
             Long groupId,
@@ -56,5 +59,9 @@ public class Group {
         if(groupName!=null){
             this.groupName=groupName;
         }
+    }
+
+    public void increaseCloneCount(){
+        this.cloneCount += 1;
     }
 }

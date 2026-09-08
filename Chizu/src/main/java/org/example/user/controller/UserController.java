@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.common.dto.MsgResponse;
 import org.example.config.JwtAuthenticationFilter;
+import org.example.review.dto.ReviewResponse;
+import org.example.review.service.ReviewService;
 import org.example.user.dto.*;
 import org.example.user.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -26,6 +28,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
@@ -33,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+    private final ReviewService reviewService;
 
     @Operation(
             summary = "회원가입",
@@ -147,6 +152,41 @@ public class UserController {
     public MyPageResponse myPage(
             @RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token) {
         return userService.mypage(token);
+    }
+
+    @Operation(
+            summary = "내가 작성한 리뷰 목록 조회",
+            description = "JWT 토큰으로 로그인한 유저가 작성한 리뷰 목록을 최신순으로 반환합니다.",
+            parameters = {
+                    @Parameter(
+                            name = JwtAuthenticationFilter.TOKEN_HEADER,
+                            description = "jwt 토큰",
+                            required = true,
+                            in = ParameterIn.HEADER,
+                            schema = @Schema(type = "string")
+                    )
+            },
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "조회 성공",
+                            content = @Content(schema = @Schema(implementation = ReviewResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "토큰이 없거나 유효하지 않음",
+                            content = @Content(schema = @Schema(implementation = MsgResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "인증 실패"
+                    )
+            }
+    )
+    @GetMapping("/me/reviews")
+    public List<ReviewResponse> myReviews(
+            @RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token) {
+        return reviewService.getMyReviews(token);
     }
 
     @Operation(

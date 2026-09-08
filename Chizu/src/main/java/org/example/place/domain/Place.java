@@ -3,7 +3,6 @@ package org.example.place.domain;
 import jakarta.persistence.*;
 import lombok.*;
 import org.example.place.dto.PlaceUpdateRequest;
-import org.example.user.entity.User;
 
 import java.util.Date;
 
@@ -46,10 +45,6 @@ public class Place {
 
     @Column(name = "placeLongitude")
     private Double placeLongitude;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "userId")
-    private User user;
 
     @Builder.Default
     @Column(nullable = false, columnDefinition = "double not null default 0")

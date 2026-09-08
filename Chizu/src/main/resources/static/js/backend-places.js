@@ -968,7 +968,27 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
     // 1) 메모리 캐시
     const memoryCached = backendPlaceCache.get(externalKey);
     if (Number(memoryCached?.placeId) > 0) {
-        return memoryCached;
+        if (descriptor.googlePlaceId) {
+            const currentGoogleId =
+                normalizeGooglePlaceId(descriptor.googlePlaceId);
+            const cachedGoogleId =
+                normalizeGooglePlaceId(memoryCached?.googlePlaceId);
+
+            // Google POI는 현재 Google Place ID와 캐시의 Google Place ID가
+            // 정확히 같은 경우에만 기존 DB Place를 재사용합니다.
+            if (
+                currentGoogleId &&
+                cachedGoogleId &&
+                currentGoogleId === cachedGoogleId
+            ) {
+                return memoryCached;
+            }
+
+            // 과거에 잘못 연결된 placeId 캐시는 폐기합니다.
+            forgetBackendPlace(externalKey);
+        } else {
+            return memoryCached;
+        }
     }
 
     // 2) 저장된 frontend <-> DB placeId 연결
@@ -983,18 +1003,46 @@ async function ensureBackendPlace(placeKey = selectedPlaceKey) {
             */
             const existing = await apiRequest(`/place/${linkedId}`);
 
-            const reused = {
-                ...existing,
-                placeId: Number(existing?.placeId) || linkedId,
-                googlePlaceId:
-                    existing?.googlePlaceId ||
-                    descriptor.googlePlaceId ||
-                    null,
-                externalKey
-            };
+            if (descriptor.googlePlaceId) {
+                const currentGoogleId =
+                    normalizeGooglePlaceId(descriptor.googlePlaceId);
+                const existingGoogleId =
+                    normalizeGooglePlaceId(existing?.googlePlaceId);
 
-            rememberBackendPlace(externalKey, reused);
-            return reused;
+                // Google POI를 기존 DB Place에 연결할 때는
+                // 양쪽 Google Place ID가 실제로 같을 때만 재사용합니다.
+                // existing.googlePlaceId가 NULL인 테스트/수동 Place에는
+                // 현재 Google ID를 억지로 덧붙이지 않습니다.
+                if (
+                    currentGoogleId &&
+                    existingGoogleId &&
+                    currentGoogleId === existingGoogleId
+                ) {
+                    const reused = {
+                        ...existing,
+                        placeId: Number(existing?.placeId) || linkedId,
+                        googlePlaceId: existingGoogleId,
+                        externalKey
+                    };
+
+                    rememberBackendPlace(externalKey, reused);
+                    return reused;
+                }
+
+                forgetBackendPlace(externalKey);
+            } else {
+                const reused = {
+                    ...existing,
+                    placeId: Number(existing?.placeId) || linkedId,
+                    googlePlaceId:
+                        normalizeGooglePlaceId(existing?.googlePlaceId) ||
+                        null,
+                    externalKey
+                };
+
+                rememberBackendPlace(externalKey, reused);
+                return reused;
+            }
         } catch (error) {
             console.warn("기존 장소 연결 조회 실패, 다시 연결합니다:", error);
             forgetBackendPlace(externalKey);

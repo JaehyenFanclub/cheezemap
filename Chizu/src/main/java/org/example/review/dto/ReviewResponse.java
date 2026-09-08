@@ -33,6 +33,9 @@ public record ReviewResponse(
         @Schema(description = "리뷰 사진 URL 목록")
         List<String> photoUrls,
 
+        @Schema(description = "리뷰 사진 ID 목록 (photoUrls와 동일한 순서)")
+        List<Long> photoIds,
+
         @Schema(description = "작성 시각")
         LocalDateTime createdAt
 ) {

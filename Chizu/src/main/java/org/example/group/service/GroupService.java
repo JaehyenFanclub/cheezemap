@@ -59,7 +59,8 @@ public class GroupService {
                 group.getGroupDate(),
                 group.getGroupMemo(),
                 group.getGroupName(),
-                placeIds
+                placeIds,
+                group.getCloneCount()
         );
     }
 
@@ -111,6 +112,7 @@ public class GroupService {
         for (PlaceGroup place : places) {
             placeGroupService.addPlace(token, new AddPlaceDto(place.getPlace().getPlaceId(), cloneGroup.getGroupId()), true);
         }
+        group.increaseCloneCount();
         String message = cloneGroup.getGroupName()+"이 성공적으로 복제되었습니다!";
         return new MsgResponse(message, "201");
     }

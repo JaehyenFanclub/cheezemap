@@ -1,15 +1,13 @@
 package org.example.place.repository;
 
-import org.example.common.enums.AgeGroup;
-import org.example.common.enums.GenderGroup;
-import org.example.place.domain.PlacePreference;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.example.common.enums.AgeGroup;
+import org.example.common.enums.GenderGroup;
+import org.example.place.domain.PlacePreference;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PlacePreferenceRepository extends JpaRepository<PlacePreference, Long> {
 
@@ -19,16 +17,16 @@ public interface PlacePreferenceRepository extends JpaRepository<PlacePreference
             GenderGroup gender
     );
 
-    @Query("""
-            select pp from PlacePreference pp
-            join fetch pp.place p
-            where p.placeId in :placeIds
-              and pp.ageGroup = :ageGroup
-              and pp.gender = :gender
-            """)
-    List<PlacePreference> findByPlaceIdsAndAgeGroupAndGender(
-            @Param("placeIds") Collection<Long> placeIds,
-            @Param("ageGroup") AgeGroup ageGroup,
-            @Param("gender") GenderGroup gender
+    @EntityGraph(attributePaths = {"place"})
+    List<PlacePreference> findByPlace_PlaceIdInAndAgeGroupAndGender(
+            Collection<Long> placeIds,
+            AgeGroup ageGroup,
+            GenderGroup gender
+    );
+
+    @EntityGraph(attributePaths = {"place"})
+    List<PlacePreference> findByPlace_PlaceIdInAndGender(
+            Collection<Long> placeIds,
+            GenderGroup gender
     );
 }

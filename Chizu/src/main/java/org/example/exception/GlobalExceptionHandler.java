@@ -3,6 +3,7 @@ package org.example.exception;
 import org.example.common.dto.MsgResponse;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -16,9 +17,24 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public MsgResponse handleIllegalArgument(IllegalArgumentException ex) {
-        return new MsgResponse(ex.getMessage(), "400");
+    public ResponseEntity<MsgResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        String message = ex.getMessage() == null ? "잘못된 요청입니다." : ex.getMessage();
+
+        if (isUnauthorizedTokenMessage(message)) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(new MsgResponse(message, "401"));
+        }
+
+        return ResponseEntity
+                .badRequest()
+                .body(new MsgResponse(message, "400"));
+    }
+
+    private boolean isUnauthorizedTokenMessage(String message) {
+        return message.contains("유효하지 않은 토큰")
+                || message.contains("이미 로그아웃된 토큰")
+                || message.contains("토큰은 필수");
     }
 
     @ExceptionHandler(MissingRequestHeaderException.class)

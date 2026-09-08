@@ -1,6 +1,5 @@
 package org.example.place.service;
 
-import org.example.config.JwtTokenProvider;
 import org.example.place.domain.Place;
 import org.example.place.domain.PlacePhoto;
 import org.example.place.dto.PlacePhotoCreateRequest;
@@ -22,18 +21,11 @@ public class PlacePhotoService {
 
     private final PlacePhotoRepository placePhotoRepository;
     private final PlaceRepository placeRepository;
-    private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
     public PlacePhotoResponse createPhoto(PlacePhotoCreateRequest dto, Long placeId, String token) {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 장소"));
-
-        Long userId = Long.parseLong(jwtTokenProvider.getSubject(token));
-
-        if (!place.getUser().getId().equals(userId)){
-            throw new IllegalArgumentException("해당 사진을 추가 할 권한이 없습니다.");
-        }
 
         MultipartFile file = dto.getFile();
 
@@ -80,12 +72,6 @@ public class PlacePhotoService {
     public void deletePhoto(Long placePhotoId, String token){
         PlacePhoto placePhoto = placePhotoRepository.findById(placePhotoId)
                 .orElseThrow(() -> new IllegalArgumentException("사진 없음"));
-
-        Long userId = Long.parseLong(jwtTokenProvider.getSubject(token));
-
-        if (!placePhoto.getPlace().getUser().getId().equals(userId)){
-            throw new IllegalArgumentException("해당 사진을 삭제 할 권한이 없습니다.");
-        }
 
         placePhotoRepository.delete(placePhoto);
 

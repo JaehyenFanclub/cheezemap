@@ -348,6 +348,8 @@ body.dark .route-panel {
     box-shadow: 12px 0 30px rgba(0, 0, 0, 0.32) !important;
 }
 
+
+
 /* 태블릿/모바일에서는 화면 전체 너비의 슬라이드 패널 */
 @media (max-width: 850px) {
     .route-panel {
@@ -564,10 +566,10 @@ body.dark .place-side-panel .place-route-panel .panel-header {
     box-shadow: 0 3px 10px rgba(65, 51, 35, 0.04);
 }
 
-.place-side-panel .transit-route-option:hover,
-.place-side-panel .transit-route-option.active {
+/* .place-side-panel .transit-route-option:hover, */
+/* .place-side-panel .transit-route-option.active {
     border-color: var(--yellow-dark);
-}
+} */
 
 .place-side-panel .transit-route-option.active {
     background: #fff9e8;
@@ -990,11 +992,18 @@ body.dark .place-side-panel.route-focus .place-image {
 .place-review-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .place-review-user { color: var(--gray-800); font-size: 12px; font-weight: 800; }
 .place-review-rating { color: #e5a900; font-size: 11px; letter-spacing: 1px; }
-.place-review-content { margin: 7px 0 5px; color: var(--gray-700); font-size: 12px; line-height: 1.55; }
+.place-review-content { margin: 7px 0 5px; color: var(--gray-700); font-size: 12px; line-height: 1.55; white-space: normal; overflow: visible; 
+    text-overflow: clip; word-break: break-word; overflow-wrap: anywhere;}
 .place-review-date { color: var(--gray-400); font-size: 10px; }
 .place-empty-text { margin: 6px 0; color: var(--gray-500); font-size: 12px; }
 body.dark .place-detail-sections, body.dark .place-detail-section, body.dark .place-review-item { border-color: var(--gray-200); }
 body.dark .place-review-summary { background: #fffaf0; }
+/* .place-review-content-full {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+} */
 
 /* MR.EUM 수정부분: Google Maps 스타일 리뷰 작성 UI */
 .review-compose-modal { width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow-y: auto; }
@@ -1004,7 +1013,7 @@ body.dark .place-review-summary { background: #fffaf0; }
 .review-star-picker { display: flex; gap: 4px; }
 .review-star-picker button {
     width: 40px;
-    height: 40px;
+    height: 40px; 
     padding: 0;
     border: 0;
     background: transparent;
@@ -1394,15 +1403,19 @@ body:has(#routePanel.show) .place-side-panel #placeRouteButton:hover {
     font-size: 17px;
 }
 
-.place-side-panel .place-route-panel .transport-tabs button:hover {
+/* .place-side-panel .place-route-panel .transport-tabs button:hover {
     background: #fffaf0;
     border-color: #edcf73;
-}
+} */
 
 .place-side-panel .place-route-panel .transport-tabs button.active {
     background: #fff1b8;
     border-color: #efc84e;
     color: #4f3a22;
+}
+
+.place-side-panel .place-route-panel .transport-tabs button.active i {
+    color: #5b4026;
 }
 
 .place-side-panel .place-route-panel #findRouteButton {
@@ -1610,7 +1623,7 @@ body:has(#routePanel.show) .place-side-panel #placeRouteButton:hover {
     z-index: 2;
     width: 22px;
     height: 22px;
-    margin-left: 2px;
+    margin-left: 1px;
     padding-top: 3px;
     border-radius: 50%;
     background: var(--gray-50);
@@ -1833,8 +1846,12 @@ body.dark .google-place-photo-carousel {
     overflow: hidden;
     border: 1px solid #e8c86a;
     border-radius: 50%;
-    color: #6f5221;
-    background: var(--yellow-light);
+
+    /* mr.eum수정부분 */
+    /* 장소 리뷰 기본 프로필 색상을 마이페이지 기본 프로필과 동일하게 */
+    color: var(--cheese-brown);
+    background: var(--cheese-yellow);
+
     font-size: 17px;
 }
 
@@ -1859,3 +1876,3608 @@ body.dark .google-place-photo-carousel {
     gap: 8px;
     flex-wrap: wrap;
 }
+
+/* =====================================================
+   MR.EUM 수정부분
+   다크모드 장소/길찾기 패널 스크롤바
+===================================================== */
+
+/* 다크모드일 때만 스크롤바 크기 변경 */
+body.dark .place-side-panel .place-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+/* 스크롤바 배경 */
+body.dark .place-side-panel .place-content::-webkit-scrollbar-track {
+    background: #25231f;
+}
+
+/* 실제 움직이는 스크롤바 */
+body.dark .place-side-panel .place-content::-webkit-scrollbar-thumb {
+    background: #6b675e;
+    border-radius: 10px;
+}
+
+/* 마우스를 올렸을 때 */
+body.dark .place-side-panel .place-content::-webkit-scrollbar-thumb:hover {
+    background: #8a8478;
+}
+
+/* Firefox */
+body.dark .place-side-panel .place-content {
+    scrollbar-width: thin;
+    scrollbar-color: #6b675e #25231f;
+}
+
+/* =====================================================
+   mr.eum수정부분
+   도보 / 자동차 길찾기 카드
+   대중교통과 유사한 카드 구조
+   ※ transit CSS는 건드리지 않음
+===================================================== */
+
+.place-side-panel .simple-route-option {
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 14px;
+
+    overflow: hidden;
+
+    box-sizing: border-box;
+
+    border: 1px solid var(--gray-200);
+    border-radius: 15px;
+
+    background: var(--white);
+    color: var(--text);
+
+    text-align: left;
+
+    cursor: pointer;
+
+    box-shadow: 0 3px 10px rgba(65, 51, 35, 0.04);
+
+    transition:
+        border-color .15s ease,
+        background .15s ease,
+        box-shadow .15s ease;
+}
+
+
+/* mr.eum수정부분
+   마우스 오버 / 선택 상태 */
+/* .place-side-panel .simple-route-option:hover, */
+/* .place-side-panel .simple-route-option.active {
+    border-color: var(--yellow-dark);
+} */
+
+
+/* mr.eum수정부분
+   선택된 카드 */
+.place-side-panel .simple-route-option.active {
+    background: #fff9e8;
+
+    box-shadow:
+        0 7px 18px rgba(111, 82, 31, 0.08);
+}
+
+
+/* =====================================================
+   상단 시간 + 추천
+===================================================== */
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-option .route-summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    margin-bottom: 11px;
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-option .route-summary-main {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    min-width: 0;
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-option .route-summary-main > strong {
+    flex-shrink: 0;
+
+    font-size: 18px;
+    font-weight: 800;
+
+    line-height: 1.1;
+
+    letter-spacing: -0.02em;
+}
+
+
+/* mr.eum수정부분
+   추천 / 대안 뱃지 */
+.place-side-panel .simple-route-option .route-recommend-badge {
+    display: inline-flex !important;
+
+    align-items: center;
+    justify-content: center;
+
+    margin: 0 !important;
+    padding: 3px 7px;
+
+    border-radius: 999px;
+
+    color: #6a4b13 !important;
+    background: var(--yellow-light);
+
+    font-size: 9px !important;
+    font-weight: 800;
+
+    line-height: 1.2 !important;
+
+    white-space: nowrap;
+}
+
+
+/* mr.eum수정부분
+   거리 */
+.place-side-panel .simple-route-option .route-summary-time {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+
+    margin: 1px 0 0 !important;
+
+    color: var(--gray-600) !important;
+
+    font-size: 10px !important;
+    font-weight: 600;
+
+    line-height: 1.45 !important;
+
+    text-align: right;
+
+    white-space: nowrap;
+}
+
+/* mr.eum수정부분 */
+/* 시작 시간 → 도착 시간은 조금 더 또렷하게 표시합니다. */
+.place-side-panel .simple-route-option .route-summary-clock {
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* mr.eum수정부분 */
+/* 시간과 거리 사이의 구분점입니다. */
+.place-side-panel .simple-route-option .route-summary-time > b {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--gray-400);
+}
+
+
+/* =====================================================
+   출발지 → 도착지
+===================================================== */
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-option .route-line {
+    display: grid;
+
+    grid-template-columns:
+        25px
+        minmax(0, 1fr)
+        18px;
+
+    align-items: center;
+
+    gap: 8px;
+
+    min-height: 34px;
+
+    padding: 8px 9px;
+
+    border-radius: 10px;
+
+    background: rgba(246, 201, 69, 0.10);
+}
+
+
+/* mr.eum수정부분
+   도보 / 자동차 아이콘 */
+.place-side-panel .simple-route-option .route-mode-icon {
+    width: 25px;
+    height: 25px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 8px;
+
+    color: var(--brown);
+
+    background: var(--yellow-light);
+
+    font-size: 14px;
+}
+
+
+/* mr.eum수정부분
+   출발지 → 도착지 */
+.place-side-panel .simple-route-option .route-line-chips {
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+
+    gap: 6px;
+
+    color: var(--text);
+
+    font-size: 11px;
+    font-weight: 700;
+
+    line-height: 1.5;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-option .route-line-chips em {
+    flex-shrink: 0;
+
+    color: var(--gray-400);
+
+    font-style: normal;
+}
+
+
+/* mr.eum수정부분
+   펼침 화살표 */
+.place-side-panel .simple-route-option .simple-route-chevron {
+    color: var(--gray-400);
+
+    font-size: 14px;
+
+    transition:
+        transform .2s ease;
+}
+
+
+/* mr.eum수정부분
+   펼쳐졌을 때 화살표 */
+.place-side-panel
+.simple-route-option.expanded
+.simple-route-chevron {
+    transform: rotate(180deg);
+}
+
+
+/* =====================================================
+   도보 상세 경로
+===================================================== */
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-details {
+    display: none;
+
+    margin-top: 13px;
+    padding-top: 13px;
+
+    border-top: 1px solid var(--gray-200);
+
+    cursor: default;
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel
+.simple-route-option.expanded
+.simple-route-details {
+    display: block;
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-detail-header {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+
+    margin-bottom: 13px;
+}
+
+
+.place-side-panel
+.simple-route-detail-header strong {
+    font-size: 12px;
+    font-weight: 800;
+}
+
+
+/* =====================================================
+   대안 버튼
+===================================================== */
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-alternatives {
+    width: 100%;
+
+    margin-top: 2px;
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-alternatives-toggle {
+    width: 100%;
+
+    min-height: 42px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 10px 13px;
+
+    box-sizing: border-box;
+
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+
+    background: var(--white);
+    color: var(--text);
+
+    font-size: 11px;
+    font-weight: 800;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        border-color .15s ease,
+        background .15s ease;
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-alternatives-toggle:hover {
+    border-color: var(--yellow-dark);
+
+    background: var(--yellow-light);
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel
+.simple-route-alternatives-toggle > i {
+    color: var(--gray-400);
+
+    font-size: 14px;
+
+    transition:
+        transform .2s ease;
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel
+.simple-route-alternatives-toggle.expanded
+> i {
+    transform: rotate(180deg);
+}
+
+
+/* mr.eum수정부분 */
+.place-side-panel .simple-route-alternatives-list {
+    margin-top: 10px;
+}
+
+
+/* mr.eum수정부분
+   대안 카드 사이 간격 */
+.place-side-panel
+.simple-route-alternatives-list
+.simple-route-option {
+    margin-bottom: 10px;
+}
+
+
+/* =====================================================
+   다크모드
+===================================================== */
+
+/* mr.eum수정부분 */
+body.dark .place-side-panel .simple-route-option {
+    background: #2e2c27;
+
+    border-color: #4a4740;
+
+    color: #f5f2ea;
+}
+
+
+/* mr.eum수정부분 */
+body.dark .place-side-panel
+.simple-route-option.active {
+    background: #3a3528;
+
+    border-color: #d8a900;
+}
+
+
+/* mr.eum수정부분 */
+body.dark .place-side-panel
+.simple-route-option .route-line {
+    background: #25231f;
+}
+
+
+/* mr.eum수정부분 */
+body.dark .place-side-panel
+.simple-route-option .route-line-chips {
+    color: #f5f2ea;
+}
+
+
+/* mr.eum수정부분 */
+body.dark .place-side-panel
+.simple-route-details {
+    border-top-color: #4a4740;
+}
+
+
+/* mr.eum수정부분 */
+body.dark .place-side-panel
+.simple-route-alternatives-toggle {
+    background: #2e2c27;
+
+    border-color: #4a4740;
+
+    color: #f5f2ea;
+}
+
+
+/* mr.eum수정부분 */
+body.dark .place-side-panel
+.simple-route-alternatives-toggle:hover {
+    background: #3a3528;
+
+    border-color: #d8a900;
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   도보 상세 경로
+   ===================================================== */
+
+.walking-detail {
+    margin-top: 14px;
+    padding: 14px;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    border-radius: 12px;
+}
+
+.walking-detail-title {
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.walking-step-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* mr.eum수정부분 */
+/* 출발 지점이 첫 번째 안내와 너무 붙지 않도록 여백을 확보합니다. */
+.walking-step-point {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    min-height: 34px;
+
+    margin-bottom: 18px;
+
+    font-size: 13px;
+}
+.walking-step-dot {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    border-radius: 50%;
+    background: #4285F4;
+}
+
+.walking-step-item {
+    margin-top : 18px;
+    display: flex;
+    align-items: flex-start;
+    min-height: 58px;
+    min-width: 0;
+}
+
+.walking-step-timeline {
+    position: relative;
+    width: 28px;
+    flex: 0 0 28px;
+    display: flex;
+    justify-content: center;
+}
+
+.walking-step-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--gray-300);
+}
+
+.walking-step-icon {
+    position: relative;
+    z-index: 1;
+
+    width: 26px;
+    min-width: 26px;
+    max-width: 26px;
+
+    height: 26px;
+    min-height: 26px;
+    max-height: 26px;
+
+    flex: 0 0 26px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.walking-step-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 2px 0 13px 10px;
+}
+
+.walking-step-instruction {
+    display: block;
+    min-width: 0;
+
+    font-size: 13px;
+    line-height: 1.55;
+    font-weight: 500;
+
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+
+/* mr.eum수정부분 */
+/* 거리 정보 뒤에 가로 구분선을 넣어 각 도보 단계를 명확하게 구분합니다. */
+.walking-step-distance {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 5px;
+
+    font-size: 11px;
+    line-height: 1.4;
+    font-weight: 200;
+
+    color: var(--gray-500);
+}
+
+/* mr.eum수정부분 */
+/* 거리 표시 오른쪽에 남은 공간만큼 실선을 표시합니다. */
+.walking-step-distance::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--gray-200);
+}
+
+.walking-detail-empty {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--gray-50);
+    font-size: 13px;
+    color: var(--gray-500);
+}
+
+
+/* =====================================================
+   다크모드
+   ===================================================== */
+
+[data-theme="dark"] .walking-detail {
+    border-color: var(--gray-700);
+    background: var(--gray-800);
+}
+
+[data-theme="dark"] .walking-step-line {
+    background: var(--gray-600);
+}
+
+[data-theme="dark"] .walking-step-icon {
+    background: var(--gray-800);
+    border-color: var(--gray-600);
+}
+
+[data-theme="dark"] .walking-detail-empty {
+    background: var(--gray-800);
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 사진
+   - 사진 테두리 제거
+   - 최대 4장 2 x 2
+   - 사진 클릭 가능
+===================================================== */
+
+.place-review-photos {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+
+    gap: 4px;
+
+    width: min(100%, 360px);
+
+    margin-top: 12px;
+
+    overflow: hidden;
+}
+
+/* 사진 1장 */
+.place-review-photos.is-one {
+    grid-template-columns: 1fr;
+}
+
+/* 사진 2장 */
+.place-review-photos.is-two {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* 사진 3장 */
+.place-review-photos.is-three {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* 사진 4장 */
+.place-review-photos.is-four {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   사진 자체를 버튼으로 사용하기 때문에
+   브라우저 기본 테두리/여백을 제거합니다.
+===================================================== */
+
+.place-review-photo-item {
+    position: relative;
+
+    width: 100%;
+    min-width: 0;
+
+    aspect-ratio: 1 / 1;
+
+    padding: 0;
+    margin: 0;
+
+    border: none;
+    outline: none;
+
+    background: transparent;
+
+    overflow: hidden;
+
+    cursor: pointer;
+
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+
+/* 실제 사진 */
+.place-review-photo-item img {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    transition: transform 0.2s ease;
+}
+
+
+/* 사진에 마우스를 올렸을 때 */
+.place-review-photo-item:hover img {
+    transform: scale(1.03);
+}
+
+
+/* =====================================================
+   5장 이상일 때 +N
+===================================================== */
+
+.place-review-photo-more {
+    position: absolute;
+
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0, 0, 0, 0.45);
+
+    color: #fff;
+
+    font-size: 22px;
+    font-weight: 700;
+
+    pointer-events: none;
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 사진 전체보기 화면
+===================================================== */
+
+/*
+   사진 확대 화면을 브라우저 전체에 띄웁니다.
+
+   position: fixed
+   -> 현재 보고 있는 장소 페이지 위에 완전히 덮어씌움
+
+   z-index: 999999
+   -> 장소 상세 패널이나 다른 모달보다 위에 표시
+*/
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 사진 전체보기 화면
+   사진 크기가 달라도 항상 화면 정중앙
+===================================================== */
+
+.review-photo-viewer {
+
+    position: fixed;
+    inset: 0;
+
+    z-index: 999999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 100%;
+
+    background: rgba(0,0,0,0.52);
+
+}
+
+.review-photo-viewer[hidden] {
+
+    display: none;
+
+}
+
+
+/* 배경 */
+
+.review-photo-viewer-backdrop {
+
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+}
+
+
+/* =====================================================
+   중앙 정렬 영역
+
+   모든 사진은 이 영역 중앙에 들어간다.
+===================================================== */
+
+.review-photo-viewer-content {
+
+    position: relative;
+
+    z-index: 2;
+
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 70px 90px;
+
+    box-sizing: border-box;
+
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   사진 + 작성자 + 리뷰를 하나의 중앙 영역으로 묶습니다.
+===================================================== */
+
+.review-photo-viewer-main {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    width: min(80vw, 900px);
+    max-width: 900px;
+
+    max-height: calc(100vh - 120px);
+
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   사진 아래 작성자 / 리뷰 영역
+===================================================== */
+
+.review-photo-viewer-info {
+
+    display: flex;
+
+    align-items: center;
+
+    width: 100%;
+
+    margin-top: 16px;
+
+    gap: 12px;
+
+    box-sizing: border-box;
+
+    /* 프로필 + 리뷰 영역 배경 */
+    padding: 8px 12px 50px;
+
+    /* 기존보다 조금 더 불투명한 검정 */
+    background: rgba(0, 0, 0, 0.72);
+
+    /* 사진 아래 영역을 하나의 카드처럼 */
+    border-radius: 10px;
+
+}
+
+
+/* 작성자 프로필 + 닉네임 */
+
+.review-photo-viewer-profile {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    flex-shrink: 0;
+
+    position: relative;
+    z-index: 1;
+
+}
+
+
+/* 프로필 */
+
+.review-photo-viewer-avatar {
+
+    width: 36px;
+    height: 36px;
+
+    flex-shrink: 0;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    border-radius: 50%;
+
+    background: var(--cheese-yellow);
+    color: var(--cheese-brown);
+}
+
+
+/* 실제 프로필 사진 */
+
+.review-photo-viewer-avatar img {
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    display: block;
+
+}
+
+
+/* 닉네임 */
+
+.review-photo-viewer-nickname {
+
+    max-width: 140px;
+
+    overflow: hidden;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+
+    color: #ffffff;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 내용은 한 줄만 표시하고
+   길면 ... 처리합니다.
+===================================================== */
+
+.review-photo-viewer-text {
+
+    flex: 1;
+
+    min-width: 0;
+
+    margin: 0;
+
+    overflow: hidden;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+
+    color: rgba(255,255,255,0.9);
+
+    font-size: 14px;
+
+    line-height: 36px;
+
+    /* 프로필보다 리뷰 내용을 살짝 아래로 */
+    position: relative;
+    top: 30px;
+
+}
+
+
+/* 사진 중앙 기준 박스 */
+
+/* =====================================================
+   MR.EUM 수정부분
+   사진 영역
+
+   사진 자체 크기가 작으면 자연스럽게 작게 나오고
+   큰 사진은 최대 영역까지만 커집니다.
+===================================================== */
+
+.review-photo-viewer-image-wrap {
+
+    width: min(80vw, 900px);
+
+    height: min(70vh, 700px);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    box-sizing: border-box;
+
+}
+
+
+/* 실제 사진 */
+
+.review-photo-viewer-image {
+
+    display: block;
+
+    max-width: 100%;
+    max-height: 100%;
+
+    width: auto;
+    height: auto;
+
+    object-fit: contain;
+
+    margin: auto;
+
+    border: none;
+
+    outline: none;
+
+    user-select: none;
+
+}
+
+
+/* 닫기 */
+
+.review-photo-viewer-close {
+
+    position: absolute;
+
+    top: 20px;
+    right: 24px;
+
+    z-index: 5;
+
+    width: 44px;
+    height: 44px;
+
+    border: none;
+
+    background: transparent;
+
+    color: white;
+
+    font-size: 36px;
+
+    cursor: pointer;
+
+}
+
+
+/* 이전 다음 */
+
+.review-photo-viewer-prev,
+.review-photo-viewer-next {
+
+    position: absolute;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    z-index: 5;
+
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 50%;
+
+    background: rgba(0,0,0,.45);
+
+    color: white;
+
+    font-size: 38px;
+
+    cursor: pointer;
+
+}
+
+.review-photo-viewer-prev {
+
+    left: 18px;
+
+}
+
+.review-photo-viewer-next {
+
+    right: 18px;
+
+}
+
+
+/* Hover */
+
+.review-photo-viewer-prev:hover,
+.review-photo-viewer-next:hover {
+
+    background: rgba(0,0,0,.7);
+
+}
+
+
+/* 스크롤 방지 */
+
+body.review-photo-viewer-open {
+
+    overflow: hidden;
+
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 더보기 버튼
+===================================================== */
+.place-review-more-button {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* 마우스를 올렸을 때 */
+.place-review-more-button:hover {
+    text-decoration: underline;
+}
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 본문 더보기 기능
+===================================================== */
+
+/*
+   리뷰 내용과 더보기 버튼을 하나의 영역으로 묶습니다.
+*/
+.place-review-content-wrap {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 본문 한 줄 / 전체 보기
+===================================================== */
+
+/*
+   처음에는 한 줄만 표시합니다.
+   review-content-collapsed 클래스가 있을 때만
+   한 줄로 제한됩니다.
+*/
+/* =====================================================
+   MR.EUM수정부분
+   리뷰 더보기 - 원래 위치에서 아래로 자연스럽게 확장
+===================================================== */
+
+/* =====================================================
+   MR.EUM 수정부분
+   리뷰 본문 한 줄 / 전체 보기
+===================================================== */
+
+.place-review-content.review-content-collapsed {
+    display: -webkit-box;
+
+    width: 100%;
+    margin: 0;
+
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.place-review-content:not(.review-content-collapsed) {
+    display: block;
+
+    width: 100%;
+    margin: 0;
+
+    overflow: visible;
+
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+
+
+/*
+   MR.EUM 핵심 수정
+
+   더보기 버튼이 반드시 보이도록 합니다.
+*/
+.place-review-more-button {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+
+/*
+   마우스를 올렸을 때
+*/
+.place-review-more-button:hover {
+    opacity: 0.7;
+}
+
+/* =====================================================
+   모바일
+===================================================== */
+
+@media(max-width:768px){
+
+    .review-photo-viewer-content{
+
+        padding:60px 55px;
+
+    }
+
+    .review-photo-viewer-image-wrap{
+
+        width:88vw;
+        height:68vh;
+
+    }
+
+    .review-photo-viewer-prev{
+
+        left:8px;
+
+    }
+
+    .review-photo-viewer-next{
+
+        right:8px;
+
+    }
+
+    .review-photo-viewer-close{
+
+        top:12px;
+        right:12px;
+
+    }
+
+}
+
+
+
+/* mr.eum수정부분
+   장소 상세 리뷰 수정 사진 UI
+*/
+.place-review-edit-photo-section { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--gray-100); }
+.place-review-edit-photo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.place-review-edit-photo-header strong { color: var(--gray-700); font-size: 11px; }
+.place-review-edit-photo-header span { color: var(--gray-500); font-size: 10px; }
+.place-review-edit-photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; min-height: 64px; }
+.place-review-edit-photo { position: relative; aspect-ratio: 1; overflow: hidden; border: 1px solid var(--cheese-border); border-radius: 9px; background: var(--cheese-cream); }
+.place-review-edit-photo img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.place-review-edit-photo-delete { position: absolute; top: 4px; right: 4px; width: 21px; height: 21px; border: 0; border-radius: 50%; background: rgba(30,27,20,.72); color: #fff; font-size: 14px; line-height: 1; cursor: pointer; }
+.place-review-edit-photo-empty { display: grid; place-items: center; grid-column: 1 / -1; min-height: 62px; border: 1px dashed var(--cheese-border); border-radius: 9px; color: var(--gray-500); font-size: 10px; }
+.place-review-edit-add-photo { margin-top: 7px; padding: 6px 9px; border: 1px solid var(--cheese-border); border-radius: 8px; background: var(--cheese-cream); color: var(--brown-dark); font-size: 10px; font-weight: 800; cursor: pointer; }
+body.dark .place-review-edit-photo-section { border-color: #3d3932; }
+body.dark .place-review-edit-photo-header strong { color: #eee8dc; }
+
+/* mr.eum수정부분
+   기존 리뷰 사진 표시 배지
+*/
+.place-review-edit-photo-badge {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    padding: 2px 5px;
+    border-radius: 5px;
+    background: rgba(30,27,20,.72);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+/* mr.eum수정부분 */
+/* 자동차 상세 안내의 통행료를 도보 상세 안내와 자연스럽게 연결합니다. */
+.driving-toll {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    margin-top: 6px;
+    padding-top: 12px;
+
+    border-top: 1px solid var(--gray-200);
+}
+
+/* mr.eum수정부분 */
+/* 통행료 제목은 보조 정보처럼 가볍게 표시합니다. */
+.driving-toll-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-500);
+}
+
+/* mr.eum수정부분 */
+/* 실제 통행료 금액은 조금 더 또렷하게 표시합니다. */
+.driving-toll-price {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gray-700);
+    white-space: nowrap;
+}
+
+/* =====================================================
+   리뷰 번역 UI
+===================================================== */
+
+.place-review-translation {
+    position: relative;
+    margin-top: 8px;
+}
+
+.place-review-translate-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 30px;
+    padding: 5px 9px;
+    border: 1px solid #e7dfd1;
+    border-radius: 9px;
+    background: #fffdf8;
+    color: #6d6253;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.place-review-translate-toggle:hover {
+    border-color: #e9bb45;
+    background: #fff8e5;
+}
+
+.place-review-translate-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 5px);
+    left: 0;
+    min-width: 130px;
+    padding: 5px;
+    border: 1px solid #e4dac9;
+    border-radius: 11px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(45, 37, 24, 0.14);
+}
+
+.place-review-translate-option {
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #3e372e;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.place-review-translate-option:hover {
+    background: #fff5d8;
+}
+
+.place-review-translate-option:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.place-review-translated-box {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border: 1px solid #eee5d6;
+    border-radius: 11px;
+    background: #fffaf0;
+}
+
+.place-review-translated-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+    color: #9a7a32;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.place-review-original-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #8b7454;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.place-review-translated-text {
+    margin: 0;
+    color: #3b352d;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+body.dark .place-review-translate-toggle {
+    border-color: #4b463d;
+    background: #2b2924;
+    color: #ddd4c4;
+}
+
+body.dark .place-review-translate-toggle:hover {
+    border-color: #8f7436;
+    background: #373126;
+}
+
+body.dark .place-review-translate-menu {
+    border-color: #4b463d;
+    background: #272520;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
+body.dark .place-review-translate-option {
+    color: #eee8dc;
+}
+
+body.dark .place-review-translate-option:hover {
+    background: #393329;
+}
+
+body.dark .place-review-translated-box {
+    border-color: #49443b;
+    background: #2c2923;
+}
+
+body.dark .place-review-translated-head {
+    color: #d9bd72;
+}
+
+body.dark .place-review-original-button {
+    color: #cfc3ad;
+}
+
+body.dark .place-review-translated-text {
+    color: #f1ece2;
+}
+
+
+/* =====================================================
+   CHEESE MAP × NAVITIME 대중교통 상세 디자인
+===================================================== */
+
+.place-side-panel .simple-route-option {
+    position: relative;
+}
+
+.place-side-panel .simple-route-option.active {
+    border-color: #d9ad2f;
+    background:
+        linear-gradient(
+            180deg,
+            #fff9e7 0%,
+            #fffdf7 100%
+        );
+}
+
+.place-side-panel .simple-route-option .route-line {
+    border: 1px solid rgba(216, 174, 55, 0.18);
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255, 232, 145, 0.42),
+            rgba(255, 248, 221, 0.72)
+        );
+}
+
+.place-side-panel .simple-route-option .route-mode-icon {
+    box-shadow:
+        inset 0 0 0 1px rgba(120, 87, 23, 0.08);
+}
+
+.place-side-panel .simple-route-option .route-line-chips > span {
+    color: #423721;
+    font-weight: 800;
+}
+
+.place-side-panel .cheese-transit-detail {
+    margin-top: 2px;
+}
+
+.place-side-panel .cheese-transit-overview {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto
+        minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+
+    margin-bottom: 10px;
+    padding: 10px 11px;
+
+    border: 1px solid rgba(216, 174, 55, 0.24);
+    border-radius: 12px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #fff7d7,
+            #fffdf7
+        );
+}
+
+.place-side-panel .cheese-transit-overview > div {
+    min-width: 0;
+}
+
+.place-side-panel .cheese-transit-overview > div:nth-child(3) {
+    text-align: right;
+}
+
+.place-side-panel .cheese-transit-overview span {
+    display: block;
+    margin-bottom: 2px;
+
+    color: #9a855b;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .cheese-transit-overview strong {
+    display: block;
+
+    color: #332b1f;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+
+.place-side-panel .cheese-transit-overview > i {
+    color: #b79442;
+    font-size: 13px;
+}
+
+.place-side-panel .cheese-transit-overview .cheese-transit-overview-fare {
+    grid-column: 1 / -1;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 3px;
+    padding-top: 8px;
+
+    border-top: 1px dashed rgba(171, 139, 68, 0.24);
+
+    text-align: left;
+}
+
+.place-side-panel .cheese-transit-overview .cheese-transit-overview-fare span {
+    margin: 0;
+}
+
+.place-side-panel .cheese-transit-overview .cheese-transit-overview-fare strong {
+    color: #a87600;
+    font-size: 13px;
+}
+
+.place-side-panel .cheese-transit-walk-total {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    margin-bottom: 11px;
+    padding: 6px 9px;
+
+    border-radius: 9px;
+
+    background: #f6f2e8;
+    color: #796d59;
+
+    font-size: 9px;
+    font-weight: 750;
+}
+
+.place-side-panel .cheese-transit-walk-total i {
+    color: #a1834b;
+    font-size: 12px;
+}
+
+.place-side-panel .cheese-transit-timeline {
+    display: block;
+}
+
+.place-side-panel .cheese-transit-section {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 8px;
+
+    position: relative;
+}
+
+.place-side-panel .cheese-transit-section + .cheese-transit-section {
+    margin-top: 3px;
+}
+
+.place-side-panel .cheese-transit-rail {
+    position: relative;
+    min-height: 100%;
+}
+
+.place-side-panel .cheese-transit-node {
+    position: relative;
+    z-index: 2;
+
+    display: grid;
+    place-items: center;
+
+    width: 24px;
+    height: 24px;
+
+    border: 2px solid #d7ac38;
+    border-radius: 50%;
+
+    background: #fffdf7;
+    color: #8c6b1f;
+
+    font-size: 11px;
+
+    box-shadow: 0 2px 6px rgba(82, 62, 24, 0.08);
+}
+
+.place-side-panel .cheese-transit-section.walk .cheese-transit-node {
+    border-color: #b8aea0;
+    color: #756c60;
+}
+
+.place-side-panel .cheese-transit-rail-line {
+    position: absolute;
+    z-index: 1;
+
+    top: 24px;
+    bottom: -8px;
+    left: 11px;
+
+    width: 2px;
+
+    border-radius: 999px;
+    background: #d8b651;
+}
+
+.place-side-panel .cheese-transit-rail-line.dotted {
+    width: 0;
+    border-left: 2px dotted #b8aea0;
+    background: transparent;
+}
+
+.place-side-panel .cheese-transit-section-body {
+    min-width: 0;
+    padding-bottom: 13px;
+}
+
+.place-side-panel .cheese-transit-point {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    min-width: 0;
+    min-height: 24px;
+}
+
+.place-side-panel .cheese-transit-point strong {
+    min-width: 0;
+
+    color: #302a20;
+    font-size: 11px;
+    font-weight: 900;
+
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .cheese-transit-point em {
+    display: inline-grid;
+    place-items: center;
+
+    min-width: 24px;
+    height: 20px;
+    padding: 0 5px;
+
+    border: 1px solid #e0d8ca;
+    border-radius: 6px;
+
+    background: #fff;
+    color: #564c3e;
+
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-clock {
+    flex: 0 0 34px;
+
+    color: #9c885e;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-move-card {
+    margin: 5px 0 7px;
+    padding: 9px 10px;
+
+    border: 1px solid #ece4d5;
+    border-left: 4px solid #e2b942;
+    border-radius: 11px;
+
+    background: #fff;
+
+    box-shadow: 0 3px 10px rgba(69, 56, 35, 0.04);
+}
+
+.place-side-panel .cheese-transit-section.walk .cheese-transit-move-card {
+    border-left-style: dashed;
+    border-left-color: #a99f90;
+    background: #fbfaf7;
+}
+
+.place-side-panel .cheese-transit-move-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.place-side-panel .cheese-transit-mode {
+    display: grid;
+    place-items: center;
+
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+
+    border-radius: 8px;
+
+    background: #fff2bd;
+    color: #7d5d13;
+
+    font-size: 14px;
+}
+
+.place-side-panel .cheese-transit-section.walk .cheese-transit-mode {
+    background: #efede8;
+    color: #71695d;
+}
+
+.place-side-panel .cheese-transit-move-main > div {
+    min-width: 0;
+}
+
+.place-side-panel .cheese-transit-move-main strong {
+    display: block;
+
+    color: #342c20;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.4;
+
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .cheese-transit-move-main span,
+.place-side-panel .cheese-transit-move-main small {
+    display: block;
+
+    margin-top: 2px;
+
+    color: #7f7566;
+    font-size: 9px;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.place-side-panel .cheese-transit-move-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+
+    margin-top: 8px;
+}
+
+.place-side-panel .cheese-transit-move-meta span,
+.place-side-panel .cheese-transit-move-meta b {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 21px;
+    padding: 0 7px;
+
+    border-radius: 999px;
+
+    background: #f5f1e8;
+    color: #6e6252;
+
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .cheese-transit-move-meta b {
+    background: #fff0ad;
+    color: #875f00;
+}
+
+.place-side-panel .cheese-transit-transfer {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    margin: 4px 0 2px;
+    padding: 4px 7px;
+
+    border: 1px solid rgba(215, 172, 56, 0.3);
+    border-radius: 999px;
+
+    background: #fff8dc;
+    color: #886917;
+
+    font-size: 8px;
+    font-weight: 900;
+}
+
+.place-side-panel .transit-fare {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 11px;
+    padding: 9px 11px;
+
+    border: 1px solid rgba(215, 172, 56, 0.28);
+    border-radius: 11px;
+
+    background: #fff8dd;
+}
+
+.place-side-panel .transit-fare-label {
+    color: #806c43;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.place-side-panel .transit-fare-price {
+    color: #9b6b00;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+/* NAVITIME 상세가 simple-route-option 안에서도 정상적으로 펼쳐지게 */
+.place-side-panel
+.simple-route-option.expanded
+.cheese-transit-detail {
+    display: block;
+}
+
+/* Dark */
+body.dark .place-side-panel .simple-route-option.active {
+    border-color: #8e7335;
+    background:
+        linear-gradient(
+            180deg,
+            #353026,
+            #2e2b25
+        );
+}
+
+body.dark .place-side-panel .simple-route-option .route-line {
+    border-color: #5d5135;
+    background: #393329;
+}
+
+body.dark .place-side-panel .simple-route-option .route-line-chips > span,
+body.dark .place-side-panel .cheese-transit-point strong,
+body.dark .place-side-panel .cheese-transit-move-main strong,
+body.dark .place-side-panel .cheese-transit-overview strong {
+    color: #f2ebdd;
+}
+
+body.dark .place-side-panel .cheese-transit-overview,
+body.dark .place-side-panel .cheese-transit-move-card,
+body.dark .place-side-panel .transit-fare {
+    border-color: #504a40;
+    background: #302d27;
+}
+
+body.dark .place-side-panel .cheese-transit-node {
+    border-color: #a7873c;
+    background: #2e2b25;
+    color: #e3c574;
+}
+
+body.dark .place-side-panel .cheese-transit-point em {
+    border-color: #555047;
+    background: #292722;
+    color: #ddd5c7;
+}
+
+body.dark .place-side-panel .cheese-transit-move-main span,
+body.dark .place-side-panel .cheese-transit-move-main small,
+body.dark .place-side-panel .cheese-transit-clock {
+    color: #bdb4a5;
+}
+
+body.dark .place-side-panel .cheese-transit-walk-total,
+body.dark .place-side-panel .cheese-transit-move-meta span {
+    background: #39362f;
+    color: #c8bfae;
+}
+
+
+/* =====================================================
+   NAVITIME 상세 - Google Maps 스타일로 간결화
+   기존 CHEESE MAP 톤은 유지하되 정보 밀도를 낮춥니다.
+===================================================== */
+
+.place-side-panel .cheese-transit-detail.googlelike {
+    margin-top: 4px;
+}
+
+.place-side-panel .cheese-transit-overview.compact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    margin: 0 0 10px;
+    padding: 8px 10px;
+
+    border: 0;
+    border-radius: 10px;
+
+    background: rgba(255, 248, 220, 0.72);
+}
+
+.place-side-panel .cheese-transit-timepair {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.place-side-panel .cheese-transit-timepair strong {
+    color: #302a20;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-timepair span {
+    color: #aa8a3b;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-walk-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    color: #7b705f;
+    font-size: 8px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.place-side-panel .cheese-transit-walk-summary i {
+    font-size: 11px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike {
+    display: block;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-section {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 7px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-node {
+    width: 20px;
+    height: 20px;
+
+    border-width: 1.5px;
+    font-size: 9px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-rail-line {
+    top: 20px;
+    left: 9px;
+    bottom: -4px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-section-body {
+    padding-bottom: 9px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-point {
+    min-height: 20px;
+    gap: 5px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-clock {
+    flex-basis: 32px;
+    font-size: 8px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-point strong {
+    font-size: 10px;
+}
+
+.place-side-panel .cheese-transit-timeline.googlelike .cheese-transit-point em {
+    min-width: 22px;
+    height: 18px;
+    padding: 0 4px;
+
+    font-size: 7px;
+}
+
+.place-side-panel .cheese-transit-walk-row,
+.place-side-panel .cheese-transit-ride-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    margin: 4px 0 6px;
+    padding: 7px 9px;
+
+    border-radius: 9px;
+}
+
+.place-side-panel .cheese-transit-walk-row {
+    justify-content: flex-start;
+
+    border: 0;
+    background: #f5f2ec;
+    color: #71685b;
+}
+
+.place-side-panel .cheese-transit-walk-row i {
+    font-size: 11px;
+}
+
+.place-side-panel .cheese-transit-walk-row strong {
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.place-side-panel .cheese-transit-walk-row span {
+    color: #847a6c;
+    font-size: 8px;
+    font-weight: 750;
+}
+
+.place-side-panel .cheese-transit-ride-row {
+    border: 1px solid #e9e1d2;
+    background: #fff;
+}
+
+.place-side-panel .cheese-transit-ride-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+
+    min-width: 0;
+}
+
+.place-side-panel .cheese-transit-ride-main > div {
+    min-width: 0;
+}
+
+.place-side-panel .cheese-transit-ride-main strong {
+    display: block;
+
+    color: #342d22;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.35;
+
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .cheese-transit-ride-main span,
+.place-side-panel .cheese-transit-ride-main small {
+    display: block;
+
+    margin-top: 2px;
+
+    color: #807568;
+    font-size: 8px;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.place-side-panel .cheese-transit-ride-row .cheese-transit-mode {
+    flex-basis: 24px;
+    width: 24px;
+    height: 24px;
+
+    border-radius: 7px;
+    font-size: 12px;
+}
+
+.place-side-panel .cheese-transit-ride-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    flex: 0 0 auto;
+}
+
+.place-side-panel .cheese-transit-ride-meta span,
+.place-side-panel .cheese-transit-ride-meta b {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 20px;
+    padding: 0 6px;
+
+    border-radius: 999px;
+
+    font-size: 8px;
+    font-weight: 850;
+}
+
+.place-side-panel .cheese-transit-ride-meta span {
+    background: #f3efe7;
+    color: #6f6557;
+}
+
+.place-side-panel .cheese-transit-ride-meta b {
+    background: #fff0ae;
+    color: #8b6500;
+}
+
+.place-side-panel .cheese-transit-transfer {
+    margin: 2px 0 4px;
+    padding: 3px 6px;
+
+    font-size: 7px;
+}
+
+.place-side-panel .transit-fare.total-only {
+    margin-top: 10px;
+    padding: 9px 10px;
+
+    border: 0;
+    border-top: 1px dashed rgba(188, 151, 55, 0.3);
+    border-radius: 0;
+
+    background: transparent;
+}
+
+.place-side-panel .transit-fare.total-only .transit-fare-label {
+    font-size: 9px;
+}
+
+.place-side-panel .transit-fare.total-only .transit-fare-price {
+    font-size: 13px;
+}
+
+/* 기존 과한 카드형 레이아웃 숨김/무력화 */
+.place-side-panel .cheese-transit-detail.googlelike .cheese-transit-move-card,
+.place-side-panel .cheese-transit-detail.googlelike .cheese-transit-overview-fare,
+.place-side-panel .cheese-transit-detail.googlelike .cheese-transit-walk-total {
+    display: none;
+}
+
+/* Dark */
+body.dark .place-side-panel .cheese-transit-overview.compact {
+    background: #353128;
+}
+
+body.dark .place-side-panel .cheese-transit-timepair strong {
+    color: #f0e9dc;
+}
+
+body.dark .place-side-panel .cheese-transit-walk-summary,
+body.dark .place-side-panel .cheese-transit-walk-row {
+    color: #c1b7a7;
+}
+
+body.dark .place-side-panel .cheese-transit-walk-row {
+    background: #37342e;
+}
+
+body.dark .place-side-panel .cheese-transit-ride-row {
+    border-color: #4b463e;
+    background: #2d2a25;
+}
+
+body.dark .place-side-panel .cheese-transit-ride-main strong {
+    color: #f1eadf;
+}
+
+body.dark .place-side-panel .cheese-transit-ride-main span,
+body.dark .place-side-panel .cheese-transit-ride-main small {
+    color: #bbb1a1;
+}
+
+body.dark .place-side-panel .cheese-transit-ride-meta span {
+    background: #3a362f;
+    color: #d0c6b5;
+}
+
+
+/* =====================================================
+   NAVITIME 경로 카드 상단 요약 - Google Maps식 간결화
+   도보 세부는 상단 요약에서 제외하고 출발→도착 + 이용 노선만 표시
+===================================================== */
+
+.place-side-panel .route-line-chips {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+}
+
+.place-side-panel .route-line-primary {
+    display: block;
+    max-width: 100%;
+
+    color: #342d22;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.35;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.place-side-panel .route-line-secondary {
+    display: block;
+    max-width: 100%;
+
+    color: #877b68;
+    font-size: 8px;
+    font-weight: 750;
+    line-height: 1.35;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+body.dark .place-side-panel .route-line-primary {
+    color: #f1eadf;
+}
+
+body.dark .place-side-panel .route-line-secondary {
+    color: #bbb09e;
+}
+
+
+/* =====================================================
+   NAVITIME 노선색 / 환승 가독성 개선
+===================================================== */
+
+.place-side-panel .navitime-route-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 7px 0 10px;
+    margin-bottom: 4px;
+
+    border-bottom: 1px solid #eee7da;
+}
+
+.place-side-panel .navitime-route-head strong {
+    color: #302a20;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-route-head > span {
+    color: #a98835;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-route-head small {
+    margin-left: auto;
+
+    color: #807564;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .navitime-route-steps {
+    padding-top: 4px;
+}
+
+.place-side-panel .navitime-step {
+    display: grid;
+    grid-template-columns:
+        34px
+        24px
+        minmax(0, 1fr);
+    gap: 5px;
+
+    position: relative;
+}
+
+.place-side-panel .navitime-step + .navitime-step {
+    margin-top: 1px;
+}
+
+.place-side-panel .navitime-step-time {
+    padding-top: 2px;
+
+    color: #877b69;
+    font-size: 8px;
+    font-weight: 850;
+    text-align: right;
+}
+
+.place-side-panel .navitime-step-line {
+    position: relative;
+    min-height: 100%;
+}
+
+.place-side-panel .navitime-step-dot {
+    position: relative;
+    z-index: 2;
+
+    display: grid;
+    place-items: center;
+
+    width: 20px;
+    height: 20px;
+
+    border-radius: 50%;
+
+    background: #fff;
+    font-size: 9px;
+}
+
+.place-side-panel .navitime-step-dot.transit {
+    border: 2px solid var(--navitime-line-color, #5B8DEF);
+    color: var(--navitime-line-color, #5B8DEF);
+}
+
+.place-side-panel .navitime-step-dot.walk {
+    border: 1.5px solid #aaa194;
+    color: #81776a;
+}
+
+.place-side-panel .navitime-step-connector {
+    position: absolute;
+
+    top: 20px;
+    bottom: -7px;
+    left: 9px;
+}
+
+.place-side-panel .navitime-step-connector.transit {
+    width: 3px;
+
+    border-radius: 999px;
+    background:
+        var(--navitime-line-color, #5B8DEF);
+}
+
+.place-side-panel .navitime-step-connector.walk {
+    width: 0;
+
+    border-left: 2px dotted #aaa194;
+}
+
+.place-side-panel .navitime-step-content {
+    min-width: 0;
+    padding-bottom: 12px;
+}
+
+.place-side-panel .navitime-step-place,
+.place-side-panel .navitime-station-row strong,
+.place-side-panel .navitime-arrival strong {
+    color: #312b21;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-station-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    min-height: 20px;
+}
+
+.place-side-panel .navitime-station-row em,
+.place-side-panel .navitime-arrival em {
+    display: inline-grid;
+    place-items: center;
+
+    min-width: 22px;
+    height: 18px;
+    padding: 0 4px;
+
+    border: 1px solid #ded6c8;
+    border-radius: 5px;
+
+    background: #fff;
+
+    color: #62594d;
+    font-size: 7px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-line-card {
+    display: grid;
+    grid-template-columns:
+        5px
+        minmax(0, 1fr)
+        auto;
+    gap: 8px;
+
+    align-items: stretch;
+
+    margin: 5px 0 6px;
+    padding: 8px 9px 8px 7px;
+
+    border: 1px solid #e7dfd2;
+    border-radius: 9px;
+
+    background: #fff;
+}
+
+.place-side-panel .navitime-line-swatch {
+    width: 5px;
+    min-height: 100%;
+
+    border-radius: 999px;
+
+    background:
+        var(--navitime-line-color, #5B8DEF);
+}
+
+.place-side-panel .navitime-line-main {
+    min-width: 0;
+}
+
+.place-side-panel .navitime-line-main strong {
+    display: block;
+
+    color: #322c22;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.35;
+
+    overflow-wrap: anywhere;
+}
+
+.place-side-panel .navitime-line-main span,
+.place-side-panel .navitime-line-main small {
+    display: block;
+
+    margin-top: 2px;
+
+    color: #7e7466;
+    font-size: 8px;
+    font-weight: 650;
+    line-height: 1.3;
+}
+
+.place-side-panel .navitime-line-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    align-self: center;
+}
+
+.place-side-panel .navitime-line-meta span,
+.place-side-panel .navitime-line-meta b {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 19px;
+    padding: 0 6px;
+
+    border-radius: 999px;
+
+    font-size: 8px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.place-side-panel .navitime-line-meta span {
+    background: #f2eee7;
+    color: #6f665a;
+}
+
+.place-side-panel .navitime-line-meta b {
+    background: #fff0ab;
+    color: #8a6200;
+}
+
+.place-side-panel .navitime-arrival {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    min-height: 20px;
+
+    color: #867a69;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .navitime-arrival > span:first-child {
+    flex: 0 0 auto;
+}
+
+.place-side-panel .navitime-transfer-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    margin: 3px 0 0;
+    padding: 3px 6px;
+
+    border: 1px solid #e3d9c7;
+    border-radius: 999px;
+
+    background: #faf6ee;
+
+    color: #746958;
+    font-size: 7px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-walk-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    margin: 5px 0 6px;
+    padding: 5px 7px;
+
+    border-radius: 8px;
+
+    background: #f4f1eb;
+    color: #746b5e;
+
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .navitime-walk-summary i {
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-walk-summary span + span {
+    color: #948979;
+}
+
+/* Dark mode */
+body.dark .place-side-panel .navitime-route-head {
+    border-bottom-color: #48433b;
+}
+
+body.dark .place-side-panel .navitime-route-head strong,
+body.dark .place-side-panel .navitime-step-place,
+body.dark .place-side-panel .navitime-station-row strong,
+body.dark .place-side-panel .navitime-arrival strong,
+body.dark .place-side-panel .navitime-line-main strong {
+    color: #f2ebdf;
+}
+
+body.dark .place-side-panel .navitime-line-card {
+    border-color: #4c463d;
+    background: #2e2b26;
+}
+
+body.dark .place-side-panel .navitime-line-main span,
+body.dark .place-side-panel .navitime-line-main small,
+body.dark .place-side-panel .navitime-step-time,
+body.dark .place-side-panel .navitime-arrival {
+    color: #bdb3a3;
+}
+
+body.dark .place-side-panel .navitime-station-row em,
+body.dark .place-side-panel .navitime-arrival em {
+    border-color: #565047;
+    background: #292722;
+    color: #ddd4c5;
+}
+
+body.dark .place-side-panel .navitime-transfer-row,
+body.dark .place-side-panel .navitime-walk-summary {
+    border-color: #4d473f;
+    background: #38342e;
+    color: #c5bbab;
+}
+
+
+/* =====================================================
+   NAVITIME SIMPLE FINAL
+   - 노선색 중심
+   - 장식 최소화
+   - 글자 크기 확대
+===================================================== */
+
+.place-side-panel .navitime-route-head {
+    padding: 9px 0 11px;
+}
+
+.place-side-panel .navitime-route-head strong {
+    font-size: 14px;
+}
+
+.place-side-panel .navitime-route-head small {
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-step {
+    grid-template-columns:
+        40px
+        25px
+        minmax(0, 1fr);
+    gap: 7px;
+}
+
+.place-side-panel .navitime-step-time {
+    padding-top: 3px;
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-step-dot {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-step-connector {
+    top: 22px;
+    left: 10px;
+}
+
+.place-side-panel .navitime-step-connector.transit {
+    width: 4px;
+}
+
+.place-side-panel .navitime-step-connector.walk {
+    border-left-width: 2px;
+}
+
+.place-side-panel .navitime-step-content {
+    padding-bottom: 14px;
+}
+
+.place-side-panel .navitime-step-place,
+.place-side-panel .navitime-station-row strong,
+.place-side-panel .navitime-arrival strong {
+    font-size: 12px;
+}
+
+.place-side-panel .navitime-station-row {
+    min-height: 22px;
+}
+
+.place-side-panel .navitime-station-row em,
+.place-side-panel .navitime-arrival em {
+    min-width: 25px;
+    height: 20px;
+    font-size: 8px;
+}
+
+/* 노선 카드: 박스 장식 줄이고 왼쪽 노선색만 강조 */
+.place-side-panel .navitime-line-card {
+    grid-template-columns:
+        5px
+        minmax(0, 1fr)
+        auto;
+    gap: 9px;
+
+    margin: 7px 0;
+    padding: 8px 7px;
+
+    border: 0;
+    border-radius: 7px;
+
+    background: transparent;
+    box-shadow: none;
+}
+
+.place-side-panel .navitime-line-swatch {
+    width: 5px;
+    border-radius: 999px;
+}
+
+.place-side-panel .navitime-line-main strong {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.place-side-panel .navitime-line-main span,
+.place-side-panel .navitime-line-main small {
+    margin-top: 3px;
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-line-meta {
+    gap: 5px;
+}
+
+.place-side-panel .navitime-line-meta span,
+.place-side-panel .navitime-line-meta b {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 9px;
+}
+
+.place-side-panel .navitime-line-meta span {
+    background: #f3f1ec;
+}
+
+/* 실제 운임만 노란 pill */
+.place-side-panel .navitime-line-meta b {
+    background: #fff0aa;
+    color: #805900;
+}
+
+.place-side-panel .navitime-arrival {
+    min-height: 22px;
+    font-size: 10px;
+}
+
+/* 환승은 카드보다 작은 텍스트 행 */
+.place-side-panel .navitime-transfer-row {
+    margin: 4px 0 2px;
+    padding: 0;
+
+    border: 0;
+    border-radius: 0;
+
+    background: transparent;
+
+    color: #8a7a62;
+    font-size: 9px;
+}
+
+.place-side-panel .navitime-transfer-row i {
+    font-size: 11px;
+}
+
+/* 도보도 단순 텍스트형 */
+.place-side-panel .navitime-walk-summary {
+    gap: 6px;
+
+    margin: 6px 0;
+    padding: 4px 0;
+
+    border-radius: 0;
+
+    background: transparent;
+
+    font-size: 10px;
+}
+
+.place-side-panel .navitime-walk-summary i {
+    font-size: 12px;
+}
+
+.place-side-panel .transit-fare.total-only {
+    margin-top: 12px;
+    padding-top: 11px;
+}
+
+.place-side-panel .transit-fare.total-only .transit-fare-label {
+    font-size: 10px;
+}
+
+.place-side-panel .transit-fare.total-only .transit-fare-price {
+    font-size: 15px;
+}
+
+/* 상단 요약도 조금 키움 */
+.place-side-panel .route-line-primary {
+    font-size: 11px;
+}
+
+.place-side-panel .route-line-secondary {
+    font-size: 10px;
+}
+
+/* Dark */
+body.dark .place-side-panel .navitime-line-card {
+    background: transparent;
+    border: 0;
+}
+
+body.dark .place-side-panel .navitime-transfer-row,
+body.dark .place-side-panel .navitime-walk-summary {
+    background: transparent;
+    border: 0;
+}
+
+
+/* =====================================================
+   NAVITIME 승강장 / 출구 우선 표시
+   우선순위: 승강장 > 출구 > 역 번호
+===================================================== */
+
+.place-side-panel .navitime-station-assist {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    min-height: 22px;
+    padding: 0 7px;
+
+    border: 1px solid #ded7cb;
+    border-radius: 6px;
+
+    background: #fff;
+}
+
+.place-side-panel .navitime-station-assist small {
+    color: #8a8072;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.place-side-panel .navitime-station-assist b {
+    color: #41392f;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.place-side-panel .navitime-station-assist.platform {
+    border-color: rgba(91, 141, 239, 0.28);
+    background: rgba(91, 141, 239, 0.07);
+}
+
+.place-side-panel .navitime-station-assist.platform b {
+    color: #3f6fce;
+}
+
+.place-side-panel .navitime-station-assist.gateway {
+    border-color: rgba(214, 170, 49, 0.3);
+    background: rgba(255, 239, 178, 0.38);
+}
+
+.place-side-panel .navitime-station-assist.gateway b {
+    color: #8b6500;
+}
+
+.place-side-panel .navitime-station-assist.numbering {
+    padding: 0 6px;
+    background: transparent;
+}
+
+.place-side-panel .navitime-station-assist.numbering small {
+    display: none;
+}
+
+body.dark .place-side-panel .navitime-station-assist {
+    border-color: #504a42;
+    background: #2e2b26;
+}
+
+body.dark .place-side-panel .navitime-station-assist.platform {
+    border-color: rgba(111, 157, 245, 0.38);
+    background: rgba(75, 118, 201, 0.12);
+}
+
+body.dark .place-side-panel .navitime-station-assist.platform b {
+    color: #8eb2f7;
+}
+
+body.dark .place-side-panel .navitime-station-assist.gateway {
+    border-color: rgba(214, 170, 49, 0.35);
+    background: rgba(166, 125, 22, 0.12);
+}
+
+body.dark .place-side-panel .navitime-station-assist.gateway b {
+    color: #e1c36f;
+}
+
+
+/* =====================================================
+   NAVITIME 출입구 방향 구분
+   도보→대중교통 = 입구 / 대중교통→도보 = 출구
+===================================================== */
+
+.place-side-panel .navitime-station-assist.entrance,
+.place-side-panel .navitime-station-assist.exit {
+    background: transparent;
+}
+
+.place-side-panel .navitime-station-assist.entrance {
+    border-color: rgba(34, 154, 94, 0.30);
+}
+
+.place-side-panel .navitime-station-assist.entrance small,
+.place-side-panel .navitime-station-assist.entrance b {
+    color: #268455;
+}
+
+.place-side-panel .navitime-station-assist.exit {
+    border-color: rgba(208, 155, 34, 0.34);
+}
+
+.place-side-panel .navitime-station-assist.exit small,
+.place-side-panel .navitime-station-assist.exit b {
+    color: #916a10;
+}
+
+body.dark .place-side-panel .navitime-station-assist.entrance {
+    border-color: rgba(76, 190, 124, 0.38);
+}
+
+body.dark .place-side-panel .navitime-station-assist.entrance small,
+body.dark .place-side-panel .navitime-station-assist.entrance b {
+    color: #78d5a0;
+}
+
+body.dark .place-side-panel .navitime-station-assist.exit {
+    border-color: rgba(219, 178, 72, 0.38);
+}
+
+body.dark .place-side-panel .navitime-station-assist.exit small,
+body.dark .place-side-panel .navitime-station-assist.exit b {
+    color: #e0c36f;
+}
+
+
+/* =====================================================
+   장소 상세 리뷰 - 최종 가독성 조정
+   - 다크모드 닉네임 흰색
+   - 평점 별 노란색 고정
+   - 리뷰 본문 확대
+   - 더보기는 본문보다 작게
+   - 번역 버튼 오른쪽 하단 정렬
+===================================================== */
+
+/* 리뷰 본문: 기존 12px보다 키움 */
+.place-side-panel .place-review-content {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+}
+
+/* 더보기는 리뷰 본문보다 작게 */
+.place-side-panel .place-review-more-button {
+    margin-top: 4px !important;
+    padding: 0 !important;
+
+    border: 0 !important;
+    background: transparent !important;
+
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    line-height: 1.35 !important;
+
+    color: var(--gray-600) !important;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.place-side-panel .place-review-more-button:hover {
+    color: var(--gray-800) !important;
+    opacity: 1 !important;
+}
+
+/* 평점 별은 라이트/다크 모두 노란색 유지 */
+.place-side-panel .place-review-rating,
+.place-side-panel .place-review-stars {
+    color: #f5b800 !important;
+}
+
+/* 번역 영역은 리뷰 하단에서 오른쪽 정렬 */
+.place-side-panel .place-review-translation {
+    position: relative;
+
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    flex-wrap: wrap;
+
+    width: 100%;
+    margin-top: 8px;
+}
+
+/* 번역 버튼 자체도 우측으로 */
+.place-side-panel .place-review-translate-toggle {
+    margin-left: auto;
+}
+
+/* 드롭다운은 버튼 오른쪽 기준 */
+.place-side-panel .place-review-translate-menu {
+    left: auto !important;
+    right: 0 !important;
+}
+
+/* 번역 결과 박스는 다시 전체 폭 사용 */
+.place-side-panel .place-review-translated-box {
+    flex: 0 0 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* =========================
+   다크모드 리뷰
+========================= */
+
+body.dark .place-side-panel .place-review-user {
+    color: #ffffff !important;
+}
+
+/* 닉네임 옆 별점도 회색으로 죽지 않게 */
+body.dark .place-side-panel .place-review-rating,
+body.dark .place-side-panel .place-review-stars {
+    color: #f5b800 !important;
+}
+
+/* 리뷰 본문도 읽기 쉬운 밝은 색 유지 */
+body.dark .place-side-panel .place-review-content {
+    color: #f1ece2 !important;
+}
+
+/* 더보기는 본문보다 작고 한 단계 옅게 */
+body.dark .place-side-panel .place-review-more-button {
+    color: #cfc7b9 !important;
+}
+
+body.dark .place-side-panel .place-review-more-button:hover {
+    color: #ffffff !important;
+}
+
+/* 번역 버튼은 오른쪽 하단 위치를 유지하면서 다크톤 유지 */
+body.dark .place-side-panel .place-review-translate-toggle {
+    color: #eee8dc !important;
+}
+
+
+/* =====================================================
+   CHEESE MAP - 장소 SNS 공유 모달
+===================================================== */
+
+.place-share-modal {
+    position: fixed;
+    z-index: 1000005;
+    inset: 0;
+
+    display: grid;
+    place-items: center;
+
+    padding: 18px;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transition:
+        opacity .18s ease,
+        visibility .18s ease;
+}
+
+.place-share-modal.show {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.place-share-backdrop {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+    padding: 0;
+
+    border: 0;
+    background: rgba(32, 28, 22, 0.46);
+    backdrop-filter: blur(4px);
+
+    cursor: default;
+}
+
+.place-share-sheet {
+    position: relative;
+    z-index: 1;
+
+    width: min(430px, calc(100vw - 30px));
+
+    padding: 22px;
+
+    border: 1px solid #eadfca;
+    border-radius: 22px;
+
+    background: #fffdf8;
+
+    box-shadow:
+        0 24px 70px rgba(41, 33, 24, 0.24);
+
+    transform: translateY(8px) scale(.985);
+
+    transition:
+        transform .2s ease;
+}
+
+.place-share-modal.show
+.place-share-sheet {
+    transform: translateY(0) scale(1);
+}
+
+.place-share-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.place-share-head span {
+    display: block;
+    margin-bottom: 4px;
+
+    color: #b77a00;
+
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .16em;
+}
+
+.place-share-head h3 {
+    margin: 0;
+
+    color: #2f2922;
+
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.place-share-close {
+    width: 34px;
+    height: 34px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+
+    border: 1px solid #e8dfcf;
+    border-radius: 11px;
+
+    color: #746a5e;
+    background: #ffffff;
+
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.place-share-place {
+    margin-top: 17px;
+    padding: 13px 14px;
+
+    border: 1px solid #eee4d4;
+    border-radius: 14px;
+
+    background: #fbf8f1;
+}
+
+.place-share-place strong {
+    display: block;
+
+    color: #332d25;
+
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.45;
+}
+
+.place-share-place span {
+    display: block;
+    margin-top: 4px;
+
+    color: #85796a;
+
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.place-share-options {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-top: 18px;
+}
+
+.place-share-option {
+    min-width: 0;
+    min-height: 84px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    padding: 10px 6px;
+
+    border: 1px solid #ebe1d0;
+    border-radius: 15px;
+
+    color: #40382f;
+    background: #ffffff;
+
+    cursor: pointer;
+
+    transition:
+        transform .14s ease,
+        border-color .14s ease,
+        background .14s ease,
+        box-shadow .14s ease;
+}
+
+.place-share-option:hover {
+    transform: translateY(-2px);
+
+    border-color: #dfb84d;
+    background: #fffaf0;
+
+    box-shadow:
+        0 7px 16px rgba(81, 62, 35, 0.08);
+}
+
+.place-share-brand {
+    width: 44px;
+    height: 44px;
+
+    display: grid;
+    place-items: center;
+
+    flex: 0 0 auto;
+}
+
+.share-brand-svg {
+    width: 44px;
+    height: 44px;
+    display: block;
+    overflow: visible;
+}
+
+/* LINE */
+.place-share-option.line .share-brand-svg > rect {
+    fill: #06c755;
+}
+
+.place-share-option.line .line-bubble {
+    fill: #ffffff;
+}
+
+.place-share-option.line .line-wordmark {
+    fill: #06c755;
+    font-size: 7px;
+    font-weight: 900;
+    font-family: Arial, Helvetica, sans-serif;
+    letter-spacing: -0.2px;
+}
+
+/* X */
+.place-share-option.x .share-brand-svg > rect {
+    fill: #0a0a0a;
+}
+
+.place-share-option.x .x-mark {
+    fill: #ffffff;
+}
+
+/* KakaoTalk */
+.place-share-option.kakao .share-brand-svg > rect {
+    fill: #fee500;
+}
+
+.place-share-option.kakao .kakao-bubble {
+    fill: #3c1e1e;
+}
+
+/* Instagram */
+.place-share-option.instagram .instagram-outline {
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: 2.5;
+}
+
+.place-share-option.instagram .instagram-dot {
+    fill: #ffffff;
+}
+
+/* Utility */
+.place-share-option.native .utility-svg > rect,
+.place-share-option.copy .utility-svg > rect {
+    fill: #fff1b7;
+}
+
+.place-share-option.native .utility-svg path,
+.place-share-option.copy .utility-svg path {
+    fill: none;
+    stroke: #8b6112;
+    stroke-width: 2.3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.place-share-option b {
+    max-width: 100%;
+
+    overflow: hidden;
+
+    font-size: 10px;
+    font-weight: 850;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+
+
+
+
+
+
+/* 다크모드 */
+
+body.dark .place-share-sheet {
+    border-color: #4c473d;
+    background: #2e2b25;
+
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, .42);
+}
+
+body.dark .place-share-head h3,
+body.dark .place-share-place strong,
+body.dark .place-share-option {
+    color: #f5f0e7;
+}
+
+body.dark .place-share-close,
+body.dark .place-share-option {
+    border-color: #4c473d;
+    background: #35322c;
+}
+
+body.dark .place-share-close {
+    color: #ddd5c8;
+}
+
+body.dark .place-share-place {
+    border-color: #49443b;
+    background: #292722;
+}
+
+
+
+body.dark .place-share-place span {
+    color: #bbb1a3;
+}
+
+body.dark .place-share-option:hover {
+    border-color: #8c7134;
+    background: #3b362b;
+}
+
+
+/* 모바일에서는 하단 시트처럼 표시 */
+
+@media (max-width: 560px) {
+    .place-share-modal {
+        align-items: end;
+        padding: 0;
+    }
+
+    .place-share-sheet {
+        width: 100%;
+
+        padding:
+            20px
+            18px
+            calc(
+                20px +
+                env(safe-area-inset-bottom)
+            );
+
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+
+        border-radius:
+            22px
+            22px
+            0
+            0;
+
+        transform:
+            translateY(24px);
+    }
+
+    .place-share-modal.show
+    .place-share-sheet {
+        transform:
+            translateY(0);
+    }
+
+    .place-share-options {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            );
+    }
+}
+
+
+
+/* 장소 공유 모달 - 아이콘/간격 최종 보정 */
+.place-share-options {
+    gap: 12px;
+}
+
+.place-share-option {
+    min-height: 92px;
+    padding: 12px 7px 10px;
+    gap: 9px;
+}
+
+.place-share-option b {
+    font-size: 10.5px;
+    letter-spacing: -0.01em;
+}
+
+
+
+/* =====================================================
+   장소 공유 - 실제 브랜드 이미지 아이콘 적용
+   LINE / KakaoTalk / Instagram
+===================================================== */
+
+
+/* 실제 이미지 아이콘을 쓰는 브랜드는 기존 SVG 색상 규칙 무효화 */
+.place-share-option.line .place-share-brand,
+.place-share-option.kakao .place-share-brand,
+.place-share-option.instagram .place-share-brand {
+    background: transparent !important;
+}
+
+/* 맨 아래 설명 문구는 표시하지 않음 */
+
+
+/* =====================================================
+   장소 공유 - LINE / KakaoTalk / Instagram inline SVG
+   별도 PNG 파일 필요 없음
+===================================================== */
+
+.place-share-brand-svg {
+    width: 46px;
+    height: 46px;
+    display: block;
+    overflow: visible;
+}
+
+/* 브랜드 SVG가 카드 안에서 또 배경을 받지 않도록 정리 */
+.place-share-option.line .place-share-brand,
+.place-share-option.kakao .place-share-brand,
+.place-share-option.instagram .place-share-brand {
+    width: 46px;
+    height: 46px;
+    background: transparent !important;
+}
+
+/* 설명 문구는 완전히 숨김 */
+.place-share-note {
+    display: none !important;
+}
+
+
+/* LINE 아이콘 비율 보정 */
+.place-share-option.line .line-logo-svg {
+    width: 46px;
+    height: 46px;
+}
+
+.place-share-option.line .place-share-brand {
+    display: grid;
+    place-items: center;
+}
+
+/* =====================================================
+   리뷰 더보기 최종 표시 조건
+   - 한 줄이면 숨김
+   - 실제로 두 번째 줄이 생길 때만 표시
+===================================================== */
+
+/*
+   기존 .place-review-more-button { display:inline-block; } 규칙이
+   HTML hidden 속성을 덮어쓰고 있어서 짧은 리뷰에도 더보기가 보였습니다.
+*/
+.place-side-panel .place-review-more-button[hidden],
+.place-review-more-button[hidden] {
+    display: none !important;
+}
+
+/* 더보기 버튼은 표시될 때만 기존 작은 크기 유지 */
+.place-side-panel .place-review-more-button:not([hidden]) {
+    display: inline-block !important;
+}
+

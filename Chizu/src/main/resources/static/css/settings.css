@@ -309,3 +309,261 @@ body.dark .settings-select-row select {
     width: 0 !important;
     height: 0 !important;
 }
+
+/* =====================================================
+   DARK MODE 가독성 보정
+   - 마지막에 로드되는 settings.css에서 공통 다크모드 색상을 보정합니다.
+   - 노란색 primary 버튼 자체의 글자색은 건드리지 않습니다.
+===================================================== */
+
+body.dark .sidebar,
+body.dark .panel,
+body.dark .place-card,
+body.dark .route-panel,
+body.dark .recommend-panel,
+body.dark .modal,
+body.dark .settings-modal {
+    color: var(--text);
+}
+
+/* 다크모드에서 밝은 배경용 고정 글자색이 남아 사라지는 텍스트 보정 */
+body.dark .sidebar h1,
+body.dark .sidebar h2,
+body.dark .sidebar h3,
+body.dark .sidebar strong,
+body.dark .panel h1,
+body.dark .panel h2,
+body.dark .panel h3,
+body.dark .panel strong,
+body.dark .place-card h1,
+body.dark .place-card h2,
+body.dark .place-card h3,
+body.dark .place-card strong,
+body.dark .route-panel h1,
+body.dark .route-panel h2,
+body.dark .route-panel h3,
+body.dark .route-panel strong,
+body.dark .recommend-panel h1,
+body.dark .recommend-panel h2,
+body.dark .recommend-panel h3,
+body.dark .modal h1,
+body.dark .modal h2,
+body.dark .modal h3,
+body.dark .modal label,
+body.dark .settings-modal h1,
+body.dark .settings-modal h2,
+body.dark .settings-modal h3,
+body.dark .settings-modal label {
+    color: var(--text);
+}
+
+/* 설명/보조 텍스트 */
+body.dark .sidebar small,
+body.dark .sidebar p,
+body.dark .panel small,
+body.dark .panel p,
+body.dark .place-card small,
+body.dark .place-card p,
+body.dark .route-panel small,
+body.dark .route-panel p,
+body.dark .recommend-panel small,
+body.dark .recommend-panel p,
+body.dark .modal small,
+body.dark .modal p,
+body.dark .settings-modal small,
+body.dark .settings-modal p {
+    color: #c8c3b8;
+}
+
+/* 입력창 안의 값/placeholder */
+body.dark input:not([type="checkbox"]):not([type="radio"]),
+body.dark textarea,
+body.dark select {
+    color: var(--text);
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+    color: #aaa69b;
+    opacity: 1;
+}
+
+/* =====================================================
+   다크모드 사이드 메뉴 - 길찾기 버튼 색상 통일
+===================================================== */
+
+body.dark .side-item[data-panel="route"],
+body.dark .side-item[data-panel="route"].active {
+    color: var(--gray-600) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.dark .side-item[data-panel="route"] .side-icon,
+body.dark .side-item[data-panel="route"].active .side-icon {
+    color: #d1cdc3 !important;
+    background: transparent !important;
+}
+
+/* 다른 사이드 메뉴 아이콘도 어두운 배경에서 동일 계열로 */
+body.dark .side-item:not(.active) .side-icon {
+    color: #d1cdc3 !important;
+}
+
+/* hover는 다른 메뉴처럼 은은하게 */
+body.dark .side-item[data-panel="route"]:hover {
+    background: rgba(246, 201, 69, 0.10) !important;
+    color: #fff5d6 !important;
+}
+
+
+
+/* =====================================================
+   DARK MODE 최종 가독성 보정
+   - 기존 수정사항 유지
+   - 검색 버튼 / 장소 액션 버튼 / 리뷰 영역만 우선순위 높여 보정
+===================================================== */
+
+/* 상단 검색 버튼: 노란 배경에서 글자가 확실히 보이게 */
+body.dark #searchButton {
+    border: 1px solid #d7a51e !important;
+    color: #33250d !important;
+    background: #f6c945 !important;
+    text-shadow: none !important;
+    opacity: 1 !important;
+}
+
+body.dark #searchButton:hover {
+    border-color: #e0ae23 !important;
+    color: #2b210e !important;
+    background: #ffd65a !important;
+}
+
+/* 장소 상세 액션 버튼 4개를 동일한 톤으로 통일
+   길찾기만 흰색으로 튀는 현상 방지 */
+body.dark .place-side-panel .place-actions > button,
+body.dark .place-side-panel #placeRouteButton,
+body.dark .place-side-panel #placeSaveButton,
+body.dark .place-side-panel #placeShareButton,
+body.dark .place-side-panel #placeGroupSaveButton {
+    border-color: #625b4e !important;
+    color: #ece5d8 !important;
+    background: #34312b !important;
+    box-shadow: none !important;
+}
+
+body.dark .place-side-panel .place-actions > button i,
+body.dark .place-side-panel #placeRouteButton i,
+body.dark .place-side-panel #placeSaveButton i,
+body.dark .place-side-panel #placeShareButton i,
+body.dark .place-side-panel #placeGroupSaveButton i {
+    color: #e3b22e !important;
+}
+
+body.dark .place-side-panel .place-actions > button:hover,
+body.dark .place-side-panel #placeRouteButton:hover,
+body.dark .place-side-panel #placeSaveButton:hover,
+body.dark .place-side-panel #placeShareButton:hover,
+body.dark .place-side-panel #placeGroupSaveButton:hover {
+    border-color: #d6ad43 !important;
+    color: #fff6dc !important;
+    background: #403b31 !important;
+}
+
+/* 실제 길찾기 상태가 활성화돼도 다른 버튼과 너무 다르게 보이지 않게 */
+body.dark .place-side-panel #placeRouteButton.active,
+body.dark .place-side-panel #placeRouteButton.is-active,
+body.dark .place-side-panel.route-focus #placeRouteButton {
+    border-color: #d6ad43 !important;
+    color: #fff6dc !important;
+    background: #403b31 !important;
+}
+
+/* 리뷰 섹션 제목/버튼 */
+body.dark .place-detail-section .place-section-header h3,
+body.dark .place-detail-section .place-section-header strong,
+body.dark .place-detail-section .place-section-header span {
+    color: #f3eee4 !important;
+}
+
+body.dark #placeReviewWriteButton {
+    border-color: #5d574b !important;
+    color: #eee7db !important;
+    background: #34312b !important;
+}
+
+body.dark #placeReviewWriteButton:hover {
+    border-color: #d6ad43 !important;
+    color: #fff5d4 !important;
+    background: #403b31 !important;
+}
+
+/* 리뷰 평균 요약 카드 */
+body.dark .place-review-summary {
+    border: 1px solid #524c41 !important;
+    color: #f3eee4 !important;
+    background: #34312b !important;
+}
+
+body.dark .place-review-summary > strong {
+    color: #fff8e9 !important;
+}
+
+body.dark .place-review-stars,
+body.dark .place-review-rating {
+    color: #f1bd2c !important;
+}
+
+body.dark .place-review-summary span {
+    color: #c6beb1 !important;
+}
+
+/* 리뷰 개별 내용 */
+body.dark .place-review-user,
+body.dark .place-review-user-meta strong {
+    color: #f0eadf !important;
+}
+
+body.dark .place-review-content {
+    color: #ddd5c8 !important;
+}
+
+body.dark .place-review-date,
+body.dark .place-empty-text,
+body.dark .place-review-user-meta span {
+    color: #aaa296 !important;
+}
+
+body.dark .place-review-item {
+    border-color: #4d473e !important;
+}
+
+/* 리뷰 수정 폼 */
+body.dark .place-review-edit textarea,
+body.dark #reviewContent {
+    border-color: #565046 !important;
+    color: #f3eee4 !important;
+    background: #282621 !important;
+}
+
+body.dark .place-review-edit textarea::placeholder,
+body.dark #reviewContent::placeholder {
+    color: #aaa296 !important;
+}
+
+body.dark .review-compose-modal,
+body.dark .review-compose-modal .review-compose-block {
+    color: #eee8dd !important;
+}
+
+body.dark .review-compose-block > strong,
+body.dark #reviewComposeTitle {
+    color: #f4eee4 !important;
+}
+
+body.dark .review-compose-place,
+body.dark .review-rating-message,
+body.dark .review-character-count {
+    color: #b9b1a5 !important;
+}
+

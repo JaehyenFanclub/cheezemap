@@ -77,6 +77,9 @@ const translations = {
         "place.reviewEdit": "수정",
         "place.reviewEditSave": "수정 완료",
         "place.reviewEditCancel": "취소",
+        "place.reviewDelete": "삭제",
+        "place.reviewDeleteConfirm": "이 리뷰를 삭제할까요?",
+        "place.reviewDeleteDone": "리뷰가 삭제되었습니다.",
 
         "review.writeTitle": "리뷰 작성",
         "review.ratingLabel": "별점을 선택해주세요",
@@ -111,7 +114,8 @@ const translations = {
         "auth.signupDescription":
             "나만의 도쿄 장소를 저장해보세요.",
 
-        "auth.goSignup": "회원가입",
+        "auth.orContinueWith": "다른 계정으로 로그인 또는 회원가입",
+        "auth.goSignup": "치즈맵 계정으로 회원가입",
         "auth.goLogin": "이미 계정이 있어요",
 
         "mypage.title": "마이페이지",
@@ -140,6 +144,7 @@ const translations = {
         "toast.loginRequired": "로그인이 필요한 기능입니다.",
         "toast.loginSuccess": "로그인했습니다.",
         "toast.logoutSuccess": "로그아웃했습니다.",
+        "toast.sessionExpired": "세션이 만료되어 로그아웃되었습니다. 다시 로그인해주세요.",
         "toast.signupSuccess": "회원가입이 완료되었습니다.",
         "toast.saved": "좋아요에 저장했습니다.",
         "toast.removed": "좋아요에서 삭제했습니다.",
@@ -222,6 +227,9 @@ const translations = {
         "place.reviewEdit": "Edit",
         "place.reviewEditSave": "Save changes",
         "place.reviewEditCancel": "Cancel",
+        "place.reviewDelete": "Delete",
+        "place.reviewDeleteConfirm": "Delete this review?",
+        "place.reviewDeleteDone": "Review deleted.",
         "review.writeTitle": "Write a review",
         "review.ratingLabel": "Choose a rating",
         "review.ratingHelp": "Choose a rating.",
@@ -249,7 +257,8 @@ const translations = {
         "auth.loginDescription": "Save favorites and travel plans.",
         "auth.signupTitle": "Create a CHEESE MAP account",
         "auth.signupDescription": "Save your favorite places in Tokyo.",
-        "auth.goSignup": "Sign up",
+        "auth.orContinueWith": "Sign in or sign up with another account",
+        "auth.goSignup": "Create a CHEESE MAP account",
         "auth.goLogin": "Already have an account?",
         "mypage.title": "My page",
         "mypage.reviews": "My reviews",
@@ -275,6 +284,7 @@ const translations = {
         "toast.loginRequired": "Please log in first.",
         "toast.loginSuccess": "Logged in.",
         "toast.logoutSuccess": "Logged out.",
+        "toast.sessionExpired": "Your session has expired. Please log in again.",
         "toast.signupSuccess": "Account created.",
         "toast.saved": "Saved to likes.",
         "toast.removed": "Removed from likes.",
@@ -368,6 +378,9 @@ const translations = {
         "place.reviewEdit": "編集",
         "place.reviewEditSave": "編集を保存",
         "place.reviewEditCancel": "キャンセル",
+        "place.reviewDelete": "削除",
+        "place.reviewDeleteConfirm": "このレビューを削除しますか？",
+        "place.reviewDeleteDone": "レビューを削除しました。",
 
         "review.writeTitle": "レビューを書く",
         "review.ratingLabel": "評価を選択してください",
@@ -402,7 +415,8 @@ const translations = {
         "auth.signupDescription":
             "お気に入りの東京スポットを保存しましょう。",
 
-        "auth.goSignup": "新規登録",
+        "auth.orContinueWith": "他のアカウントでログイン・新規登録",
+        "auth.goSignup": "チーズマップのアカウントを作成",
         "auth.goLogin": "すでにアカウントをお持ちですか",
 
         "mypage.title": "マイページ",
@@ -431,6 +445,7 @@ const translations = {
         "toast.loginRequired": "ログインが必要です。",
         "toast.loginSuccess": "ログインしました。",
         "toast.logoutSuccess": "ログアウトしました。",
+        "toast.sessionExpired": "セッションが期限切れのためログアウトしました。再度ログインしてください。",
         "toast.signupSuccess": "新規登録が完了しました。",
         "toast.saved": "お気に入りに保存しました。",
         "toast.removed": "お気に入りから削除しました。",
@@ -1168,6 +1183,15 @@ const loadingScreen =
    공통 함수
 ===================================================== */
 
+function escapeGroupHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
 function readStorage(key, fallbackValue) {
     try {
         const value = localStorage.getItem(key);
@@ -1202,7 +1226,7 @@ function translate(key) {
 }
 
 
-function showToast(messageOrKey) {
+function showToast(messageOrKey, durationMs = 2000) {
     if (!toast) {
         return;
     }
@@ -1218,7 +1242,47 @@ function showToast(messageOrKey) {
 
     window.cheeseToastTimer = setTimeout(() => {
         toast.classList.remove("show");
-    }, 2000);
+    }, durationMs);
+}
+
+/** 로딩 화면이 사라진 뒤 토스트 표시 (지도 로드 토스트와 같은 위치/스타일) */
+function showToastAfterLoading(messageOrKey, durationMs = 3500) {
+    let shown = false;
+
+    const reveal = () => {
+        if (shown) {
+            return;
+        }
+        shown = true;
+        // 지도 로드 토스트가 먼저 뜨면 에러 메시지가 보이도록 짧게 지연
+        setTimeout(() => showToast(messageOrKey, durationMs), 450);
+    };
+
+    const screen = document.getElementById("loadingScreen");
+    if (!screen || screen.classList.contains("is-hidden")) {
+        reveal();
+        return;
+    }
+
+    const observer = new MutationObserver(() => {
+        if (
+            screen.classList.contains("is-hidden") ||
+            !document.body.contains(screen)
+        ) {
+            observer.disconnect();
+            reveal();
+        }
+    });
+
+    observer.observe(screen, {
+        attributes: true,
+        attributeFilter: ["class"]
+    });
+
+    setTimeout(() => {
+        observer.disconnect();
+        reveal();
+    }, 9000);
 }
 
 
@@ -1276,8 +1340,30 @@ window.addEventListener("load", () => {
    언어 변환
 ===================================================== */
 
+function getGoogleMapsLanguage(language = currentLanguage) {
+    return ["ko", "ja", "en"].includes(language)
+        ? language
+        : "ko";
+}
+
 function applyLanguage(language) {
-    currentLanguage = ["ko", "ja", "en"].includes(language) ? language : "ko";
+    const nextLanguage = getGoogleMapsLanguage(language);
+
+    // Google Maps JS API의 language는 로드 후 변경할 수 없어,
+    // 상단 언어가 지도 로드 언어와 다르면 저장 후 새로고침합니다.
+    if (
+        window.googleMapsApiLanguage &&
+        window.googleMapsApiLanguage !== nextLanguage
+    ) {
+        localStorage.setItem(
+            STORAGE_KEYS.language,
+            nextLanguage
+        );
+        location.reload();
+        return;
+    }
+
+    currentLanguage = nextLanguage;
 
     document.documentElement.lang = currentLanguage;
     localStorage.setItem(STORAGE_KEYS.language, currentLanguage);
@@ -1309,6 +1395,23 @@ function applyLanguage(language) {
             currentLanguage === "ko" ? "한국어" : currentLanguage === "ja" ? "日本語" : "English";
     }
 
+    document
+        .querySelectorAll("[data-header-language]")
+        .forEach(button => {
+            const isActive =
+                button.dataset.headerLanguage === currentLanguage;
+
+            button.classList.toggle(
+                "active",
+                isActive
+            );
+
+            button.setAttribute(
+                "aria-pressed",
+                String(isActive)
+            );
+        });
+
     if (typeof renderCurrentAreaName === "function") {
         renderCurrentAreaName();
     }
@@ -1316,6 +1419,16 @@ function applyLanguage(language) {
     renderRecommendedPlaces();
     updatePlaceCard(selectedPlaceKey);
     updateHeaderAuthState();
+
+    // Google POI가 열려 있으면 현재 선택 언어(ko/ja/en)의
+    // Google 공식 장소명/주소/카테고리 표시명으로 즉시 갱신합니다.
+    // map.js의 로컬 캐시가 있으면 API를 다시 호출하지 않습니다.
+    if (
+        typeof refreshCurrentGooglePoiLanguage ===
+        "function"
+    ) {
+        refreshCurrentGooglePoiLanguage();
+    }
 
     // 역 투명 클릭 영역의 제목도 현재 언어로 다시 생성합니다.
     if (googleMap) {
@@ -1349,6 +1462,22 @@ function applyLanguage(language) {
     updateWeatherText();
 }
 
+
+
+
+/* 헤더 언어 전환 버튼 */
+document
+    .querySelectorAll("[data-header-language]")
+    .forEach(button => {
+        button.addEventListener(
+            "click",
+            () => {
+                applyLanguage(
+                    button.dataset.headerLanguage
+                );
+            }
+        );
+    });
 
 /* =====================================================
    도쿄 현재 시간 및 날씨
@@ -1745,3 +1874,8 @@ document.addEventListener(
 );
 
 
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    applyLanguage(currentLanguage);
+});

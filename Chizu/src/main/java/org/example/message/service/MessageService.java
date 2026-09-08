@@ -9,19 +9,25 @@ import org.example.message.dto.*;
 import org.example.message.entity.Message;
 import org.example.message.repository.MessageRepository;
 import org.example.user.entity.User;
+import org.example.user.entity.UserPhoto;
+import org.example.user.repository.UserPhotoRepository;
 import org.example.user.repository.UserRepository;
+import org.example.user.service.UserDisplayNames;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 public class MessageService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final UserPhotoRepository userPhotoRepository;
     private final TokenBlacklist tokenBlacklist;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -73,6 +79,12 @@ public class MessageService {
     public List<GetChatterResponse> getChatters(String token){
         User user = findUserByToken(token);
         List<Long> chattersList = messageRepository.findAllChatters(user.getId());
+        Map<Long, String> photoUrlByUserId = userPhotoRepository.findByUser_IdIn(chattersList).stream()
+                .collect(Collectors.toMap(
+                        photo -> photo.getUser().getId(),
+                        UserPhoto::getPhotoUrl,
+                        (first, ignored) -> first
+                ));
         List<GetChatterResponse> result = new ArrayList<>();
         for(Long id : chattersList){
             List<Message> messages = messageRepository.findByUsers(user.getId(),id);
@@ -80,11 +92,14 @@ public class MessageService {
                 throw new IllegalArgumentException("대화내용이 없습니다.");
             }
             Message message = messages.get(messages.size() - 1);
+            User chatter = userRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
             result.add(new GetChatterResponse(
-                    userRepository.getById(id).getUserNickname(),
+                    UserDisplayNames.nickname(chatter),
                     message.getContent(),
                     message.getMessageDate(),
-                    id
+                    id,
+                    photoUrlByUserId.get(id)
             ));
         }
         return result;
@@ -132,7 +147,7 @@ public class MessageService {
     }
 
     public Long findUser(String nickName){
-        return userRepository.findByUserNickname(nickName)
+        return userRepository.findByUserNicknameAndDeletedFalse(nickName)
                 .map(User::getId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 닉네임을 가진 유저가 없습니다."));
     }

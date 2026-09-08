@@ -1,11 +1,15 @@
 package org.example.config;
 
+import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.auth.OAuth2AuthenticationFailureHandler;
 import org.example.auth.OAuth2AuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -16,8 +20,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -31,9 +33,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter
-    ) throws Exception {
-
-        http
+    ) {
+        try {
+            http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -57,8 +59,10 @@ public class SecurityConfig {
                         // 정적 파일
                         .requestMatchers(
                                 "/",
-                                "/index.html",
-                                "/*.html",
+                                "/html/**",
+                                "/signup",
+                                "/profile-edit",
+                                "/complete-profile",
                                 "/css/**",
                                 "/js/**",
                                 "/png/**",
@@ -101,6 +105,23 @@ public class SecurityConfig {
                                 "/api/places/**"
                         ).permitAll()
 
+                        // 리뷰 번역 (공개)
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/translate"
+                        ).permitAll()
+
+                        // NAVITIME 대중교통 경로 (공개)
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/route/transit"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/public/**"
+                        ).permitAll()
+
                         // 그룹 공유 조회
                         .requestMatchers(
                                 HttpMethod.GET,
@@ -118,12 +139,34 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write(
+                                    "{\"msg\":\"로그인이 필요합니다.\",\"stat\":\"401\"}"
+                            );
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write(
+                                    "{\"msg\":\"접근 권한이 없습니다.\",\"stat\":\"403\"}"
+                            );
+                        })
+                )
+
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 );
 
-        return http.build();
+            return http.build();
+        } catch (Exception e) {
+            throw new IllegalStateException("SecurityFilterChain 구성에 실패했습니다.", e);
+        }
     }
 
 

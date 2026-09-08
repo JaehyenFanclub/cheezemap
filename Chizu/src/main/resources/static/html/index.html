@@ -10,12 +10,12 @@
 
     <title>CHEESE MAP</title>
 
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/map-ui.css">
-    <link rel="stylesheet" href="css/auth-profile.css">
-    <link rel="stylesheet" href="css/group-messages.css">
-    <link rel="stylesheet" href="css/place-panel-route.css">
-    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/map-ui.css">
+    <link rel="stylesheet" href="/css/auth-profile.css">
+    <link rel="stylesheet" href="/css/group-messages.css">
+    <link rel="stylesheet" href="/css/place-panel-route.css">
+    <link rel="stylesheet" href="/css/settings.css">
 
     <link
         rel="stylesheet"
@@ -43,7 +43,7 @@
                 aria-hidden="true"
             >
                 <img
-                    src="png/cheese-map-logo.png"
+                    src="/png/cheese-map-logo.png"
                     class="loading-logo-base"
                     alt=""
                 >
@@ -84,7 +84,7 @@
                 aria-label="CHEESE MAP 홈"
             >
                 <img
-                    src="png/cheese-map-logo.png"
+                    src="/png/cheese-map-logo.png"
                     class="brand-logo"
                     alt="CHEESE MAP 로고"
                 >
@@ -98,7 +98,7 @@
 
             <!-- 검색 -->
 
-            <div class="search-area">
+            <div class="search-area" id="searchArea">
 
                 <span class="search-icon">
                     <i class="ti ti-search"></i>
@@ -119,6 +119,14 @@
                 >
                     검색
                 </button>
+
+                <div class="recent-search-dropdown" id="recentSearchDropdown" hidden>
+                    <div class="recent-search-header">
+                        <strong id="recentSearchTitle">최근 검색어</strong>
+                        <button type="button" class="recent-search-clear" id="recentSearchClear">전체 삭제</button>
+                    </div>
+                    <div class="recent-search-list" id="recentSearchList"></div>
+                </div>
             </div>
 
 
@@ -181,6 +189,17 @@
                         aria-hidden="true"
                     ></i>
                 </button>
+
+                <div
+                    class="header-language-switcher"
+                    id="headerLanguageSwitcher"
+                    role="group"
+                    aria-label="Language"
+                >
+                    <button type="button" class="header-language-option" data-header-language="ko">한국어</button>
+                    <button type="button" class="header-language-option" data-header-language="ja">日本語</button>
+                    <button type="button" class="header-language-option" data-header-language="en">EN</button>
+                </div>
 
 
                 <button
@@ -536,7 +555,7 @@
                 ></div>
 
 
-                <!-- 지도 위 카테고리 필터 -->
+                <!-- 지도 위 카테고리 필터
 
                 <div class="top-filter-bar">
 
@@ -608,7 +627,7 @@
                             교통
                         </span>
                     </button>
-                </div>
+                </div> -->
 
 
                 <!-- 현재 지역 -->
@@ -994,10 +1013,7 @@
                         </p>
                     </div>
 
-                    <p class="transit-data-credit">
-                        <span>대중교통 경로:</span>
-                        <a href="https://transitous.org/sources/" target="_blank" rel="noopener noreferrer">Transitous 데이터 출처</a>
-                    </p>
+                    
                 </section>
                     </div>
                 </section>
@@ -1173,36 +1189,16 @@
             </form>
 
 
-            <div class="social-login-divider">
-                <span data-i18n="auth.orContinueWith">또는 소셜 계정으로</span>
+            <div class="social-login-divider" id="socialLoginDivider">
+                <span data-i18n="auth.orContinueWith">다른 계정으로 로그인 또는 회원가입</span>
             </div>
 
 
-            <div class="social-login-buttons">
-                <a
-                    href="/oauth2/authorization/google"
-                    class="social-login-button social-login-google"
-                    data-provider="google"
-                >
-                    Google
-                </a>
-
-                <a
-                    href="/oauth2/authorization/naver"
-                    class="social-login-button social-login-naver"
-                    data-provider="naver"
-                >
-                    Naver
-                </a>
-
-                <a
-                    href="/oauth2/authorization/line"
-                    class="social-login-button social-login-line"
-                    data-provider="line"
-                >
-                    LINE
-                </a>
-            </div>
+            <div
+                class="social-login-buttons"
+                id="socialLoginButtons"
+                aria-live="polite"
+            ></div>
 
 
             <p
@@ -1213,12 +1209,12 @@
 
 
             <a
-                href="signup.html"
+                href="/signup"
                 class="text-button signup-page-link"
                 id="openSignupButton"
                 data-i18n="auth.goSignup"
             >
-                회원가입
+                치즈맵 계정으로 회원가입
             </a>
         </div>
     </div>
@@ -1262,7 +1258,7 @@
                         </h2>
 
                         <a
-                            href="profile-edit.html"
+                            href="/profile-edit"
                             class="mypage-edit-button"
                         >
                             <i class="ti ti-edit"></i>
@@ -1322,6 +1318,159 @@
         </div>
     </div>
 
+    <!-- =====================================================
+     MR.EUM 수정부분
+     마이페이지 리뷰 수정 전용 모달
+
+     기존 마이페이지 카드 안에서 수정창을 펼치는 방식이 아니라
+     화면 중앙에 별도의 수정 모달을 띄웁니다.
+===================================================== -->
+
+<div
+    class="modal-backdrop mypage-review-edit-modal"
+    id="mypageReviewEditModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="mypageReviewEditTitle"
+    hidden
+>
+    <div class="modal mypage-review-edit-modal-box">
+
+        <!-- 닫기 버튼 -->
+        <button
+            type="button"
+            class="modal-close"
+            id="mypageReviewEditCloseButton"
+            aria-label="닫기"
+        >
+            ×
+        </button>
+
+        <!-- 제목 -->
+        <div class="mypage-review-edit-header">
+
+            <span class="mypage-review-edit-label">
+                리뷰 수정
+            </span>
+
+            <h2 id="mypageReviewEditTitle">
+                리뷰 수정
+            </h2>
+
+            <p
+                class="mypage-review-edit-place"
+                id="mypageReviewEditPlace"
+            ></p>
+
+        </div>
+
+        <!-- 별점 -->
+        <div class="mypage-review-edit-section">
+
+            <label class="mypage-review-edit-section-title">
+                별점
+            </label>
+
+            <div
+                class="place-review-edit-stars mypage-review-edit-stars"
+                id="mypageReviewEditStars"
+            >
+                <button type="button" data-mypage-edit-rating="1">☆</button>
+                <button type="button" data-mypage-edit-rating="2">☆</button>
+                <button type="button" data-mypage-edit-rating="3">☆</button>
+                <button type="button" data-mypage-edit-rating="4">☆</button>
+                <button type="button" data-mypage-edit-rating="5">☆</button>
+            </div>
+
+        </div>
+
+        <!-- 리뷰 내용 -->
+        <div class="mypage-review-edit-section">
+
+            <label
+                for="mypageReviewEditContent"
+                class="mypage-review-edit-section-title"
+            >
+                리뷰 내용
+            </label>
+
+            <textarea
+                id="mypageReviewEditContent"
+                class="mypage-review-edit-textarea"
+                maxlength="500"
+                placeholder="리뷰 내용을 입력해주세요."
+            ></textarea>
+
+        </div>
+
+        <!-- 사진 -->
+        <div class="mypage-review-edit-section">
+
+            <div class="mypage-review-edit-photo-title-row">
+
+                <label class="mypage-review-edit-section-title">
+                    사진
+                </label>
+
+                <span
+                    class="mypage-review-edit-photo-count"
+                    id="mypageReviewEditPhotoCount"
+                >
+                    0장
+                </span>
+
+            </div>
+
+            <!-- 기존 사진 + 새로 추가한 사진 -->
+            <div
+                class="mypage-review-edit-photos"
+                id="mypageReviewEditPhotos"
+            ></div>
+
+            <!-- 실제 파일 선택 -->
+            <input
+                type="file"
+                id="mypageReviewEditPhotoInput"
+                accept="image/*"
+                multiple
+                hidden
+            >
+
+            <!-- 사진 추가 버튼 -->
+            <button
+                type="button"
+                class="mypage-review-edit-add-photo"
+                id="mypageReviewEditAddPhotoButton"
+            >
+                <i class="ti ti-photo-plus"></i>
+                사진 추가
+            </button>
+
+        </div>
+
+        <!-- 하단 버튼 -->
+        <div class="mypage-review-edit-actions">
+
+            <button
+                type="button"
+                class="mypage-review-edit-cancel"
+                id="mypageReviewEditCancelButton"
+            >
+                취소
+            </button>
+
+            <button
+                type="button"
+                class="mypage-review-edit-save"
+                id="mypageReviewEditSaveButton"
+            >
+                수정 완료
+            </button>
+
+        </div>
+
+    </div>
+</div>
 
 
     <!-- =============================================
@@ -1618,14 +1767,12 @@
                     >
                 </label>
 
-                <label>
-                    그룹 날짜 <em>*</em>
-                    <input
-                        type="datetime-local"
-                        id="groupDate"
-                        required
-                    >
-                </label>
+                <!-- mr.eum수정부분 -->
+                <!-- 그룹 날짜 입력 UI는 제거하고 기존 JS/백엔드 호환을 위해 값만 유지 -->
+                <input
+                    type="hidden"
+                    id="groupDate"
+                >
 
                 <label>
                     그룹 메모
@@ -1779,24 +1926,34 @@
                 </button>
             </header>
 
-            <div class="message-tabs" role="tablist" aria-label="쪽지 대화 목록">
-                <button type="button" class="active" data-message-tab="inbox">
-                    대화 목록
-                    <span id="messageInboxCount">0</span>
-                </button>
-                <span id="messageSentCount" hidden>0</span>
-            </div>
-
             <div class="message-layout">
                 <section class="message-list-panel">
+                    <div class="message-panel-title">
+                        <strong>대화 목록</strong>
+                        <span id="messageInboxCount">0</span>
+                    </div>
+
+                    <!-- 기존 messages.js의 탭 로직 호환용 -->
+                    <button
+                        type="button"
+                        class="message-tab-compat active"
+                        data-message-tab="inbox"
+                        hidden
+                    ></button>
+                    <span id="messageSentCount" hidden>0</span>
+
                     <div class="message-list" id="messageList"></div>
+
+                    <div class="message-my-profile-wrap" id="messageMyProfile"></div>
                 </section>
 
                 <section class="message-detail-panel" id="messageDetailPanel">
                     <div class="message-empty-state">
-                        <i class="ti ti-mail-opened"></i>
-                        <strong>쪽지를 선택해 주세요</strong>
-                        <p>내용을 확인하거나 답장을 보낼 수 있어요.</p>
+                        <div class="message-empty-icon">
+                            <i class="ti ti-mail-opened"></i>
+                        </div>
+                        <strong>대화를 선택해 주세요</strong>
+                        <p>주고받은 쪽지를 확인하고 답장을 보낼 수 있어요.</p>
                     </div>
                 </section>
             </div>
@@ -1837,16 +1994,6 @@
                     >
                 </label>
 
-                <label>
-                    제목 <em>*</em>
-                    <input
-                        type="text"
-                        id="messageSubject"
-                        maxlength="50"
-                        placeholder="쪽지 제목을 입력하세요"
-                        required
-                    >
-                </label>
 
                 <label>
                     내용 <em>*</em>
@@ -1899,27 +2046,7 @@
             <div class="settings-heading">
                 <span class="settings-eyebrow">CHEESE MAP</span>
                 <h2 id="settingsModalTitle">설정</h2>
-                <p>언어와 추천 표시, 저장 데이터를 관리할 수 있어요.</p>
-            </div>
-
-            <div class="settings-section">
-                <div class="settings-section-title">
-                    <i class="ti ti-language"></i>
-                    <span>언어</span>
-                </div>
-
-                <label class="settings-select-row" for="settingsLanguage">
-                    <span>
-                        <strong>언어 변경</strong>
-                        <small>화면에 표시할 언어를 선택합니다.</small>
-                    </span>
-
-                    <select id="settingsLanguage">
-                        <option value="ko">한국어</option>
-                        <option value="ja">日本語</option>
-                        <option value="en">English</option>
-                    </select>
-                </label>
+                <p>추천 표시와 저장 데이터를 관리할 수 있어요.</p>
             </div>
 
             <div class="settings-section">
@@ -1968,7 +2095,7 @@
                 >
                     <span>
                         <strong>저장 데이터 초기화</strong>
-                        <small>좋아요, 즐겨찾기, 그룹, 쪽지, 추천 설정을 초기화합니다.</small>
+                        <small>좋아요, 즐겨찾기와 추천 설정을 초기화합니다.</small>
                     </span>
                     <i class="ti ti-trash"></i>
                 </button>
@@ -2041,34 +2168,63 @@
 
     <!-- 치즈맵 JavaScript -->
 
-    <script src="js/core.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/backend-services.js"></script>
-    <script src="js/map-style-config.js"></script>
-    <script src="js/map.js"></script>
-    <script src="js/backend-places.js"></script>
-    <script src="js/routes.js"></script>
-    <script src="js/interactions.js"></script>
-    <script src="js/account.js"></script>
-    <script src="js/settings.js"></script>
-    <script src="js/messages.js"></script>
-    <script src="js/favorites-init.js"></script>
-    <script src="js/groups.js"></script>
-    <script src="js/reviews.js"></script>
+    <script src="/js/core.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/backend-services.js"></script>
+    <script src="/js/map-style-config.js"></script>
+    <script src="/js/map.js"></script>
+    <script src="/js/backend-places.js"></script>
+    <script src="/js/routes.js"></script>
+    <script src="/js/interactions.js"></script>
+    <script src="/js/account.js"></script>
+    <script src="/js/settings.js"></script>
+    <script src="/js/messages.js"></script>
+    <script src="/js/favorites-init.js"></script>
+    <script src="/js/groups.js"></script>
+    <script src="/js/reviews.js"></script>
 
+    <!-- Google Maps API 키는 /api/public/config (GOOGLE_API_KEY 환경변수)에서 로드 -->
+    <script>
+    (async function () {
+        try {
+            const response = await fetch("/api/public/config");
 
-    <!--
-        YOUR_GOOGLE_MAPS_API_KEY를
-        실제 Google Maps API 키로 교체
-    -->
+            if (!response.ok) {
+                throw new Error("Failed to load map configuration");
+            }
 
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key={GoogleApiKey}&callback=initGoogleMap&loading=async&libraries=places,routes&language=ja&region=JP&v=weekly"
-        async
-        defer
-       
-       
-    ></script>
+            const config = await response.json();
+            const apiKey = String(config.googleMapsApiKey || "").trim();
+
+            if (!apiKey) {
+                console.error("Google Maps API key is not configured.");
+                return;
+            }
+
+            // Maps JS API language는 스크립트 로드 시점에 고정됩니다.
+            // 상단 언어(cheeseMapLanguage)와 맞춰 로드하고, 전환 시 페이지를 다시 불러옵니다.
+            const storedLanguage =
+                localStorage.getItem("cheeseMapLanguage");
+            const mapsLanguage = ["ko", "ja", "en"].includes(
+                storedLanguage
+            )
+                ? storedLanguage
+                : "ko";
+
+            window.googleMapsApiLanguage = mapsLanguage;
+
+            const script = document.createElement("script");
+            script.src =
+                `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}` +
+                `&callback=initGoogleMap&loading=async&libraries=places,routes&language=${encodeURIComponent(mapsLanguage)}&region=JP&v=weekly`;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        } catch (error) {
+            console.error("Google Maps loader error:", error);
+        }
+    })();
+    </script>
 
 </body>
 </html>
