@@ -2020,6 +2020,47 @@ const reviewPhotoGrid =
 let reviewSelectedRating = 0;
 let reviewSelectedPhotos = [];
 
+const REVIEW_MAX_FILE_BYTES = 10 * 1024 * 1024;
+const REVIEW_MAX_REQUEST_BYTES = 30 * 1024 * 1024;
+const REVIEW_PHOTO_SIZE_ERROR =
+    "사진이 너무 커서 추가할 수 없습니다. (장당 최대 10MB)";
+
+function getReviewPhotoSizeError(files) {
+    const list = Array.isArray(files) ? files.filter(Boolean) : [];
+    for (const file of list) {
+        if (Number(file.size) > REVIEW_MAX_FILE_BYTES) {
+            return REVIEW_PHOTO_SIZE_ERROR;
+        }
+    }
+
+    const total = list.reduce((sum, file) => sum + Number(file.size || 0), 0);
+    if (total > REVIEW_MAX_REQUEST_BYTES) {
+        return "선택한 사진 용량이 너무 큽니다. (한 번에 최대 30MB)";
+    }
+
+    return null;
+}
+
+function filterReviewPhotosBySize(files, { showError = true } = {}) {
+    const list = Array.isArray(files) ? Array.from(files) : [];
+    const accepted = [];
+    let rejected = false;
+
+    for (const file of list) {
+        if (Number(file?.size) > REVIEW_MAX_FILE_BYTES) {
+            rejected = true;
+            continue;
+        }
+        accepted.push(file);
+    }
+
+    if (rejected && showError) {
+        showToast(REVIEW_PHOTO_SIZE_ERROR);
+    }
+
+    return accepted;
+}
+
 function resetReviewComposeForm() {
     reviewSelectedRating = 0;
     reviewSelectedPhotos = [];
@@ -2176,18 +2217,29 @@ reviewContent?.addEventListener(
 reviewPhotoInput?.addEventListener(
     "change",
     event => {
-        const selectedFiles =
-            Array.from(
-                event.target.files || []
-            );
+        const selectedFiles = filterReviewPhotosBySize(
+            Array.from(event.target.files || [])
+        );
 
-        reviewSelectedPhotos = [
+        if (!selectedFiles.length) {
+            reviewPhotoInput.value = "";
+            return;
+        }
+
+        const nextPhotos = [
             ...reviewSelectedPhotos,
             ...selectedFiles
         ].slice(0, 5);
 
-        reviewPhotoInput.value = "";
+        const totalError = getReviewPhotoSizeError(nextPhotos);
+        if (totalError) {
+            showToast(totalError);
+            reviewPhotoInput.value = "";
+            return;
+        }
 
+        reviewSelectedPhotos = nextPhotos;
+        reviewPhotoInput.value = "";
         renderReviewPhotoPreview();
     }
 );
@@ -2270,6 +2322,13 @@ document
 
             try {
                 submitButton.disabled = true;
+
+                const photoSizeError = getReviewPhotoSizeError(
+                    reviewSelectedPhotos
+                );
+                if (photoSizeError) {
+                    throw new Error(photoSizeError);
+                }
 
                 const backendPlace =
                     await ensureBackendPlace(
@@ -2593,8 +2652,17 @@ document
 
             // mr.eum수정부분
             if (event.target.matches('[data-place-review-edit-photo-input]')) {
-                const files = Array.from(event.target.files || []);
-                placeReviewEditNewPhotos.push(...files);
+                const files = filterReviewPhotosBySize(
+                    Array.from(event.target.files || [])
+                );
+                const nextPhotos = [...placeReviewEditNewPhotos, ...files];
+                const totalError = getReviewPhotoSizeError(nextPhotos);
+                if (totalError) {
+                    showToast(totalError);
+                    event.target.value = '';
+                    return;
+                }
+                placeReviewEditNewPhotos = nextPhotos;
                 event.target.value = '';
                 renderPlaceReviewEditPhotos(item);
                 return;
@@ -2712,6 +2780,13 @@ document
                 );
 
                 // mr.eum수정부분
+                const photoSizeError = getReviewPhotoSizeError(
+                    placeReviewEditNewPhotos
+                );
+                if (photoSizeError) {
+                    return showToast(photoSizeError);
+                }
+
                 placeReviewEditNewPhotos.forEach(file => {
                     form.append("images", file);
                 });
@@ -3999,17 +4074,28 @@ function ensureMyPageReviewEditModal() {
             event => {
 
                 const files =
-                    Array.from(
-                        event.target.files || []
+                    filterReviewPhotosBySize(
+                        Array.from(
+                            event.target.files || []
+                        )
                     );
 
                 if (!files.length) {
                     return;
                 }
 
-                myPageReviewEditNewPhotos.push(
+                const nextPhotos = [
+                    ...myPageReviewEditNewPhotos,
                     ...files
-                );
+                ];
+                const totalError = getReviewPhotoSizeError(nextPhotos);
+                if (totalError) {
+                    showToast(totalError);
+                    event.target.value = "";
+                    return;
+                }
+
+                myPageReviewEditNewPhotos = nextPhotos;
 
                 event.target.value = "";
 
@@ -4463,6 +4549,12 @@ async function saveMyPageReviewEdit() {
     form.append("content", content);
 
     // mr.eum수정부분
+    const photoSizeError = getReviewPhotoSizeError(myPageReviewEditNewPhotos);
+    if (photoSizeError) {
+        showToast(photoSizeError);
+        return;
+    }
+
     myPageReviewEditNewPhotos.forEach(file => {
         form.append("images", file);
     });
