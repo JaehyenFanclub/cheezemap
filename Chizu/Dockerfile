@@ -21,13 +21,10 @@ RUN addgroup -S spring && adduser -S spring -G spring
 
 COPY --from=build /app/build/libs/*.jar app.jar
 
-RUN mkdir -p /app/uploads/userImg /app/uploads/reviewImg \
-    && chown -R spring:spring /app
+RUN chown -R spring:spring /app
 
 USER spring:spring
 
 EXPOSE 8080
-
-ENV FILE_UPLOAD_DIR=/app/uploads
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

@@ -1,0 +1,597 @@
+/*
+=====================================================
+CHEESE MAP - MOBILE ONLY
+대상: 최대 768px
+PC / 태블릿(769px 이상)에는 영향 없음
+=====================================================
+*/
+
+@media (max-width: 768px) {
+
+    :root {
+        --header-height: 72px;
+        --mobile-drawer-width: min(86vw, 320px);
+    }
+
+    html,
+    body {
+        width: 100%;
+        min-width: 0;
+        overflow-x: hidden;
+    }
+
+    .app,
+    .main {
+        min-height: 100dvh;
+        height: 100dvh;
+    }
+
+    /* =================================================
+       HEADER
+    ================================================= */
+
+    .header {
+        height: var(--header-height);
+        gap: 8px;
+        padding:
+            8px
+            10px;
+    }
+
+    .menu-button {
+        display: grid !important;
+        place-items: center;
+
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+
+        padding: 0;
+        border-radius: 15px;
+
+        font-size: 0;
+        cursor: pointer;
+    }
+
+    .menu-button::before {
+        content: "☰";
+        font-size: 21px;
+        line-height: 1;
+    }
+
+    .brand {
+        min-width: 44px !important;
+        width: 44px;
+        flex: 0 0 44px;
+        gap: 0;
+        justify-content: center;
+    }
+
+    .brand > span {
+        display: none !important;
+    }
+
+    .brand-logo {
+        width: 42px !important;
+        height: 42px !important;
+        max-width: 42px !important;
+        object-fit: contain;
+    }
+
+    .search-area {
+        min-width: 0;
+        max-width: none;
+        height: 46px;
+
+        margin: 0;
+        padding-left: 12px;
+
+        border-radius: 16px;
+    }
+
+    .search-icon {
+        flex: 0 0 auto;
+        font-size: 21px;
+    }
+
+    .search-area input {
+        min-width: 0;
+        padding: 0 8px 0 10px;
+
+        font-size: 13px;
+    }
+
+    .search-area button {
+        display: none !important;
+    }
+
+    .recent-search-dropdown {
+        position: fixed;
+        z-index: 650;
+
+        top: calc(var(--header-height) - 2px);
+        right: 10px;
+        left: 10px;
+
+        width: auto;
+        max-height: min(62dvh, 460px);
+
+        overflow-y: auto;
+    }
+
+    /*
+       PC 헤더 우측 메뉴는 모바일 상단에서 숨김.
+       햄버거 메뉴가 열린 경우에만 사이드바 위쪽에 나타남.
+    */
+    .header-actions {
+        display: none !important;
+    }
+
+    body:has(.sidebar.open) .header-actions {
+        position: fixed;
+        z-index: 121;
+
+        top: calc(var(--header-height) + 10px);
+        left: 12px;
+
+        width: calc(var(--mobile-drawer-width) - 24px);
+
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 7px;
+
+        padding: 10px;
+
+        border: 1px solid var(--gray-200);
+        border-radius: 16px;
+
+        background: color-mix(
+            in srgb,
+            var(--white) 96%,
+            transparent
+        );
+
+        box-shadow: var(--small-shadow);
+        backdrop-filter: blur(14px);
+    }
+
+    body.dark:has(.sidebar.open) .header-actions {
+        border-color: rgba(255,255,255,.1);
+        background: rgba(42, 40, 35, .97);
+    }
+
+    body:has(.sidebar.open) .weather-button {
+        grid-column: 1 / -1;
+
+        width: 100%;
+        max-width: none;
+        height: 40px;
+
+        justify-content: flex-start;
+    }
+
+    body:has(.sidebar.open) .weather-button > time {
+        display: inline-flex;
+    }
+
+    body:has(.sidebar.open)
+    .weather-button.open {
+        max-width: none;
+    }
+
+    body:has(.sidebar.open)
+    .weather-expanded-content {
+        display: none !important;
+    }
+
+    body:has(.sidebar.open)
+    .header-language-switcher {
+        grid-column: 1 / -1;
+
+        width: 100%;
+        height: 40px;
+
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    body:has(.sidebar.open)
+    .header-language-option {
+        min-width: 0;
+        width: 100%;
+        height: 32px;
+
+        font-size: 11px !important;
+    }
+
+    body:has(.sidebar.open)
+    .header-language-option[data-header-language="ko"]::after,
+    body:has(.sidebar.open)
+    .header-language-option[data-header-language="ja"]::after {
+        content: none !important;
+    }
+
+    body:has(.sidebar.open)
+    .header-language-option[data-header-language="ko"],
+    body:has(.sidebar.open)
+    .header-language-option[data-header-language="ja"] {
+        font-size: 11px !important;
+    }
+
+    body:has(.sidebar.open) .icon-button,
+    body:has(.sidebar.open) .header-message-button,
+    body:has(.sidebar.open) .login-button,
+    body:has(.sidebar.open) .profile-button {
+        min-width: 0;
+        height: 40px;
+    }
+
+    body:has(.sidebar.open) .icon-button {
+        width: 42px;
+    }
+
+    body:has(.sidebar.open) .header-message-button,
+    body:has(.sidebar.open) .login-button,
+    body:has(.sidebar.open) .profile-button {
+        width: 100%;
+    }
+
+    body:has(.sidebar.open) .login-button {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* =================================================
+       MOBILE DRAWER
+    ================================================= */
+
+    .sidebar {
+        z-index: 120;
+
+        top: var(--header-height);
+        bottom: 0;
+        width: var(--mobile-drawer-width);
+
+        padding:
+            176px
+            14px
+            calc(18px + env(safe-area-inset-bottom));
+
+        border-radius: 0 20px 20px 0;
+    }
+
+    .sidebar:not(.open) {
+        transform: translateX(-105%);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .side-item {
+        height: 44px;
+    }
+
+    .category-item {
+        min-height: 64px;
+        font-size: 12px;
+    }
+
+    /* =================================================
+       MAP
+    ================================================= */
+
+    .map-area {
+        top: var(--header-height);
+        left: 0 !important;
+
+        width: 100%;
+        height: auto;
+        margin: 0;
+    }
+
+    .map-status-card {
+        top: 12px !important;
+        left: 12px !important;
+
+        min-width: 0 !important;
+        width: min(202px, calc(100vw - 94px));
+
+        padding: 11px 13px !important;
+        border-radius: 16px !important;
+    }
+
+    .map-status-card small {
+        margin-bottom: 3px;
+        font-size: 10px !important;
+    }
+
+    .map-status-card strong {
+        max-width: 145px;
+        overflow: hidden;
+
+        font-size: 15px !important;
+
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .status-dot {
+        width: 11px !important;
+        height: 11px !important;
+    }
+
+    .map-controls {
+        top: 12px !important;
+        right: 12px !important;
+        bottom: auto !important;
+
+        gap: 7px !important;
+    }
+
+    /* 모바일은 pinch zoom 사용 - +/- 버튼 숨김 */
+    #zoomInButton,
+    #zoomOutButton {
+        display: none !important;
+    }
+
+    .map-controls button {
+        width: 44px !important;
+        height: 44px !important;
+
+        border-radius: 14px !important;
+    }
+
+    .legend-card {
+        display: none !important;
+    }
+
+    /* =================================================
+       NEARBY PICKS -> BOTTOM SHEET
+    ================================================= */
+
+    .recommend-panel {
+        position: absolute !important;
+        z-index: 70;
+
+        right: 10px !important;
+        bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+        left: 10px !important;
+
+        width: auto !important;
+        max-width: none !important;
+        min-height: 0 !important;
+        max-height: 48dvh !important;
+
+        padding: 12px 13px 13px !important;
+
+        border-radius: 20px !important;
+
+        overflow: hidden !important;
+
+        box-shadow:
+            0 16px 38px rgba(50, 38, 18, .20) !important;
+
+        transition:
+            max-height .22s ease,
+            padding .22s ease,
+            transform .22s ease;
+    }
+
+    .recommend-panel::before {
+        content: "";
+
+        display: block;
+
+        width: 38px;
+        height: 4px;
+
+        margin: -2px auto 8px;
+
+        border-radius: 999px;
+
+        background: rgba(118, 97, 60, .24);
+    }
+
+    body.dark .recommend-panel::before {
+        background: rgba(255,255,255,.18);
+    }
+
+    .recommend-header {
+        gap: 8px;
+        margin-bottom: 8px !important;
+    }
+
+    .recommend-header small {
+        font-size: 8px !important;
+        letter-spacing: .11em;
+    }
+
+    .recommend-header h2 {
+        margin-top: 2px !important;
+        font-size: 16px !important;
+    }
+
+    .recommend-context {
+        margin-top: 3px !important;
+        font-size: 9px !important;
+    }
+
+    #recommendRefreshButton,
+    #hideRecommendButton {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 12px !important;
+    }
+
+    .recommend-mode {
+        margin: 0 0 8px !important;
+    }
+
+    .recommend-audience-trigger {
+        min-height: 31px !important;
+        padding: 6px 9px !important;
+        font-size: 10px !important;
+    }
+
+    .recommend-panel .place-list {
+        max-height: calc(48dvh - 138px) !important;
+        gap: 7px !important;
+    }
+
+    .recommend-panel .mini-place {
+        min-height: 58px !important;
+
+        grid-template-columns:
+            42px
+            minmax(0, 1fr)
+            18px !important;
+
+        gap: 8px !important;
+        padding: 7px 8px !important;
+
+        border-radius: 13px !important;
+    }
+
+    .recommend-panel .mini-image {
+        width: 42px !important;
+        height: 42px !important;
+        border-radius: 11px !important;
+    }
+
+    .recommend-panel .mini-place strong {
+        margin-bottom: 3px !important;
+        font-size: 11px !important;
+    }
+
+    /*
+       접힘 상태는 작은 하단 바.
+       지도를 거의 가리지 않음.
+    */
+    .recommend-panel.collapsed {
+        right: 10px !important;
+        left: 10px !important;
+
+        width: auto !important;
+        max-height: 66px !important;
+
+        padding:
+            9px
+            12px
+            10px !important;
+    }
+
+    .recommend-panel.collapsed::before {
+        margin-bottom: 5px;
+    }
+
+    .recommend-panel.collapsed .recommend-header {
+        margin: 0 !important;
+    }
+
+    .recommend-panel.collapsed
+    .recommend-header small,
+    .recommend-panel.collapsed
+    .recommend-context,
+    .recommend-panel.collapsed
+    .recommend-mode,
+    .recommend-panel.collapsed
+    .place-list,
+    .recommend-panel.collapsed
+    #recommendRefreshButton {
+        display: none !important;
+    }
+
+    .recommend-panel.collapsed
+    .recommend-header h2 {
+        margin: 0 !important;
+        font-size: 14px !important;
+    }
+
+    /* =================================================
+       PLACE / ROUTE PANELS
+    ================================================= */
+
+    .place-card,
+    .route-panel {
+        right: 10px !important;
+        bottom: calc(86px + env(safe-area-inset-bottom)) !important;
+        left: 10px !important;
+
+        width: auto !important;
+        max-width: none !important;
+        max-height: calc(100dvh - 176px) !important;
+
+        border-radius: 20px !important;
+    }
+
+    /* =================================================
+       MODALS
+    ================================================= */
+
+    .modal-backdrop {
+        padding:
+            12px
+            10px
+            calc(12px + env(safe-area-inset-bottom)) !important;
+    }
+
+    .modal {
+        width: 100%;
+        max-width: 520px;
+        max-height: calc(100dvh - 24px);
+
+        padding: 22px 18px !important;
+        border-radius: 20px !important;
+
+        overflow-y: auto;
+    }
+
+    .toast {
+        bottom: calc(82px + env(safe-area-inset-bottom)) !important;
+
+        max-width: calc(100vw - 28px);
+    }
+}
+
+
+@media (max-width: 430px) {
+    .header {
+        gap: 6px;
+        padding-inline: 8px;
+    }
+
+    .menu-button {
+        width: 42px;
+        height: 42px;
+        flex-basis: 42px;
+    }
+
+    .brand {
+        width: 40px;
+        min-width: 40px !important;
+        flex-basis: 40px;
+    }
+
+    .brand-logo {
+        width: 39px !important;
+        height: 39px !important;
+    }
+
+    .search-area {
+        height: 44px;
+    }
+
+    .search-area input {
+        font-size: 12px;
+    }
+
+    .search-area input::placeholder {
+        font-size: 12px;
+    }
+
+    .map-status-card {
+        width: min(190px, calc(100vw - 84px));
+    }
+}

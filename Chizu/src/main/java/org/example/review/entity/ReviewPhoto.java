@@ -25,7 +25,7 @@ public class ReviewPhoto extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long photoId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 1000)
     private String photoUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)

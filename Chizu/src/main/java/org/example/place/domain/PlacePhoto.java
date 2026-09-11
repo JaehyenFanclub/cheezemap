@@ -27,7 +27,7 @@ public class PlacePhoto {
     @Column(name = "photoDate")
     private LocalDateTime photoDate;
 
-    @Column(name = "photoUrl")
+    @Column(name = "photoUrl", length = 1000)
     private String photoUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)

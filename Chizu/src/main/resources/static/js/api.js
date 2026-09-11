@@ -185,7 +185,15 @@ async function apiRequest(path, options = {}) {
         }
     }
 
-    const response = await fetch(path, { method, headers, body: requestBody });
+    let response;
+    try {
+        response = await fetch(path, { method, headers, body: requestBody });
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(String(error || "요청에 실패했습니다."));
+    }
+
     if (raw) return response;
 
     const contentType = response.headers.get("content-type") || "";
@@ -194,12 +202,16 @@ async function apiRequest(path, options = {}) {
         : await response.text().catch(() => "");
 
     if (!response.ok) {
-        const message =
+        let message =
             data?.msg ||
             data?.message ||
             data?.error ||
             (typeof data === "string" && data) ||
             `요청 실패 (${response.status})`;
+
+        if (isUploadSizeExceededError(message, response.status)) {
+            message = "사진이 너무 커서 추가할 수 없습니다. (장당 최대 10MB)";
+        }
 
         const shouldLogout =
             auth &&
@@ -224,6 +236,23 @@ async function apiRequest(path, options = {}) {
     }
 
     return data;
+}
+
+function isUploadSizeExceededError(message, status) {
+    if (Number(status) === 413) {
+        return true;
+    }
+
+    const text = String(message || "").toLowerCase();
+    return (
+        text.includes("entity too large") ||
+        text.includes("max upload") ||
+        text.includes("maximum upload") ||
+        text.includes("size exceed") ||
+        text.includes("업로드 파일 크기가 제한") ||
+        text.includes("사진 최대용량") ||
+        text.includes("너무 커서")
+    );
 }
 
 function mapMyPageUser(data, fallbackUser = null) {
