@@ -2,6 +2,8 @@ package org.example.menu.service;
 
 
 import lombok.RequiredArgsConstructor;
+import org.example.common.service.ImageStorageService;
+import org.example.common.service.ImageStorageService.ImageFolder;
 import org.example.menu.domain.Menu;
 import org.example.menu.domain.MenuPhoto;
 import org.example.menu.dto.MenuPhotoCreateRequest;
@@ -12,16 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 public class MenuPhotoService {
 
     private final MenuPhotoRepository menuPhotoRepository;
     private final MenuRepository menuRepository;
+    private final ImageStorageService imageStorageService;
 
     @Transactional
     public MenuPhotoResponse createPhoto(MenuPhotoCreateRequest dto, Long menuId, String token){
@@ -29,28 +28,7 @@ public class MenuPhotoService {
                 .orElseThrow(() -> new IllegalArgumentException("없는 메뉴"));
 
         MultipartFile file = dto.getFile();
-
-        if (file == null || file.isEmpty()){
-            throw new IllegalArgumentException("업로드할 파일이 없음");
-        }
-
-        String uploadDir = System.getProperty("user.dir") + "/MenuPhoto/";
-        File dir = new File(uploadDir);
-        if(!dir.exists()){
-            dir.mkdirs();
-        }
-
-        String originalFilename = file.getOriginalFilename();
-        String storeFileName = UUID.randomUUID() + "-" + originalFilename;
-        String fullPath = uploadDir + storeFileName;
-
-        try {
-            file.transferTo(new File(fullPath));
-        } catch (IOException e) {
-            throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
-        }
-
-        String photoUrl = "/images/" + storeFileName;
+        String photoUrl = imageStorageService.store(file, ImageFolder.MENU);
 
         MenuPhoto menuPhoto = MenuPhoto.builder()
                 .photoUrl(photoUrl)
@@ -73,6 +51,7 @@ public class MenuPhotoService {
         MenuPhoto menuPhoto = menuPhotoRepository.findById(menuPhotoId)
                 .orElseThrow(() -> new IllegalArgumentException("사진 없음"));
 
+        imageStorageService.deleteByStoredPath(menuPhoto.getPhotoUrl());
         menuPhotoRepository.delete(menuPhoto);
 
     }

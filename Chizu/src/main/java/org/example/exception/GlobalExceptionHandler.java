@@ -64,6 +64,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public MsgResponse handleMaxUploadSize(MaxUploadSizeExceededException ex) {
-        return new MsgResponse("업로드 파일 크기가 제한을 초과했습니다.", "400");
+        return new MsgResponse("사진 최대 용량이 초과되어 업로드할 수 없습니다. (장당 최대 10MB)", "400");
     }
 }

@@ -47,7 +47,7 @@ public class Place {
     private Double placeLongitude;
 
     @Builder.Default
-    @Column(nullable = false, columnDefinition = "double not null default 0")
+    @Column(nullable = false, columnDefinition = "double precision not null default 0")
     private double avgRating = 0.0;
 
     @Builder.Default
